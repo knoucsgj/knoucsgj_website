@@ -127,20 +127,22 @@ export const CommunityPage: React.FC = () => {
     <div className="space-y-12">
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-start sm:items-center gap-5">
-          <img
-            src={ASSETS.characters.study}
-            alt="스터디 마스코트"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 hidden sm:block"
-          />
+        <div className="flex items-center gap-4 sm:gap-5">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-blue-50/70 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center shadow-xs">
+            <img
+              src={ASSETS.characters.study}
+              alt="스터디 마스코트"
+              className="w-full h-full object-contain drop-shadow-xs"
+            />
+          </div>
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
               <span>Academic Community & Study Groups</span>
             </div>
-            <h1 className="font-knou text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight mb-2">
+            <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
               학술 스터디 & 커뮤니티
             </h1>
-            <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
+            <p className="text-slate-600 text-xs sm:text-sm max-w-xl leading-relaxed font-normal">
               혼자 공부하면 어렵지만 함께하면 끝까지 해낼 수 있습니다.
               온·오프라인 스터디 그룹에 참여하거나 직접 모집해 보세요.
             </p>

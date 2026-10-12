@@ -28,34 +28,34 @@ export const HeroSection: React.FC = () => {
               <span>한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회</span>
             </div>
 
-            <h1 className="font-knou text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
+            <h1 className="font-knou text-2xl sm:text-3xl lg:text-[2.25rem] font-bold tracking-tight text-white leading-snug">
               일과 학업의 병행, <br className="hidden sm:inline" />
               <span className="text-blue-400">끝까지 완주할 수 있도록</span> 함께합니다.
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl font-normal">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-lg font-normal">
               출석수업 및 과제 가이드, 100% 투명한 학생회비 결산, 실습 교재 및 비품 대여, 동료 학우들과 함께하는 스터디까지 학생회가 든든한 동반자가 되겠습니다.
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <Link
                 to="/notices"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95"
               >
                 <Bell className="w-4 h-4" />
                 공지사항 바로가기
               </Link>
               <Link
                 to="/calendar"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm transition-all border border-slate-700 active:scale-95"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm transition-all border border-slate-700 active:scale-95"
               >
                 <Calendar className="w-4 h-4 text-blue-400" />
                 학사일정 캘린더
               </Link>
               <Link
                 to="/governance"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-medium text-xs sm:text-sm transition-all border border-slate-800"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-medium text-xs sm:text-sm transition-all border border-slate-800"
               >
                 <Scale className="w-4 h-4 text-emerald-400" />
                 투명 재정 보고
@@ -66,19 +66,28 @@ export const HeroSection: React.FC = () => {
           {/* Right Column: Urgent Academic Card */}
           <div className="lg:col-span-5 space-y-3">
             {/* Mascot Greeting Callout */}
-            <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-3 px-4 shadow-sm">
-              <img
-                src={ASSETS.characters.practice}
-                alt="방송대 실습 마스코트"
-                className="w-11 h-11 object-contain shrink-0"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-white block">함께 공부하는 컴퓨터과학과</span>
-                <span className="text-slate-400 text-[11px]">선배·동료 학우가 곁에서 끝까지 응원합니다!</span>
+            <div className="flex items-center gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950/60 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-800/80 border border-slate-700/80 p-2 shrink-0 flex items-center justify-center shadow-inner">
+                <img
+                  src={ASSETS.characters.practice}
+                  alt="방송대 실습 마스코트"
+                  className="w-full h-full object-contain drop-shadow-md"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-400/20">
+                  <span>컴퓨터과학과 마스코트</span>
+                </div>
+                <h4 className="font-bold text-white text-sm sm:text-base leading-snug">
+                  "함께 공부하며 완주해요!"
+                </h4>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  선배·동료 학우가 곁에서 끝까지 함께 응원합니다.
+                </p>
               </div>
             </div>
 
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5 relative overflow-hidden">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-lg space-y-4 relative overflow-hidden">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">
                   학사 마감 알림 (D-Day)
@@ -89,7 +98,7 @@ export const HeroSection: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white mb-1.5">
+                <h3 className="text-base sm:text-lg font-bold text-white mb-1.5">
                   2026학년도 2학기 중간과제물 정규 제출
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">

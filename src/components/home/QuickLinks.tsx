@@ -53,7 +53,7 @@ export const QuickLinks: React.FC = () => {
     <section className="mb-12">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
             주요 학생회 서비스 바로가기
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">

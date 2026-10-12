@@ -39,13 +39,13 @@ export const AboutPage: React.FC = () => {
     <div className="space-y-10">
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8">
-        <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
           <span>Department & Student Council</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-3">
+        <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-2">
           학과 및 학생회 소개
         </h1>
-        <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
+        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
           한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회는 학우 여러분의 보람찬 대학 생활과 성공적인 학위 취득을 위한 가장 가까운 길잡이가 되겠습니다.
         </p>
       </div>
@@ -103,21 +103,23 @@ export const AboutPage: React.FC = () => {
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-8 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
             <div className="border-l-4 border-blue-600 pl-4 py-1">
-              <h2 className="font-knou text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 {councilIntro.title}
               </h2>
-              <p className="text-sm text-slate-500 mt-1 font-medium">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
                 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회
               </p>
             </div>
-            <img
-              src={ASSETS.characters.greeting}
-              alt="방송대 감사 마스코트"
-              className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 self-start sm:self-center"
-            />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-2xl bg-blue-50/70 border border-blue-100 p-2 shrink-0 flex items-center justify-center shadow-xs">
+              <img
+                src={ASSETS.characters.greeting}
+                alt="방송대 감사 마스코트"
+                className="w-full h-full object-contain drop-shadow-xs"
+              />
+            </div>
           </div>
 
-          <div className="prose prose-slate max-w-none text-slate-700 text-sm sm:text-base leading-relaxed space-y-4 whitespace-pre-line font-normal">
+          <div className="prose prose-slate max-w-none text-slate-700 text-xs sm:text-sm leading-relaxed space-y-4 whitespace-pre-line font-normal">
             {councilIntro.president_greeting}
           </div>
 

@@ -75,20 +75,22 @@ export const WelfarePage: React.FC = () => {
     <div className="space-y-10">
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-start sm:items-center gap-5">
-          <img
-            src={ASSETS.characters.best}
-            alt="복지 엄지척 마스코트"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 hidden sm:block"
-          />
+        <div className="flex items-center gap-4 sm:gap-5">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-emerald-50/70 border border-emerald-100 p-1.5 shrink-0 flex items-center justify-center shadow-xs">
+            <img
+              src={ASSETS.characters.best}
+              alt="복지 엄지척 마스코트"
+              className="w-full h-full object-contain drop-shadow-xs"
+            />
+          </div>
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 tracking-wider uppercase mb-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-700 tracking-wider uppercase mb-1">
               <span>Student Welfare & Communication</span>
             </div>
-            <h1 className="font-knou text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight mb-2">
+            <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
               학생 복지 & 소통 센터
             </h1>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl font-normal">
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
               광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 실습 교재 및 비품 대여, IT 제휴 혜택, 열린 소통 창구를 운영합니다.
             </p>
           </div>

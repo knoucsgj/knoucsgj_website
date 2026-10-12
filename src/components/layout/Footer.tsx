@@ -12,11 +12,11 @@ export const Footer: React.FC = () => {
           {/* Column 1 & 2: Council Identity */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-3.5">
-              <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-700/60 inline-flex items-center">
+              <div className="bg-white px-3.5 py-2 rounded-2xl border border-slate-700/60 inline-flex items-center shrink-0 shadow-xs">
                 <img
                   src={ASSETS.UI.gwangjuJeonnam}
                   alt="한국방송통신대학교 광주전남지역대학"
-                  className="h-7 w-auto object-contain"
+                  className="h-10 sm:h-11 w-auto object-contain"
                 />
               </div>
               <div>
