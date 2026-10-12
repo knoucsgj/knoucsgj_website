@@ -254,7 +254,7 @@ export const AboutPage: React.FC = () => {
                 <img
                   src={ASSETS.UI.gwangjuJeonnam}
                   alt="광주전남지역대학"
-                  className="h-11 sm:h-13 md:h-14 w-auto object-contain shrink-0"
+                  className="h-9 sm:h-11 w-auto object-contain shrink-0"
                 />
                 <div>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">

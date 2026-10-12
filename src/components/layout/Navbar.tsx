@@ -69,21 +69,21 @@ export const Navbar: React.FC = () => {
 
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 sm:h-24">
-          {/* Official Emblem & Wordmark */}
+        <div className="flex items-center justify-between h-20">
+          {/* Official Emblem & Wordmark (컴퓨터과학과 학생회 핵심 강조) */}
           <Link to="/" className="flex items-center gap-3 sm:gap-4 group shrink-0">
             <img
               src={ASSETS.UI.gwangjuJeonnam}
               alt="한국방송통신대학교 광주전남지역대학"
-              className="h-11 sm:h-13 md:h-14 lg:h-15 w-auto object-contain shrink-0 drop-shadow-xs"
+              className="h-8 sm:h-9 md:h-10 w-auto object-contain shrink-0"
             />
-            <div className="hidden sm:block h-9 w-px bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200" />
             <div className="flex flex-col justify-center">
-              <span className="text-[10px] sm:text-[11px] font-semibold text-blue-700 tracking-wider">
-                제43대 학생회
+              <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 tracking-wider">
+                제43대
               </span>
-              <span className="font-knou text-sm sm:text-base md:text-lg font-bold text-slate-900 group-hover:text-blue-700 transition-colors leading-tight">
-                컴퓨터과학과
+              <span className="font-knou text-base sm:text-lg md:text-xl font-bold text-slate-950 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
+                컴퓨터과학과 학생회
               </span>
             </div>
           </Link>
