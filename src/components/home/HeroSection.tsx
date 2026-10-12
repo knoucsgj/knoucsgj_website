@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Calendar, ChevronRight, Scale, Package, Users, CheckCircle } from 'lucide-react';
 import { getDDay } from '../../lib/dateUtils';
+import { ASSETS } from '../../lib/assets';
 
 export const HeroSection: React.FC = () => {
   // Urgent upcoming deadline: 2학기 중간과제물 제출
@@ -27,7 +28,7 @@ export const HeroSection: React.FC = () => {
               <span>한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+            <h1 className="font-knou text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
               일과 학업의 병행, <br className="hidden sm:inline" />
               <span className="text-blue-400">끝까지 완주할 수 있도록</span> 함께합니다.
             </h1>
@@ -63,8 +64,21 @@ export const HeroSection: React.FC = () => {
           </div>
 
           {/* Right Column: Urgent Academic Card */}
-          <div className="lg:col-span-5">
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5">
+          <div className="lg:col-span-5 space-y-3">
+            {/* Mascot Greeting Callout */}
+            <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-3 px-4 shadow-sm">
+              <img
+                src={ASSETS.characters.practice}
+                alt="방송대 실습 마스코트"
+                className="w-11 h-11 object-contain shrink-0"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-white block">함께 공부하는 컴퓨터과학과</span>
+                <span className="text-slate-400 text-[11px]">선배·동료 학우가 곁에서 끝까지 응원합니다!</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5 relative overflow-hidden">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">
                   학사 마감 알림 (D-Day)

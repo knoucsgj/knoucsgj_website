@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ExternalLink, ChevronRight, Shield } from 'lucide-react';
 import { auth } from '../../services/auth';
+import { ASSETS } from '../../lib/assets';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,16 +71,19 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Official Emblem & Wordmark */}
-          <Link to="/" className="flex items-center gap-3.5 group">
-            <div className="w-11 h-11 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-white shadow-xs group-hover:border-blue-600 transition-colors">
-              <span className="font-black text-sm tracking-tighter text-blue-400">KNOU</span>
-            </div>
+          <Link to="/" className="flex items-center gap-3 sm:gap-4 group">
+            <img
+              src={ASSETS.UI.gwangjuJeonnam}
+              alt="한국방송통신대학교 광주전남지역대학"
+              className="h-9 sm:h-11 w-auto object-contain"
+            />
+            <div className="hidden sm:block h-7 w-px bg-slate-200" />
             <div className="flex flex-col">
-              <span className="text-[11px] font-semibold tracking-wider text-blue-700 uppercase">
-                광주전남지역대학
+              <span className="text-[10px] sm:text-[11px] font-semibold text-blue-700 uppercase tracking-wider">
+                제43대 학생회
               </span>
-              <span className="text-lg font-extrabold text-slate-950 tracking-tight group-hover:text-blue-700 transition-colors">
-                컴퓨터과학과 <span className="font-normal text-slate-500 text-sm">학생회</span>
+              <span className="font-knou text-base sm:text-lg font-bold text-slate-950 tracking-tight group-hover:text-blue-700 transition-colors">
+                컴퓨터과학과
               </span>
             </div>
           </Link>

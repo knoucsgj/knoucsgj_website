@@ -1,7 +1,17 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'KNOUfont';
+  src: url('/fonts/KNOUfont.otf') format('opentype'),
+       url('/fonts/KNOUfont.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-knou: "KNOUfont", "Pretendard Variable", "Pretendard", sans-serif;
 }
 
 @layer base {

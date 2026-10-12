@@ -2,6 +2,7 @@ import React from 'react';
 import { ExternalLink, Mail, MapPin, Phone, Scale } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { regionalInfo } from '../../data/mockCouncil';
+import { ASSETS } from '../../lib/assets';
 
 export const Footer: React.FC = () => {
   return (
@@ -10,15 +11,19 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Column 1 & 2: Council Identity */}
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-400 font-black text-xs tracking-tighter">
-                KNOU
+            <div className="flex items-center gap-3.5">
+              <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-700/60 inline-flex items-center">
+                <img
+                  src={ASSETS.UI.gwangjuJeonnam}
+                  alt="한국방송통신대학교 광주전남지역대학"
+                  className="h-7 w-auto object-contain"
+                />
               </div>
               <div>
-                <h3 className="text-white font-bold text-base tracking-tight">
-                  한국방송통신대학교 광주전남지역대학
+                <h3 className="font-knou text-white font-bold text-base tracking-tight">
+                  컴퓨터과학과 제43대 학생회
                 </h3>
-                <p className="text-blue-400 text-xs font-semibold">컴퓨터과학과 제43대 학생회</p>
+                <p className="text-slate-400 text-xs">한국방송통신대학교 광주전남지역대학</p>
               </div>
             </div>
 

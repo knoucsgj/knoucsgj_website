@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
 import type { StudyGroup } from '../lib/types';
+import { ASSETS } from '../lib/assets';
 import {
   Users,
   PlusCircle,
@@ -125,23 +126,30 @@ export const CommunityPage: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* Clean Editorial Page Header */}
-      <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
-            <span>Academic Community & Study Groups</span>
+      <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-5">
+          <img
+            src={ASSETS.characters.study}
+            alt="스터디 마스코트"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 hidden sm:block"
+          />
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+              <span>Academic Community & Study Groups</span>
+            </div>
+            <h1 className="font-knou text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight mb-2">
+              학술 스터디 & 커뮤니티
+            </h1>
+            <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
+              혼자 공부하면 어렵지만 함께하면 끝까지 해낼 수 있습니다.
+              온·오프라인 스터디 그룹에 참여하거나 직접 모집해 보세요.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-2">
-            학술 스터디 & 커뮤니티
-          </h1>
-          <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
-            혼자 공부하면 어렵지만 함께하면 끝까지 해낼 수 있습니다.
-            온·오프라인 스터디 그룹에 참여하거나 직접 모집해 보세요.
-          </p>
         </div>
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shrink-0 self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
         >
           <PlusCircle className="w-4 h-4" />
           스터디 개설 신청

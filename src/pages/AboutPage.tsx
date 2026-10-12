@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { regionalInfo, councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
 import type { CouncilMember } from '../lib/types';
+import { ASSETS } from '../lib/assets';
 import {
   Users,
   MapPin,
@@ -100,13 +101,20 @@ export const AboutPage: React.FC = () => {
       {/* Tab 1: Greeting */}
       {activeTab === 'greeting' && (
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-8 animate-in fade-in duration-200">
-          <div className="border-l-4 border-blue-600 pl-4 py-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              {councilIntro.title}
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+            <div className="border-l-4 border-blue-600 pl-4 py-1">
+              <h2 className="font-knou text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                {councilIntro.title}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1 font-medium">
+                한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회
+              </p>
+            </div>
+            <img
+              src={ASSETS.characters.greeting}
+              alt="방송대 감사 마스코트"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 self-start sm:self-center"
+            />
           </div>
 
           <div className="prose prose-slate max-w-none text-slate-700 text-sm sm:text-base leading-relaxed space-y-4 whitespace-pre-line font-normal">
@@ -240,13 +248,20 @@ export const AboutPage: React.FC = () => {
           {/* Main Regional Center Info */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-4">
-              <div>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                  본관
-                </span>
-                <h2 className="text-xl font-bold text-slate-900 mt-1">
-                  {regionalInfo.center_name}
-                </h2>
+              <div className="flex items-center gap-4">
+                <img
+                  src={ASSETS.UI.gwangjuJeonnam}
+                  alt="광주전남지역대학"
+                  className="h-9 sm:h-11 w-auto object-contain hidden sm:block"
+                />
+                <div>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                    본관
+                  </span>
+                  <h2 className="font-knou text-xl font-bold text-slate-900 mt-1">
+                    {regionalInfo.center_name}
+                  </h2>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <a

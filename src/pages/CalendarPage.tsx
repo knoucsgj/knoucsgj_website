@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { AcademicEvent, EventCategory } from '../lib/types';
 import { getDDay, formatEventPeriod } from '../lib/dateUtils';
+import { ASSETS } from '../lib/assets';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -96,17 +97,24 @@ export const CalendarPage: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Clean Editorial Page Header */}
-      <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
-            <span>Academic Schedule & D-Day</span>
+      <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-5">
+          <img
+            src={ASSETS.characters.exam}
+            alt="시험 마스코트"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 hidden sm:block"
+          />
+          <div>
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+              <span>Academic Schedule & D-Day</span>
+            </div>
+            <h1 className="font-knou text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight mb-2">
+              학사일정 캘린더
+            </h1>
+            <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
+              광주전남지역대학 컴퓨터과학과의 출석수업, 온라인평가, 과제물 마감일 등 중요 일정을 한눈에 확인하세요.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-2">
-            학사일정 캘린더
-          </h1>
-          <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
-            광주전남지역대학 컴퓨터과학과의 출석수업, 온라인평가, 과제물 마감일 등 중요 일정을 한눈에 확인하세요.
-          </p>
         </div>
 
         {/* View Switcher */}

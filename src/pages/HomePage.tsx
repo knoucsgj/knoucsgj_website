@@ -7,6 +7,7 @@ import { UpcomingEventsSection } from '../components/home/UpcomingEventsSection'
 import { api } from '../services/api';
 import type { Notice, AcademicEvent } from '../lib/types';
 import { Users, MapPin } from 'lucide-react';
+import { ASSETS } from '../lib/assets';
 
 export const HomePage: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -52,17 +53,24 @@ export const HomePage: React.FC = () => {
 
       {/* Student Council Academic Support Banner */}
       <section className="rounded-3xl bg-white border border-slate-200/90 p-8 sm:p-10 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-3 border border-blue-100">
-            <span>제43대 컴퓨터과학과 학생회 소통 창구</span>
+        <div className="flex items-start sm:items-center gap-5">
+          <img
+            src={ASSETS.characters.study}
+            alt="방송대 토론 마스코트"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0"
+          />
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-2 border border-blue-100">
+              <span>제43대 컴퓨터과학과 학생회 소통 창구</span>
+            </div>
+            <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-1.5">
+              수업이나 과제, 혼자 고민하지 마세요
+            </h2>
+            <p className="text-slate-600 text-sm leading-relaxed">
+              방송대 컴퓨터과학과는 다양한 세대와 분야의 학우들이 서로 가르쳐주고 배우는 따뜻한 커뮤니티입니다. 
+              스터디 그룹 참여를 희망하시거나 학교 생활에 궁금한 점이 있다면 언제든 학생회와 함께하세요.
+            </p>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
-            수업이나 과제, 혼자 고민하지 마세요
-          </h2>
-          <p className="text-slate-600 text-sm leading-relaxed">
-            방송대 컴퓨터과학과는 다양한 세대와 분야의 학우들이 서로 가르쳐주고 배우는 따뜻한 커뮤니티입니다. 
-            스터디 그룹 참여를 희망하시거나 학교 생활에 궁금한 점이 있다면 언제든 학생회와 함께하세요.
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
