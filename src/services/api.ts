@@ -352,26 +352,96 @@ export const api = {
   },
 
   // ==========================================
-  // 4. 스터디 (Studies)
+  // 4. 스터디 (Studies) CRUD
   // ==========================================
   async getStudies(): Promise<StudyGroup[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('study_groups')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          return data as StudyGroup[];
+        }
+      } catch (e) {
+        console.warn('Supabase studies fetch failed, using local studies', e);
+      }
+    }
     return getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
   },
 
-  async createStudy(study: Omit<StudyGroup, 'id' | 'created_at' | 'members_count'>): Promise<StudyGroup> {
+  async createStudy(study: Omit<StudyGroup, 'id' | 'created_at'>): Promise<StudyGroup> {
     const newStudy: StudyGroup = {
       ...study,
       id: `study-${Date.now()}`,
       created_at: new Date().toISOString().split('T')[0],
-      members_count: 1,
+      members_count: study.members_count || 1,
     };
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('study_groups')
+          .insert([newStudy])
+          .select()
+          .single();
+
+        if (!error && data) {
+          return data as StudyGroup;
+        }
+      } catch (e) {
+        console.error('Supabase study insert error:', e);
+      }
+    }
+
     const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
     const updated = [newStudy, ...current];
     setLocalItem(STUDIES_STORAGE_KEY, updated);
     return newStudy;
   },
 
+  async updateStudy(id: string, updatedFields: Partial<StudyGroup>): Promise<StudyGroup | null> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('study_groups')
+          .update(updatedFields)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          return data as StudyGroup;
+        }
+      } catch (e) {
+        console.error('Supabase study update error', e);
+      }
+    }
+
+    const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
+    let updatedStudy: StudyGroup | null = null;
+    const next = current.map((s) => {
+      if (s.id === id) {
+        updatedStudy = { ...s, ...updatedFields };
+        return updatedStudy;
+      }
+      return s;
+    });
+    setLocalItem(STUDIES_STORAGE_KEY, next);
+    return updatedStudy;
+  },
+
   async deleteStudy(id: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('study_groups').delete().eq('id', id);
+      } catch (e) {
+        console.error('Supabase study delete error', e);
+      }
+    }
+
     const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
     const next = current.filter((s) => s.id !== id);
     setLocalItem(STUDIES_STORAGE_KEY, next);

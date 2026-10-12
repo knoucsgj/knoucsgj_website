@@ -41,6 +41,22 @@ CREATE TABLE IF NOT EXISTS public.council_members (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 4. 스터디 그룹 테이블 (study_groups)
+CREATE TABLE IF NOT EXISTS public.study_groups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT '모집중' CHECK (status IN ('모집중', '진행중', '마감', '종료')),
+    members_count INTEGER NOT NULL DEFAULT 1,
+    max_members INTEGER NOT NULL DEFAULT 8,
+    target_grade TEXT DEFAULT '전학년',
+    meeting_type TEXT DEFAULT '온/오프라인 병행',
+    leader TEXT NOT NULL,
+    leader_contact TEXT,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ==============================================================================
 -- Row Level Security (RLS) 보안 정책
 -- 누구나 조회 가능 (SELECT), 수정/추가는 로그인된 관리자만 가능
@@ -49,11 +65,13 @@ CREATE TABLE IF NOT EXISTS public.council_members (
 ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.academic_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.council_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.study_groups ENABLE ROW LEVEL SECURITY;
 
 -- 읽기 권한: 전체 공개 (익명 사용자 포함)
 CREATE POLICY "Public Read Notices" ON public.notices FOR SELECT USING (true);
 CREATE POLICY "Public Read Events" ON public.academic_events FOR SELECT USING (true);
 CREATE POLICY "Public Read Council" ON public.council_members FOR SELECT USING (true);
+CREATE POLICY "Public Read Studies" ON public.study_groups FOR SELECT USING (true);
 
 -- 쓰기 권한: 인증된 사용자만 가능 (추후 관리자 로그인 연동)
 CREATE POLICY "Auth Insert Notices" ON public.notices FOR INSERT WITH CHECK (auth.role() = 'authenticated');
@@ -63,6 +81,10 @@ CREATE POLICY "Auth Delete Notices" ON public.notices FOR DELETE USING (auth.rol
 CREATE POLICY "Auth Insert Events" ON public.academic_events FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Auth Update Events" ON public.academic_events FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Auth Delete Events" ON public.academic_events FOR DELETE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Auth Insert Studies" ON public.study_groups FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Auth Update Studies" ON public.study_groups FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Auth Delete Studies" ON public.study_groups FOR DELETE USING (auth.role() = 'authenticated');
 
 -- ==============================================================================
 -- 초기 샘플 데이터 입력
@@ -81,3 +103,10 @@ VALUES
   ('광주전남 컴퓨터과학과 가을 IT 특강 & 네트워킹 데이', '2026-11-07', '2026-11-07', '행사', 'AI 실무 특강 및 선후배 네트워킹 (대강당)', '전학년', true),
   ('2학기 기말시험 (출석 온라인시험) 응시일정 신청', '2026-11-20', '2026-11-25', '시험', 'U-KNOU 포털에서 원하는 시험 일자 및 교시 선착순 신청', '전학년', true),
   ('2026학년도 2학기 기말평가 (출석 온라인시험)', '2026-12-05', '2026-12-13', '시험', '광주지역대학 본관 지정 CBT 시험실에서 과목별 응시', '전학년', true);
+
+INSERT INTO public.study_groups (title, subject, status, members_count, max_members, target_grade, meeting_type, leader)
+VALUES
+  ('2026-2학기 자료구조 & 알고리즘 집중 스터디', '자료구조 / C++ / 백준 문제풀이', '모집중', 5, 8, '2~3학년', '온/오프라인 병행', '정현우 (4학년)'),
+  ('신·편입생을 위한 파이썬 기초 프로그래밍 멘토링', '파이썬프로그래밍 기초 및 중간과제 코칭', '모집중', 6, 10, '1학년 및 편입생', '온라인 (Zoom/Discord)', '김민수 (3학년)'),
+  ('웹 풀스택 실무 프로젝트 스터디 (React + Supabase)', '학과 프로젝트 및 포트폴리오 웹 제작', '진행중', 6, 6, '전학년', '온/오프라인 병행', '강태석 (3학년)'),
+  ('2027년 1회 정보처리기사 필기 스터디반', '소프트웨어설계, DB, 프로그래밍 언어 활용', '모집중', 4, 8, '3~4학년', '온라인 (Zoom/Discord)', '이지은 (3학년)');

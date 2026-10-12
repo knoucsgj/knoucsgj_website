@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { auth } from '../services/auth';
 import type { StudyGroup } from '../lib/types';
 import {
   Users,
@@ -10,14 +12,18 @@ import {
   Laptop,
   MessageCircle,
   Sparkles,
-  X
+  X,
+  Filter,
+  Shield,
+  ArrowRight
 } from 'lucide-react';
 
 export const CommunityPage: React.FC = () => {
   const [studies, setStudies] = useState<StudyGroup[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>('전체');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-  const [selectedStudyTitle, setSelectedStudyTitle] = useState('');
+  const [selectedStudy, setSelectedStudy] = useState<StudyGroup | null>(null);
 
   // Study registration modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -26,14 +32,20 @@ export const CommunityPage: React.FC = () => {
   const [newMeetingType, setNewMeetingType] = useState<'온라인 (Zoom/Discord)' | '오프라인 (광주지역대학)' | '온/오프라인 병행'>('온/오프라인 병행');
   const [newMaxMembers, setNewMaxMembers] = useState(8);
   const [newLeader, setNewLeader] = useState('');
+  const [newLeaderContact, setNewLeaderContact] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isAdmin = auth.isAdmin();
 
   useEffect(() => {
-    async function loadStudies() {
-      const data = await api.getStudies();
-      setStudies(data);
-    }
     loadStudies();
   }, []);
+
+  const loadStudies = async () => {
+    const data = await api.getStudies();
+    setStudies(data);
+  };
 
   const faqs = [
     {
@@ -58,38 +70,57 @@ export const CommunityPage: React.FC = () => {
     }
   ];
 
-  const handleApplyClick = (title: string) => {
-    setSelectedStudyTitle(title);
+  const handleApplyClick = (study: StudyGroup) => {
+    setSelectedStudy(study);
     setIsApplyModalOpen(true);
   };
 
-  const handleCreateStudy = (e: React.FormEvent) => {
+  const handleCreateStudy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStudyTitle || !newSubject) {
+    if (!newStudyTitle.trim() || !newSubject.trim()) {
       alert('스터디 제목과 주제를 입력해주세요.');
       return;
     }
 
-    const created: StudyGroup = {
-      id: `study-${Date.now()}`,
-      title: newStudyTitle,
-      subject: newSubject,
-      status: '모집중',
-      members_count: 1,
-      max_members: newMaxMembers,
-      target_grade: '전학년',
-      meeting_type: newMeetingType,
-      leader: newLeader || '익명 학우',
-      created_at: new Date().toISOString().split('T')[0],
-    };
+    try {
+      setIsSubmitting(true);
+      await api.createStudy({
+        title: newStudyTitle.trim(),
+        subject: newSubject.trim(),
+        status: '모집중',
+        members_count: 1,
+        max_members: newMaxMembers,
+        target_grade: '전학년',
+        meeting_type: newMeetingType,
+        leader: newLeader.trim() || '익명 학우',
+        leader_contact: newLeaderContact.trim(),
+        description: newDescription.trim()
+      });
 
-    setStudies([created, ...studies]);
-    setIsCreateModalOpen(false);
-    setNewStudyTitle('');
-    setNewSubject('');
-    setNewLeader('');
-    alert('새 스터디 그룹이 성공적으로 개설되었습니다!');
+      await loadStudies();
+      setIsCreateModalOpen(false);
+      setNewStudyTitle('');
+      setNewSubject('');
+      setNewLeader('');
+      setNewLeaderContact('');
+      setNewDescription('');
+      alert('새 스터디 그룹이 성공적으로 등록되었습니다!');
+    } catch (err) {
+      console.error(err);
+      alert('스터디 등록 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Filter studies by status
+  const filteredStudies = studies.filter((s) => {
+    if (selectedStatus === '전체') return true;
+    if (selectedStatus === '마감·종료') return s.status === '마감' || s.status === '종료';
+    return s.status === selectedStatus;
+  });
+
+  const statusOptions = ['전체', '모집중', '진행중', '마감·종료'];
 
   return (
     <div className="space-y-12">
@@ -117,78 +148,122 @@ export const CommunityPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Admin Notice Pill (if logged in) */}
+      {isAdmin && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-xs text-amber-900">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-amber-600" />
+            <span className="font-semibold">관리자 접속 중:</span>
+            <span>스터디 상태 변경(모집중/진행중/마감) 및 삭제(해체)는 관리자 센터에서 바로 가능합니다.</span>
+          </div>
+          <Link
+            to="/admin"
+            className="font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+          >
+            관리자 센터
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
       {/* Study Groups Section */}
       <section className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">모집 중인 스터디 그룹</h2>
+            <h2 className="text-xl font-bold text-slate-900">스터디 그룹 목록</h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              광주전남 컴퓨터과학과 학우들이 활발히 활동 중인 스터디 목록입니다.
+              학기별로 개설되고 활동하는 스터디 소그룹입니다.
             </p>
           </div>
-          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
-            총 {studies.length}개 그룹
-          </span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {studies.map((study) => (
-            <div
-              key={study.id}
-              className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                      study.status === '모집중'
-                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                        : study.status === '진행중'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                        : 'bg-slate-100 text-slate-600 border border-slate-200'
-                    }`}
-                  >
-                    {study.status}
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">
-                    인원: {study.members_count} / {study.max_members}명
-                  </span>
-                </div>
-
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-                  {study.title}
-                </h3>
-
-                <p className="text-xs text-blue-600 font-medium mb-3">
-                  주제: {study.subject}
-                </p>
-
-                <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Laptop className="w-3.5 h-3.5 text-slate-400" />
-                    <span>진행 방식: {study.meeting_type}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                    <span>대상 학년: {study.target_grade}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                    <span>개설자: {study.leader}</span>
-                  </div>
-                </div>
-              </div>
-
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
+            <Filter className="w-3.5 h-3.5 text-slate-400 ml-1 hidden sm:inline" />
+            {statusOptions.map((opt) => (
               <button
-                onClick={() => handleApplyClick(study.title)}
-                className="w-full py-2.5 px-4 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                key={opt}
+                onClick={() => setSelectedStatus(opt)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  selectedStatus === opt
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
               >
-                <MessageCircle className="w-4 h-4" />
-                스터디 참여 문의
+                {opt}
               </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {filteredStudies.length === 0 ? (
+          <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-400 text-sm">
+            해당 조건의 스터디 그룹이 없습니다.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredStudies.map((study) => (
+              <div
+                key={study.id}
+                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                        study.status === '모집중'
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          : study.status === '진행중'
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}
+                    >
+                      {study.status}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      인원: {study.members_count} / {study.max_members}명
+                    </span>
+                  </div>
+
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                    {study.title}
+                  </h3>
+
+                  <p className="text-xs text-blue-600 font-medium mb-3">
+                    주제: {study.subject}
+                  </p>
+
+                  <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Laptop className="w-3.5 h-3.5 text-slate-400" />
+                      <span>진행 방식: {study.meeting_type}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>대상 학년: {study.target_grade}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                      <span>개설자: {study.leader}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleApplyClick(study)}
+                  disabled={study.status === '종료' || study.status === '마감'}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                    study.status === '종료' || study.status === '마감'
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700'
+                  }`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {study.status === '종료' || study.status === '마감' ? '모집 마감된 스터디' : '스터디 참여 문의'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* FAQ Section */}
@@ -236,7 +311,7 @@ export const CommunityPage: React.FC = () => {
       </section>
 
       {/* Apply Info Modal */}
-      {isApplyModalOpen && (
+      {isApplyModalOpen && selectedStudy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
@@ -249,18 +324,26 @@ export const CommunityPage: React.FC = () => {
               </button>
             </div>
             <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-              선택하신 <span className="font-bold text-blue-600">[{selectedStudyTitle}]</span> 스터디에 참여를 희망하시나요?
+              선택하신 <span className="font-bold text-blue-600">[{selectedStudy.title}]</span> 스터디에 참여를 희망하시나요?
             </p>
-            <div className="bg-blue-50 p-3.5 rounded-2xl text-xs text-blue-900 space-y-2 mb-4 border border-blue-100">
-              <p className="font-semibold">참여 방법 안내:</p>
-              <p>1. 광주전남 컴퓨터과학과 학생회 오픈카톡방 또는 학술부장 이메일(academic@knou-cs-gj.org)로 학번/성함과 함께 스터디 참여 의사를 남겨주세요.</p>
-              <p>2. 스터디 리더에게 전달 후 스터디 단톡방 및 Zoom 링크를 전달해 드립니다.</p>
+
+            <div className="bg-blue-50 p-4 rounded-2xl text-xs text-blue-900 space-y-2 mb-4 border border-blue-100">
+              <p className="font-semibold text-blue-950">참여 방법 안내:</p>
+              {selectedStudy.leader_contact ? (
+                <div>
+                  <span className="font-medium text-slate-700">개설자 직접 연락처:</span>
+                  <p className="font-bold text-blue-700 mt-0.5 break-all">{selectedStudy.leader_contact}</p>
+                </div>
+              ) : null}
+              <p>1. 광주전남 컴퓨터과학과 학생회 오픈카톡방 또는 학술부장(academic@knou-cs-gj.org)에게 학번과 성함을 알려주세요.</p>
+              <p>2. 스터디 리더({selectedStudy.leader})에게 전달 후 스터디 모임 단톡방 및 온라인 회의 링크를 전달해 드립니다.</p>
             </div>
+
             <button
               onClick={() => setIsApplyModalOpen(false)}
               className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors"
             >
-              확인
+              확인 완료
             </button>
           </div>
         </div>
@@ -330,13 +413,37 @@ export const CommunityPage: React.FC = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">개설자 성명 (학년)</label>
+                  <input
+                    type="text"
+                    required
+                    value={newLeader}
+                    onChange={(e) => setNewLeader(e.target.value)}
+                    placeholder="예: 홍길동 (3학년)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">연락처 / 카톡 링크</label>
+                  <input
+                    type="text"
+                    value={newLeaderContact}
+                    onChange={(e) => setNewLeaderContact(e.target.value)}
+                    placeholder="오픈카톡 링크 등"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">개설자 성명 (학년)</label>
-                <input
-                  type="text"
-                  value={newLeader}
-                  onChange={(e) => setNewLeader(e.target.value)}
-                  placeholder="예: 홍길동 (3학년)"
+                <label className="block font-semibold text-slate-700 mb-1">소개 / 목표 (선택)</label>
+                <textarea
+                  rows={2}
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="스터디 진행 계획 및 목표..."
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -351,9 +458,10 @@ export const CommunityPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  개설 등록
+                  {isSubmitting ? '등록 중...' : '개설 등록'}
                 </button>
               </div>
             </form>

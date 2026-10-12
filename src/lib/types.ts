@@ -40,15 +40,19 @@ export interface CouncilMember {
   email?: string;
 }
 
+export type StudyStatus = '모집중' | '진행중' | '마감' | '종료';
+
 export interface StudyGroup {
   id: string;
   title: string;
   subject: string;
-  status: '모집중' | '진행중' | '마감';
+  status: StudyStatus;
   members_count: number;
   max_members: number;
   target_grade: string;
   meeting_type: '온라인 (Zoom/Discord)' | '오프라인 (광주지역대학)' | '온/오프라인 병행';
   leader: string;
+  leader_contact?: string;
+  description?: string;
   created_at: string;
 }

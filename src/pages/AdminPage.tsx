@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
-import type { Notice, AcademicEvent, CouncilMember } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -23,7 +23,8 @@ import {
   X,
   Pin,
   Save,
-  RotateCcw
+  RotateCcw,
+  BookOpen
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -31,12 +32,13 @@ export const AdminPage: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Active Tab: 'notices' | 'events' | 'council' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'council' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'backup'>('notices');
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<AcademicEvent[]>([]);
+  const [studies, setStudies] = useState<StudyGroup[]>([]);
   const [councilIntro, setCouncilIntro] = useState({
     title: '',
     president_greeting: '',
@@ -69,6 +71,22 @@ export const AdminPage: React.FC = () => {
     is_important: false
   });
 
+  // Study Modals
+  const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
+  const [editingStudyId, setEditingStudyId] = useState<string | null>(null);
+  const [studyForm, setStudyForm] = useState({
+    title: '',
+    subject: '',
+    status: '모집중' as StudyStatus,
+    members_count: 1,
+    max_members: 8,
+    target_grade: '전학년',
+    meeting_type: '온/오프라인 병행' as '온라인 (Zoom/Discord)' | '오프라인 (광주지역대학)' | '온/오프라인 병행',
+    leader: '',
+    leader_contact: '',
+    description: ''
+  });
+
   // Council Member Modals
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -92,14 +110,16 @@ export const AdminPage: React.FC = () => {
   }, [isAdmin]);
 
   const loadAllData = async () => {
-    const [nData, eData, iData, mData] = await Promise.all([
+    const [nData, eData, sData, iData, mData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
+      api.getStudies(),
       api.getCouncilIntro(),
       api.getCouncilMembers()
     ]);
     setNotices(nData);
     setEvents(eData);
+    setStudies(sData);
     setCouncilIntro(iData);
     setCouncilMembers(mData);
   };
@@ -228,6 +248,72 @@ export const AdminPage: React.FC = () => {
   };
 
   // ==========================================
+  // Study Group CRUD & Status Management
+  // ==========================================
+  const openNewStudyModal = () => {
+    setEditingStudyId(null);
+    setStudyForm({
+      title: '',
+      subject: '',
+      status: '모집중',
+      members_count: 1,
+      max_members: 8,
+      target_grade: '전학년',
+      meeting_type: '온/오프라인 병행',
+      leader: '',
+      leader_contact: '',
+      description: ''
+    });
+    setIsStudyModalOpen(true);
+  };
+
+  const openEditStudyModal = (study: StudyGroup) => {
+    setEditingStudyId(study.id);
+    setStudyForm({
+      title: study.title,
+      subject: study.subject,
+      status: study.status,
+      members_count: study.members_count,
+      max_members: study.max_members,
+      target_grade: study.target_grade,
+      meeting_type: study.meeting_type,
+      leader: study.leader,
+      leader_contact: study.leader_contact || '',
+      description: study.description || ''
+    });
+    setIsStudyModalOpen(true);
+  };
+
+  const handleSaveStudy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studyForm.title.trim() || !studyForm.subject.trim()) {
+      alert('스터디 제목과 주제를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (editingStudyId) {
+      await api.updateStudy(editingStudyId, studyForm);
+    } else {
+      await api.createStudy(studyForm);
+    }
+
+    setIsStudyModalOpen(false);
+    loadAllData();
+  };
+
+  const handleQuickStatusChange = async (studyId: string, newStatus: StudyStatus) => {
+    await api.updateStudy(studyId, { status: newStatus });
+    loadAllData();
+  };
+
+  const handleDeleteStudy = async (id: string, title: string) => {
+    if (confirm(`"${title}" 스터디 그룹을 정말 삭제(해체)하시겠습니까?\n홈페이지에서 즉시 내려갑니다.`)) {
+      await api.deleteStudy(id);
+      loadAllData();
+    }
+  };
+
+  // ==========================================
   // Council CRUD
   // ==========================================
   const handleSaveCouncilIntro = async (e: React.FormEvent) => {
@@ -347,7 +433,7 @@ export const AdminPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">학생회 관리자 모드</h1>
           <p className="text-xs text-slate-500 mt-1">
-            공지사항, 학사일정, 임원 정보 관리를 위해 비밀번호를 입력해주세요.
+            공지사항, 학사일정, 스터디, 임원 정보 관리를 위해 비밀번호를 입력해주세요.
           </p>
         </div>
 
@@ -416,7 +502,7 @@ export const AdminPage: React.FC = () => {
             학생회 웹사이트 관리자 센터
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-            코딩이나 배포 과정 없이, 마우스 클릭과 입력만으로 공지사항, 학사일정, 임원진 정보를 실시간으로 수정합니다.
+            코딩이나 배포 과정 없이, 마우스 클릭과 입력만으로 공지사항, 학사일정, 스터디 그룹, 임원진 정보를 실시간으로 관리합니다.
           </p>
         </div>
 
@@ -461,6 +547,17 @@ export const AdminPage: React.FC = () => {
         >
           <Calendar className="w-4 h-4 text-indigo-600" />
           학사일정 관리 ({events.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('studies')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'studies'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-teal-600" />
+          스터디 그룹 관리 ({studies.length})
         </button>
         <button
           onClick={() => setActiveTab('council')}
@@ -613,7 +710,95 @@ export const AdminPage: React.FC = () => {
       )}
 
       {/* ========================================== */}
-      {/* TAB 3: Council Intro & Members             */}
+      {/* TAB 3: Study Groups Management (NEW)       */}
+      {/* ========================================== */}
+      {activeTab === 'studies' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">스터디 그룹 관리</h2>
+              <p className="text-xs text-slate-500">
+                스터디 상태(모집중/진행중/마감/종료)를 변경하거나, 없어진 스터디를 삭제 및 신규 개설합니다.
+              </p>
+            </div>
+            <button
+              onClick={openNewStudyModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs shadow-sm transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+              새 스터디 등록
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {studies.map((s) => (
+              <div key={s.id} className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Status Pill */}
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                        s.status === '모집중'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : s.status === '진행중'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                          : 'bg-slate-100 text-slate-600 border border-slate-300'
+                      }`}
+                    >
+                      {s.status}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      인원: {s.members_count} / {s.max_members}명
+                    </span>
+                    <span className="text-xs text-slate-400">대상: {s.target_grade}</span>
+                    <span className="text-xs text-slate-400">진행: {s.meeting_type}</span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900">{s.title}</h3>
+                  <p className="text-xs text-teal-700 font-medium">주제: {s.subject}</p>
+                  <p className="text-xs text-slate-500">
+                    개설자: <span className="font-semibold text-slate-700">{s.leader}</span>
+                    {s.leader_contact && ` (${s.leader_contact})`}
+                  </p>
+                </div>
+
+                {/* Quick Status Toggles & Actions */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {/* Quick Status Dropdown */}
+                  <select
+                    value={s.status}
+                    onChange={(e) => handleQuickStatusChange(s.id, e.target.value as StudyStatus)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium bg-slate-50 hover:bg-white transition-colors"
+                  >
+                    <option value="모집중">상태: 모집중</option>
+                    <option value="진행중">상태: 진행중</option>
+                    <option value="마감">상태: 마감</option>
+                    <option value="종료">상태: 종료</option>
+                  </select>
+
+                  <button
+                    onClick={() => openEditStudyModal(s)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 text-xs font-semibold transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    수정
+                  </button>
+                  <button
+                    onClick={() => handleDeleteStudy(s.id, s.title)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    삭제(해체)
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* TAB 4: Council Intro & Members             */}
       {/* ========================================== */}
       {activeTab === 'council' && (
         <div className="space-y-8">
@@ -714,7 +899,7 @@ export const AdminPage: React.FC = () => {
       )}
 
       {/* ========================================== */}
-      {/* TAB 4: Backup & Password Settings          */}
+      {/* TAB 5: Backup & Password Settings          */}
       {/* ========================================== */}
       {activeTab === 'backup' && (
         <div className="space-y-6">
@@ -722,7 +907,7 @@ export const AdminPage: React.FC = () => {
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <h2 className="text-lg font-bold text-slate-900">데이터 백업 및 인수인계</h2>
             <p className="text-xs text-slate-500 leading-relaxed">
-              임기 만료 시 다음 학생회에 데이터를 안전하게 전달하거나, 데이터 유실을 방지하기 위해 전체 공지사항, 학사일정, 임원 목록을 하나의 파일로 저장하고 복원할 수 있습니다.
+              임기 만료 시 다음 학생회에 데이터를 안전하게 전달하거나, 데이터 유실을 방지하기 위해 전체 공지사항, 학사일정, 스터디, 임원 목록을 하나의 파일로 저장하고 복원할 수 있습니다.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -732,7 +917,7 @@ export const AdminPage: React.FC = () => {
                   전체 데이터 백업 다운로드
                 </div>
                 <p className="text-xs text-blue-700">
-                  현재 등록된 모든 공지사항, 일정, 인사말, 임원 정보를 안전한 JSON 파일로 즉시 다운로드합니다.
+                  현재 등록된 모든 공지사항, 일정, 스터디, 인사말, 임원 정보를 안전한 JSON 파일로 즉시 다운로드합니다.
                 </p>
                 <button
                   onClick={handleExportBackup}
@@ -1023,6 +1208,154 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+                >
+                  저장하기
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* Study Modal (Write / Edit) (NEW)           */}
+      {/* ========================================== */}
+      {isStudyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="font-bold text-base text-slate-900">
+                {editingStudyId ? '스터디 그룹 수정' : '새 스터디 그룹 등록'}
+              </h3>
+              <button
+                onClick={() => setIsStudyModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStudy} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">스터디 명칭</label>
+                <input
+                  type="text"
+                  required
+                  value={studyForm.title}
+                  onChange={(e) => setStudyForm({ ...studyForm, title: e.target.value })}
+                  placeholder="예: 2학기 자료구조 & 알고리즘 집중반"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">학습 주제 / 목표 교과목</label>
+                <input
+                  type="text"
+                  required
+                  value={studyForm.subject}
+                  onChange={(e) => setStudyForm({ ...studyForm, subject: e.target.value })}
+                  placeholder="예: 자료구조 교재 정독 및 백준 실습"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">모집/진행 상태</label>
+                  <select
+                    value={studyForm.status}
+                    onChange={(e) => setStudyForm({ ...studyForm, status: e.target.value as StudyStatus })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50"
+                  >
+                    <option value="모집중">모집중</option>
+                    <option value="진행중">진행중</option>
+                    <option value="마감">마감</option>
+                    <option value="종료">종료</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">진행 방식</label>
+                  <select
+                    value={studyForm.meeting_type}
+                    onChange={(e) => setStudyForm({ ...studyForm, meeting_type: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50"
+                  >
+                    <option value="온/오프라인 병행">온/오프라인 병행</option>
+                    <option value="온라인 (Zoom/Discord)">온라인 (Zoom/Discord)</option>
+                    <option value="오프라인 (광주지역대학)">오프라인 (광주지역대학)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">현재 인원</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={studyForm.members_count}
+                    onChange={(e) => setStudyForm({ ...studyForm, members_count: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">모집 정원</label>
+                  <input
+                    type="number"
+                    min={2}
+                    value={studyForm.max_members}
+                    onChange={(e) => setStudyForm({ ...studyForm, max_members: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">대상 학년</label>
+                  <input
+                    type="text"
+                    value={studyForm.target_grade}
+                    onChange={(e) => setStudyForm({ ...studyForm, target_grade: e.target.value })}
+                    placeholder="예: 2~3학년"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">개설자 성명(소속)</label>
+                  <input
+                    type="text"
+                    required
+                    value={studyForm.leader}
+                    onChange={(e) => setStudyForm({ ...studyForm, leader: e.target.value })}
+                    placeholder="예: 홍길동 (3학년)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">연락처 / 단톡 링크</label>
+                  <input
+                    type="text"
+                    value={studyForm.leader_contact}
+                    onChange={(e) => setStudyForm({ ...studyForm, leader_contact: e.target.value })}
+                    placeholder="오픈카톡 링크 또는 이메일"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsStudyModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700"
                 >
                   저장하기
                 </button>
