@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { councilIntro, regionalInfo } from '../data/mockCouncil';
+import { regionalInfo, councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
 import type { CouncilMember } from '../lib/types';
 import {
@@ -18,14 +18,19 @@ import {
 
 export const AboutPage: React.FC = () => {
   const [members, setMembers] = useState<CouncilMember[]>([]);
+  const [councilIntro, setCouncilIntro] = useState(defaultCouncilIntro);
   const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'campus' | 'directions'>('greeting');
 
   useEffect(() => {
-    async function loadMembers() {
-      const data = await api.getCouncilMembers();
-      setMembers(data);
+    async function loadData() {
+      const [membersData, introData] = await Promise.all([
+        api.getCouncilMembers(),
+        api.getCouncilIntro()
+      ]);
+      setMembers(membersData);
+      setCouncilIntro(introData);
     }
-    loadMembers();
+    loadData();
   }, []);
 
   return (

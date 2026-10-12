@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ExternalLink, Calendar, Bell, Users, BookOpen, GraduationCap, ChevronRight } from 'lucide-react';
+import { Menu, X, ExternalLink, Calendar, Bell, Users, BookOpen, GraduationCap, ChevronRight, Shield } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { auth } from '../../services/auth';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const isAdmin = auth.isAdmin();
 
   const navLinks = [
     { name: '홈', path: '/', icon: GraduationCap },
@@ -33,19 +35,33 @@ export const Navbar: React.FC = () => {
             <span className="hidden sm:inline text-slate-500">|</span>
             <span className="hidden sm:inline text-slate-400">제43대 학생회 공식 홈페이지</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
               isSupabaseConfigured ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}>
               {isSupabaseConfigured ? 'Supabase 연동됨' : '로컬 모드 (Cloudflare 지원)'}
             </span>
+
+            {/* Admin shortcut in top bar */}
+            <Link
+              to="/admin"
+              className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full transition-colors ${
+                isAdmin
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-600 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Shield className="w-3 h-3 text-amber-400" />
+              <span>{isAdmin ? '👑 관리자 접속 중' : '관리자'}</span>
+            </Link>
+
             <a
               href="https://www.knou.ac.kr"
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px] hidden md:flex"
             >
-              방송대 본교 바로가기
+              본교 바로가기
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
@@ -92,8 +108,20 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Action: School Portal Shortcut */}
+          {/* Right Action: School Portal & Admin Shortcut */}
           <div className="hidden lg:flex items-center gap-2">
+            <Link
+              to="/admin"
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all border ${
+                isAdmin
+                  ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <Shield className={`w-3.5 h-3.5 ${isAdmin ? 'text-amber-600' : 'text-slate-400'}`} />
+              {isAdmin ? '관리자 센터' : '관리자'}
+            </Link>
+
             <a
               href="https://ucampus.knou.ac.kr"
               target="_blank"
@@ -144,6 +172,19 @@ export const Navbar: React.FC = () => {
                 </Link>
               );
             })}
+
+            {/* Admin link in mobile menu */}
+            <Link
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-3 py-2.5 rounded-lg text-base font-medium text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-amber-600" />
+                <span>학생회 관리자 센터</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-400" />
+            </Link>
 
             <div className="pt-4 border-t border-slate-100 mt-2">
               <a

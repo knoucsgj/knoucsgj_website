@@ -5,6 +5,7 @@ import { AboutPage } from './pages/AboutPage';
 import { NoticesPage } from './pages/NoticesPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { CommunityPage } from './pages/CommunityPage';
+import { AdminPage } from './pages/AdminPage';
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
