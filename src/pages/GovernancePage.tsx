@@ -40,19 +40,17 @@ export const GovernancePage: React.FC = () => {
 
   return (
     <div className="space-y-10">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 rounded-3xl p-8 sm:p-10 text-white shadow-xl">
-        <div className="max-w-3xl">
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/20 inline-block mb-3">
-            자치와 투명성
-          </span>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            투명 재정 & 학생 자치 자료실
-          </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            광주전남 컴퓨터과학과 학생회는 학우들의 소중한 학생회비 집행 내역과 회의록, 회칙을 100% 투명하게 공개하여 공정하고 신뢰받는 학생 자치를 실현합니다.
-          </p>
+      {/* Clean Editorial Page Header */}
+      <div className="border-b border-slate-200 pb-8">
+        <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+          <span>Student Government & Transparency</span>
         </div>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-3">
+          투명 재정 & 학생 자치 자료실
+        </h1>
+        <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
+          광주전남 컴퓨터과학과 학생회는 학우들의 소중한 학생회비 집행 내역과 회의록, 학생회칙을 100% 투명하게 공개하여 공정하고 신뢰받는 학생 자치를 실현합니다.
+        </p>
       </div>
 
       {/* Tabs Navigation */}

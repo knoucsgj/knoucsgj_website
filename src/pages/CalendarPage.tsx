@@ -95,42 +95,42 @@ export const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* Clean Editorial Page Header */}
+      <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/20 inline-block mb-3">
-            2026학년도 2학기 & 2027학년도 1학기
-          </span>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+            <span>Academic Schedule & D-Day</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-2">
             학사일정 캘린더
           </h1>
-          <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
+          <p className="text-slate-600 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
             광주전남지역대학 컴퓨터과학과의 출석수업, 온라인평가, 과제물 마감일 등 중요 일정을 한눈에 확인하세요.
           </p>
         </div>
 
         {/* View Switcher */}
-        <div className="flex items-center gap-1 bg-white/10 p-1.5 rounded-2xl border border-white/20 self-start md:self-center">
+        <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'calendar'
-                ? 'bg-white text-blue-900 shadow-sm'
-                : 'text-white/80 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className="w-3.5 h-3.5" />
             월별 달력
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'list'
-                ? 'bg-white text-blue-900 shadow-sm'
-                : 'text-white/80 hover:text-white'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <List className="w-4 h-4" />
+            <List className="w-3.5 h-3.5" />
             목록 뷰
           </button>
         </div>

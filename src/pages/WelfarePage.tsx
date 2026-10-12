@@ -72,19 +72,17 @@ export const WelfarePage: React.FC = () => {
 
   return (
     <div className="space-y-10">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 rounded-3xl p-8 sm:p-10 text-white shadow-xl">
-        <div className="max-w-3xl">
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/20 inline-block mb-3">
-            학우 중심 복지 사업
-          </span>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            학생 복지 & 소통 센터
-          </h1>
-          <p className="text-emerald-100/90 text-sm sm:text-base leading-relaxed">
-            광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 실습 교재 및 비품 대여, IT 제휴 혜택, 열린 소통 창구를 운영합니다.
-          </p>
+      {/* Clean Editorial Page Header */}
+      <div className="border-b border-slate-200 pb-8">
+        <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 tracking-wider uppercase mb-2">
+          <span>Student Welfare & Communication</span>
         </div>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-3">
+          학생 복지 & 소통 센터
+        </h1>
+        <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
+          광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 실습 교재 및 비품 대여, IT 제휴 혜택, 열린 소통 창구를 운영합니다.
+        </p>
       </div>
 
       {/* Navigation Tabs */}

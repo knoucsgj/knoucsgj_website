@@ -6,7 +6,7 @@ import { RecentNoticesSection } from '../components/home/RecentNoticesSection';
 import { UpcomingEventsSection } from '../components/home/UpcomingEventsSection';
 import { api } from '../services/api';
 import type { Notice, AcademicEvent } from '../lib/types';
-import { Users, Sparkles, MapPin } from 'lucide-react';
+import { Users, MapPin } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -50,36 +50,35 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Student Council Warm Encouragement Banner */}
-      <section className="rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-8 sm:p-10 shadow-lg relative overflow-hidden">
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5" />
+      {/* Student Council Academic Support Banner */}
+      <section className="rounded-3xl bg-white border border-slate-200/90 p-8 sm:p-10 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-3 border border-blue-100">
             <span>제43대 컴퓨터과학과 학생회 소통 창구</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold mb-3 leading-snug">
-            수업이나 과제, 혼자 고민하지 마세요!
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+            수업이나 과제, 혼자 고민하지 마세요
           </h2>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+          <p className="text-slate-600 text-sm leading-relaxed">
             방송대 컴퓨터과학과는 다양한 세대와 분야의 학우들이 서로 가르쳐주고 배우는 따뜻한 커뮤니티입니다. 
-            스터디 그룹 참여를 희망하시거나 학교 생활에 궁금한 점이 있다면 언제든 학생회에 연락해 주세요.
+            스터디 그룹 참여를 희망하시거나 학교 생활에 궁금한 점이 있다면 언제든 학생회와 함께하세요.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/community"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-blue-900 font-bold text-xs sm:text-sm hover:bg-blue-50 transition-colors shadow-sm"
-            >
-              <Users className="w-4 h-4 text-blue-600" />
-              스터디 그룹 둘러보기
-            </Link>
-            <Link
-              to="/about"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs sm:text-sm transition-colors border border-white/20"
-            >
-              <MapPin className="w-4 h-4 text-sky-300" />
-              지역대학 찾아오는 길
-            </Link>
-          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <Link
+            to="/community"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 transition-colors shadow-xs"
+          >
+            <Users className="w-4 h-4" />
+            스터디 그룹 둘러보기
+          </Link>
+          <Link
+            to="/about"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition-colors border border-slate-200"
+          >
+            <MapPin className="w-4 h-4 text-slate-500" />
+            지역대학 시설 안내
+          </Link>
         </div>
       </section>
     </div>

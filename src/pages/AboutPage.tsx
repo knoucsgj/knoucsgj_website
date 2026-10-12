@@ -36,19 +36,17 @@ export const AboutPage: React.FC = () => {
 
   return (
     <div className="space-y-10">
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-lg">
-        <div className="max-w-3xl">
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/20 inline-block mb-3">
-            제43대 컴퓨터과학과 학생회
-          </span>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            학과 및 학생회 소개
-          </h1>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회는 학우 여러분의 보람찬 대학 생활과 성공적인 학위 취득을 위한 가장 가까운 길잡이가 되겠습니다.
-          </p>
+      {/* Clean Editorial Page Header */}
+      <div className="border-b border-slate-200 pb-8">
+        <div className="flex items-center gap-2 text-xs font-bold text-blue-700 tracking-wider uppercase mb-2">
+          <span>Department & Student Council</span>
         </div>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight mb-3">
+          학과 및 학생회 소개
+        </h1>
+        <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
+          한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회는 학우 여러분의 보람찬 대학 생활과 성공적인 학위 취득을 위한 가장 가까운 길잡이가 되겠습니다.
+        </p>
       </div>
 
       {/* Tab Navigation */}
