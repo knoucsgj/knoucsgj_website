@@ -1,0 +1,26 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Layout } from './components/layout/Layout';
+import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
+import { NoticesPage } from './pages/NoticesPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { CommunityPage } from './pages/CommunityPage';
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/notices" element={<NoticesPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  );
+}
+
+export default App;
