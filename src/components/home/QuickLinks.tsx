@@ -1,21 +1,30 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, BookCheck, Users, MapPin, CalendarDays, MessageCircle } from 'lucide-react';
+import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, Package, FileText } from 'lucide-react';
 
 export const QuickLinks: React.FC = () => {
   const cards = [
     {
-      title: 'U-KNOU 원격수강',
-      desc: '강의 수강 및 학습 진도율 체크',
-      icon: BookCheck,
-      href: 'https://ucampus.knou.ac.kr',
-      isExternal: true,
-      color: 'from-blue-600 to-indigo-600',
-      badge: '포털'
+      title: '투명 재정 보고',
+      desc: '분기별 학생회비 결산 및 영수증 장부',
+      icon: DollarSign,
+      to: '/governance',
+      isExternal: false,
+      color: 'from-emerald-600 to-teal-700',
+      badge: '100% 공개'
     },
     {
-      title: '2학기 학사일정',
-      desc: '출석수업, 기말시험, 과제 마감일',
+      title: '비품·교재 대여',
+      desc: '실습 교재, 계산기, 우산, 충전기',
+      icon: Package,
+      to: '/welfare',
+      isExternal: false,
+      color: 'from-blue-600 to-indigo-600',
+      badge: '학생복지'
+    },
+    {
+      title: '학사일정 D-Day',
+      desc: '출석수업, 과제 마감, 기말시험 일정',
       icon: CalendarDays,
       to: '/calendar',
       isExternal: false,
@@ -23,40 +32,31 @@ export const QuickLinks: React.FC = () => {
       badge: 'D-Day'
     },
     {
-      title: '스터디 & 멘토링',
+      title: 'U-KNOU 수강',
+      desc: '방송대 이러닝 강의 및 진도율 체크',
+      icon: BookCheck,
+      href: 'https://ucampus.knou.ac.kr',
+      isExternal: true,
+      color: 'from-slate-700 to-slate-900',
+      badge: '원격강의'
+    },
+    {
+      title: '학술 & 스터디',
       desc: '동료 학우들과 함께 공부하는 소그룹',
       icon: Users,
       to: '/community',
       isExternal: false,
-      color: 'from-emerald-500 to-teal-600',
-      badge: '모집중'
+      color: 'from-indigo-500 to-purple-600',
+      badge: '자율소그룹'
     },
     {
-      title: '지역대학 전산실습실',
-      desc: '본관 302호 실습실 & 스터디룸',
-      icon: MapPin,
-      to: '/about',
+      title: '총회·임원 회의록',
+      desc: '개강총회, 종강총회, 임원회의 의결서',
+      icon: FileText,
+      to: '/governance',
       isExternal: false,
-      color: 'from-purple-500 to-indigo-600',
-      badge: '광주'
-    },
-    {
-      title: '학과 본부 홈페이지',
-      desc: '컴퓨터과학과 교수진 및 공식 커리큘럼',
-      icon: ExternalLink,
-      href: 'https://cs.knou.ac.kr',
-      isExternal: true,
-      color: 'from-slate-600 to-slate-800',
-      badge: '본교'
-    },
-    {
-      title: '학생회 소통 채널',
-      desc: '오픈채팅방 및 학우 질문 창구',
-      icon: MessageCircle,
-      to: '/about',
-      isExternal: false,
-      color: 'from-amber-500 to-orange-600',
-      badge: '소통'
+      color: 'from-amber-600 to-orange-600',
+      badge: '학생자치'
     }
   ];
 

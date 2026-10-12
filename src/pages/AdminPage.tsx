@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
-import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute, RentalItem } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -24,7 +24,9 @@ import {
   Pin,
   Save,
   RotateCcw,
-  BookOpen
+  BookOpen,
+  FileText,
+  Package
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -32,8 +34,8 @@ export const AdminPage: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'rentals' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'rentals' | 'backup'>('notices');
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -98,6 +100,20 @@ export const AdminPage: React.FC = () => {
     email: ''
   });
 
+  // Governance & Rental States
+  const [minutes, setMeetingMinutes] = useState<MeetingMinute[]>([]);
+  const [rentals, setRentals] = useState<RentalItem[]>([]);
+  const [isMinuteModalOpen, setIsMinuteModalOpen] = useState(false);
+  const [minuteForm, setMinuteForm] = useState({
+    title: '',
+    meeting_type: '정기임원회의' as '정기임원회의' | '개강총회' | '종강총회' | '임시회의',
+    meeting_date: new Date().toISOString().split('T')[0],
+    attendees: '학생회장, 부회장, 총무부장, 기획부장, 학술부장',
+    agenda: '',
+    content: '',
+    decisions: ''
+  });
+
   // Password change state
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -110,18 +126,22 @@ export const AdminPage: React.FC = () => {
   }, [isAdmin]);
 
   const loadAllData = async () => {
-    const [nData, eData, sData, iData, mData] = await Promise.all([
+    const [nData, eData, sData, iData, mData, minData, rData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
       api.getStudies(),
       api.getCouncilIntro(),
-      api.getCouncilMembers()
+      api.getCouncilMembers(),
+      api.getMeetingMinutes(),
+      api.getRentalItems()
     ]);
     setNotices(nData);
     setEvents(eData);
     setStudies(sData);
     setCouncilIntro(iData);
     setCouncilMembers(mData);
+    setMeetingMinutes(minData);
+    setRentals(rData);
   };
 
   // Login handler
@@ -421,6 +441,50 @@ export const AdminPage: React.FC = () => {
   };
 
   // ==========================================
+  // Governance Minutes & Rental Handlers
+  // ==========================================
+  const openNewMinuteModal = () => {
+    setMinuteForm({
+      title: '',
+      meeting_type: '정기임원회의',
+      meeting_date: new Date().toISOString().split('T')[0],
+      attendees: '학생회장, 부회장, 총무부장, 기획부장, 학술부장',
+      agenda: '',
+      content: '',
+      decisions: ''
+    });
+    setIsMinuteModalOpen(true);
+  };
+
+  const handleSaveMinute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!minuteForm.title.trim() || !minuteForm.decisions.trim()) {
+      alert('회의 제목과 의결 사항을 입력해 주세요.');
+      return;
+    }
+    await api.createMeetingMinute(minuteForm);
+    setIsMinuteModalOpen(false);
+    loadAllData();
+  };
+
+  const handleDeleteMinute = async (id: string, title: string) => {
+    if (confirm(`"${title}" 회의록을 삭제하시겠습니까?`)) {
+      await api.deleteMeetingMinute(id);
+      loadAllData();
+    }
+  };
+
+  const handleUpdateRentalQty = async (item: RentalItem, delta: number) => {
+    const newAvail = Math.max(0, Math.min(item.total_qty, item.available_qty + delta));
+    const newStatus = newAvail > 0 ? '대여가능' : '대여중';
+    await api.updateRentalItem(item.id, {
+      available_qty: newAvail,
+      status: newStatus
+    });
+    loadAllData();
+  };
+
+  // ==========================================
   // Login Gate
   // ==========================================
   if (!isAdmin) {
@@ -571,6 +635,28 @@ export const AdminPage: React.FC = () => {
           인사말 & 임원진 관리
         </button>
         <button
+          onClick={() => setActiveTab('minutes')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'minutes'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <FileText className="w-4 h-4 text-purple-600" />
+          자치 회의록 관리 ({minutes.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('rentals')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'rentals'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Package className="w-4 h-4 text-emerald-600" />
+          비품·교재 대여 관리 ({rentals.length})
+        </button>
+        <button
           onClick={() => setActiveTab('backup')}
           className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'backup'
@@ -579,7 +665,7 @@ export const AdminPage: React.FC = () => {
           }`}
         >
           <Key className="w-4 h-4 text-amber-500" />
-          데이터 백업 & 비밀번호 설정
+          데이터 백업 & 설정
         </button>
       </div>
 
@@ -1001,6 +1087,138 @@ export const AdminPage: React.FC = () => {
                 비밀번호 변경하기
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* TAB 5: Minutes Management (회의록 관리)     */}
+      {/* ========================================== */}
+      {activeTab === 'minutes' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">학생 자치 회의록 관리</h2>
+              <p className="text-xs text-slate-500">
+                정기임원회의, 개강총회, 종강총회 의결 내용을 기록하고 학우들에게 투명하게 공개합니다.
+              </p>
+            </div>
+            <button
+              onClick={openNewMinuteModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-sm transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+              새 회의록 작성
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {minutes.map((m) => (
+              <div
+                key={m.id}
+                className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-purple-300 transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+              >
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                      {m.meeting_type}
+                    </span>
+                    <span className="text-xs text-slate-500">{m.meeting_date}</span>
+                    <span className="text-xs text-slate-400">• 참석: {m.attendees}</span>
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-base">{m.title}</h3>
+                  <div className="bg-white p-3 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-1">
+                    <p><span className="font-semibold text-slate-700">안건:</span> {m.agenda}</p>
+                    <p><span className="font-semibold text-purple-700">의결 결과:</span> {m.decisions}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-start">
+                  <button
+                    onClick={() => handleDeleteMinute(m.id, m.title)}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="회의록 삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* TAB 6: Rental Management (비품 대여 관리)   */}
+      {/* ========================================== */}
+      {activeTab === 'rentals' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">학생 복지 비품 & 실습 교재 현황 관리</h2>
+              <p className="text-xs text-slate-500">
+                학생회실 비품의 현재 잔여 대여 가능 수량을 [-] [+] 버튼으로 간편하게 업데이트할 수 있습니다.
+              </p>
+            </div>
+            <Link
+              to="/welfare"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+            >
+              대여 페이지 바로가기
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rentals.map((r) => (
+              <div
+                key={r.id}
+                className="p-5 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between space-y-4 shadow-2xs"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                      {r.category}
+                    </span>
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        r.available_qty > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      }`}
+                    >
+                      {r.available_qty > 0 ? '대여 가능' : '전체 대여중'}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm mb-1">{r.name}</h3>
+                  <p className="text-slate-500 text-xs">{r.desc}</p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">총 보유: <strong className="text-slate-800">{r.total_qty}개</strong></span>
+                    <span className="text-slate-700 font-semibold">
+                      잔여 가능: <strong className="text-emerald-700 text-sm">{r.available_qty}개</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleUpdateRentalQty(r, -1)}
+                      disabled={r.available_qty <= 0}
+                      className="flex-1 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold text-slate-700 transition-colors"
+                    >
+                      - 대여 발생 (-1)
+                    </button>
+                    <button
+                      onClick={() => handleUpdateRentalQty(r, 1)}
+                      disabled={r.available_qty >= r.total_qty}
+                      className="flex-1 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 disabled:opacity-40 text-xs font-bold text-emerald-800 transition-colors"
+                    >
+                      + 반납 완료 (+1)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1455,6 +1673,127 @@ export const AdminPage: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
                 >
                   저장하기
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* Meeting Minute Modal (New)                 */}
+      {/* ========================================== */}
+      {isMinuteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="font-bold text-base text-slate-900">새 회의록 작성 및 등록</h3>
+              <button
+                onClick={() => setIsMinuteModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMinute} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">회의 구분</label>
+                  <select
+                    value={minuteForm.meeting_type}
+                    onChange={(e) => setMinuteForm({ ...minuteForm, meeting_type: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50"
+                  >
+                    <option value="정기임원회의">정기임원회의</option>
+                    <option value="개강총회">개강총회</option>
+                    <option value="종강총회">종강총회</option>
+                    <option value="임시회의">임시회의</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">회의 일자</label>
+                  <input
+                    type="date"
+                    required
+                    value={minuteForm.meeting_date}
+                    onChange={(e) => setMinuteForm({ ...minuteForm, meeting_date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">회의 명칭 (제목)</label>
+                <input
+                  type="text"
+                  required
+                  value={minuteForm.title}
+                  onChange={(e) => setMinuteForm({ ...minuteForm, title: e.target.value })}
+                  placeholder="예: 2026학년도 2학기 제2차 정기 임원회의록"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">참석 임원 및 학우</label>
+                <input
+                  type="text"
+                  value={minuteForm.attendees}
+                  onChange={(e) => setMinuteForm({ ...minuteForm, attendees: e.target.value })}
+                  placeholder="예: 학생회장, 부회장, 총무부장, 학술부장 외 15명"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">주요 안건</label>
+                <input
+                  type="text"
+                  value={minuteForm.agenda}
+                  onChange={(e) => setMinuteForm({ ...minuteForm, agenda: e.target.value })}
+                  placeholder="예: 2학기 출석수업 간식 지원의 건, 2차 예산 집행 승인"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">논의 내용 요약</label>
+                <textarea
+                  rows={3}
+                  value={minuteForm.content}
+                  onChange={(e) => setMinuteForm({ ...minuteForm, content: e.target.value })}
+                  placeholder="회의에서 논의된 주요 내용을 요약하세요..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">의결 및 결정 사항 *</label>
+                <textarea
+                  rows={2}
+                  required
+                  value={minuteForm.decisions}
+                  onChange={(e) => setMinuteForm({ ...minuteForm, decisions: e.target.value })}
+                  placeholder="예: 재적인원 전원 찬성으로 원안 가결. 간식 예산 250,000원 배정 완료."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMinuteModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700"
+                >
+                  회의록 저장
                 </button>
               </div>
             </form>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ExternalLink, Calendar, Bell, Users, BookOpen, GraduationCap, ChevronRight, Shield } from 'lucide-react';
+import { Menu, X, ExternalLink, Calendar, Bell, Users, BookOpen, GraduationCap, ChevronRight, Shield, Scale, Package } from 'lucide-react';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { auth } from '../../services/auth';
 
@@ -11,10 +11,12 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: '홈', path: '/', icon: GraduationCap },
-    { name: '학과·학생회 소개', path: '/about', icon: Users },
+    { name: '학과·학생회', path: '/about', icon: Users },
     { name: '공지사항', path: '/notices', icon: Bell },
     { name: '학사일정', path: '/calendar', icon: Calendar },
-    { name: '스터디·커뮤니티', path: '/community', icon: BookOpen },
+    { name: '투명재정·자치', path: '/governance', icon: Scale },
+    { name: '학생복지·소통', path: '/welfare', icon: Package },
+    { name: '학술·스터디', path: '/community', icon: BookOpen },
   ];
 
   const isActive = (path: string) => {

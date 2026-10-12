@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { regionalInfo, councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
 import type { CouncilMember } from '../lib/types';
@@ -136,14 +137,22 @@ export const AboutPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3">
-                <Shield className="w-5 h-5" />
+            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5 flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1">3. 투명하고 정직한 운영</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  납부해주신 학생회비 내역을 1원 단위까지 분기별로 공개하고, 모든 학우의 의견을 경청하는 열린 학생회가 되겠습니다.
+                </p>
               </div>
-              <h3 className="font-bold text-slate-900 text-base mb-1">3. 투명하고 정직한 운영</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                납부해주신 학생회비 내역을 1원 단위까지 분기별로 공개하고, 모든 학우의 의견을 경청하는 열린 학생회가 되겠습니다.
-              </p>
+              <Link
+                to="/governance"
+                className="mt-3 inline-flex items-center text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
+              >
+                투명 회계 보고 & 회칙 확인 →
+              </Link>
             </div>
           </div>
         </div>
