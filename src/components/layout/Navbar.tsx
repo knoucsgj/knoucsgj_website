@@ -69,36 +69,36 @@ export const Navbar: React.FC = () => {
 
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 sm:h-22">
+        <div className="flex items-center justify-between h-20 sm:h-24">
           {/* Official Emblem & Wordmark */}
           <Link to="/" className="flex items-center gap-3 sm:gap-4 group shrink-0">
             <img
               src={ASSETS.UI.gwangjuJeonnam}
               alt="한국방송통신대학교 광주전남지역대학"
-              className="h-11 sm:h-13 md:h-14 w-auto object-contain shrink-0"
+              className="h-11 sm:h-13 md:h-14 lg:h-15 w-auto object-contain shrink-0 drop-shadow-xs"
             />
-            <div className="hidden sm:block h-8 w-px bg-slate-200" />
+            <div className="hidden sm:block h-9 w-px bg-slate-200" />
             <div className="flex flex-col justify-center">
               <span className="text-[10px] sm:text-[11px] font-semibold text-blue-700 tracking-wider">
                 제43대 학생회
               </span>
-              <span className="font-knou text-sm sm:text-base font-bold text-slate-900 group-hover:text-blue-700 transition-colors leading-tight">
+              <span className="font-knou text-sm sm:text-base md:text-lg font-bold text-slate-900 group-hover:text-blue-700 transition-colors leading-tight">
                 컴퓨터과학과
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5">
             {navLinks.map((item) => {
               const active = isActive(item.path);
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative px-4 py-2 text-sm font-semibold transition-colors ${
+                  className={`relative px-2.5 xl:px-3.5 py-2 text-xs xl:text-sm font-semibold transition-colors ${
                     active
-                      ? 'text-blue-700 after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-blue-600'
+                      ? 'text-blue-700 after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-0.5 after:bg-blue-600'
                       : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >

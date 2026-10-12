@@ -4,11 +4,12 @@
  */
 
 export const ASSETS = {
-  // Official University Marks
+  // Official University Marks (Tightly cropped without empty margins for true sizing)
   UI: {
-    gwangjuJeonnam: encodeURI('/UI/5. 광주전남지역대학.png'),
-    mainUniversity: encodeURI('/UI/0. 한국방송통신대학교.png'),
+    gwangjuJeonnam: encodeURI('/UI/knou_gj_logo.png'),
+    mainUniversity: encodeURI('/UI/knou_main_logo.png'),
     communicationMark: encodeURI('/UI/방송대 커뮤니케이션마크.png'),
+    rawGwangjuJeonnam: encodeURI('/UI/5. 광주전남지역대학.png'),
   },
 
   // Official Mascot Characters
