@@ -27,22 +27,22 @@ export const Footer: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-lg">
+            <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-lg">
               일과 학업을 병행하는 컴퓨터과학과 학우 여러분들의 든든한 학업 동반자입니다.
               중도 포기 없는 전원 완주와 도약을 위해 학생회가 언제나 함께하겠습니다.
             </p>
 
-            <div className="pt-2 text-xs text-slate-400 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <div className="pt-2 text-sm text-slate-300 space-y-2">
+              <div className="flex items-center gap-2.5">
+                <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>{regionalInfo.address} (학생회실: 본관 405호)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <div className="flex items-center gap-2.5">
+                <Phone className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>지역대학 대표: {regionalInfo.tel} / 팩스: {regionalInfo.fax}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <div className="flex items-center gap-2.5">
+                <Mail className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>학생회 공식 이메일: contact@knou-cs-gj.org</span>
               </div>
             </div>
@@ -50,18 +50,18 @@ export const Footer: React.FC = () => {
 
           {/* Column 3: Quick University Links */}
           <div>
-            <h4 className="text-white font-bold text-xs tracking-wider uppercase mb-3">
+            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5">
               주요 포털 바로가기
             </h4>
-            <ul className="space-y-2 text-xs text-slate-400">
+            <ul className="space-y-2.5 text-sm text-slate-300">
               <li>
                 <a
                   href="https://www.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-2"
                 >
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   한국방송통신대학교 본교
                 </a>
               </li>
@@ -70,9 +70,9 @@ export const Footer: React.FC = () => {
                   href="https://cs.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-2"
                 >
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   컴퓨터과학과 학과본부
                 </a>
               </li>
@@ -81,9 +81,9 @@ export const Footer: React.FC = () => {
                   href="https://ucampus.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-2"
                 >
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   U-KNOU 캠퍼스 (원격강의)
                 </a>
               </li>
@@ -92,9 +92,9 @@ export const Footer: React.FC = () => {
                   href="https://gj.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-2"
                 >
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   광주전남지역대학
                 </a>
               </li>
@@ -103,9 +103,9 @@ export const Footer: React.FC = () => {
                   href="https://library.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-2"
                 >
-                  <ExternalLink className="w-3 h-3 text-slate-500" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   중앙도서관 학술검색
                 </a>
               </li>
@@ -114,13 +114,13 @@ export const Footer: React.FC = () => {
 
           {/* Column 4: Student Council Links */}
           <div>
-            <h4 className="text-white font-bold text-xs tracking-wider uppercase mb-3">
+            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5">
               학생 자치 & 복지
             </h4>
-            <ul className="space-y-2 text-xs text-slate-400">
+            <ul className="space-y-2.5 text-sm text-slate-300">
               <li>
-                <Link to="/governance" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <Scale className="w-3 h-3 text-blue-400" />
+                <Link to="/governance" className="hover:text-white transition-colors flex items-center gap-2">
+                  <Scale className="w-3.5 h-3.5 text-blue-400" />
                   투명 학생회비 결산 보고
                 </Link>
               </li>
@@ -145,7 +145,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li className="pt-2">
-                <Link to="/admin" className="text-slate-500 hover:text-slate-300 text-[11px] underline">
+                <Link to="/admin" className="text-slate-400 hover:text-white text-xs underline">
                   학생회 임원 관리자 로그인
                 </Link>
               </li>
@@ -154,9 +154,9 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Copyright */}
-        <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+        <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-slate-400 gap-3">
           <p>© 2026 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회. All rights reserved.</p>
-          <div className="text-slate-500 text-[11px]">
+          <div className="text-slate-400 text-xs sm:text-sm">
             광주광역시 광산구 첨단과기로 208번길 43 (오룡동) 한국방송통신대학교 본관 405호
           </div>
         </div>

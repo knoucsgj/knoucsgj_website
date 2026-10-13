@@ -142,13 +142,13 @@ export const NoticesPage: React.FC = () => {
             />
           </div>
           <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase mb-1">
               <span>Official Announcements</span>
             </div>
-            <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
+            <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950 tracking-tight mb-2">
               공지사항
             </h1>
-            <p className="text-slate-600 text-xs sm:text-sm max-w-xl leading-relaxed font-normal">
+            <p className="text-slate-700 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
               광주전남지역대학 컴퓨터과학과의 주요 학사 소식과 학생회 행사, 시험 및 과제 안내를 전해드립니다.
             </p>
           </div>
@@ -156,26 +156,26 @@ export const NoticesPage: React.FC = () => {
 
         <button
           onClick={() => setIsWriteModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm sm:text-base transition-colors shrink-0 self-start sm:self-auto shadow-xs"
         >
-          <PlusCircle className="w-4 h-4" />
+          <PlusCircle className="w-5 h-5" />
           공지 등록
         </button>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <Filter className="w-4 h-4 text-slate-400 mr-1 hidden sm:inline" />
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
                 selectedCategory === cat
                   ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
               }`}
             >
               {cat}
@@ -184,14 +184,14 @@ export const NoticesPage: React.FC = () => {
         </div>
 
         {/* Search input */}
-        <div className="relative min-w-[240px]">
+        <div className="relative min-w-[260px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="제목, 내용 검색..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm sm:text-base focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-900 font-medium"
           />
         </div>
       </div>
@@ -199,11 +199,11 @@ export const NoticesPage: React.FC = () => {
       {/* Notices Table / List */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-16 text-center text-slate-400 text-sm">
+          <div className="p-16 text-center text-slate-500 text-base">
             공지사항을 불러오는 중입니다...
           </div>
         ) : filteredNotices.length === 0 ? (
-          <div className="p-16 text-center text-slate-400 text-sm">
+          <div className="p-16 text-center text-slate-500 text-base">
             해당 조건의 공지사항이 없습니다.
           </div>
         ) : (
@@ -212,47 +212,48 @@ export const NoticesPage: React.FC = () => {
               <div
                 key={notice.id}
                 onClick={() => handleSelectNotice(notice)}
-                className={`p-4 sm:p-5 cursor-pointer transition-colors hover:bg-blue-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                className={`p-5 sm:p-6 cursor-pointer transition-colors hover:bg-blue-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                   notice.is_pinned ? 'bg-amber-50/20' : ''
                 }`}
               >
-                <div className="space-y-1.5 flex-1 pr-4">
+                <div className="space-y-2 flex-1 pr-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     {notice.is_pinned && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-600 text-white">
-                        <Pin className="w-3 h-3" />
+                      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-600 text-white">
+                        <Pin className="w-3.5 h-3.5" />
                         고정
                       </span>
                     )}
                     <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${getCategoryBadgeClass(
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-md border ${getCategoryBadgeClass(
                         notice.category
                       )}`}
                     >
                       {notice.category}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1 sm:hidden ml-auto">
+                    <span className="text-xs sm:text-sm text-slate-500 flex items-center gap-1 sm:hidden ml-auto font-medium">
                       {formatDate(notice.created_at)}
                     </span>
                   </div>
 
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 hover:text-blue-600 transition-colors">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors leading-snug">
                     {notice.title}
                   </h3>
 
-                  <p className="text-xs text-slate-500 line-clamp-1">
+                  <p className="text-sm sm:text-base text-slate-600 line-clamp-1 font-normal">
                     {notice.content}
                   </p>
                 </div>
 
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center text-xs text-slate-400 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
-                  <span className="hidden sm:inline font-medium text-slate-500">
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center text-xs sm:text-sm text-slate-500 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 font-medium">
+                  <span className="hidden sm:inline font-semibold text-slate-600">
                     {formatDate(notice.created_at)}
                   </span>
-                  <div className="flex items-center gap-3 mt-0.5">
+                  <div className="flex items-center gap-3 mt-1 text-slate-500">
                     <span>{notice.author}</span>
+                    <span>•</span>
                     <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
+                      <Eye className="w-3.5 h-3.5" />
                       {notice.views}
                     </span>
                   </div>
@@ -266,28 +267,28 @@ export const NoticesPage: React.FC = () => {
       {/* Notice Detail Modal */}
       {selectedNotice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 sm:p-10 animate-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-md border ${getCategoryBadgeClass(
+                    className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-md border ${getCategoryBadgeClass(
                       selectedNotice.category
                     )}`}
                   >
                     {selectedNotice.category}
                   </span>
                   {selectedNotice.is_pinned && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-600 text-white">
-                      <Pin className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold px-3 py-1 rounded-md bg-rose-600 text-white">
+                      <Pin className="w-3.5 h-3.5" />
                       고정 공지
                     </span>
                   )}
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
                   {selectedNotice.title}
                 </h2>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-600 font-medium">
                   <span>작성자: {selectedNotice.author}</span>
                   <span>•</span>
                   <span>등록일: {formatDate(selectedNotice.created_at)}</span>
@@ -300,12 +301,12 @@ export const NoticesPage: React.FC = () => {
                 onClick={handleCloseDetail}
                 className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Notice Body */}
-            <div className="py-6 text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+            <div className="py-6 text-slate-800 text-base sm:text-lg leading-loose whitespace-pre-line font-normal">
               {selectedNotice.content}
             </div>
 

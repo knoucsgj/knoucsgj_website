@@ -66,38 +66,38 @@ export const GovernancePage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-200 overflow-x-auto pb-px gap-2">
+      <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
         <button
           onClick={() => setActiveTab('finance')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+          className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'finance'
               ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <DollarSign className="w-4 h-4 text-emerald-600" />
+          <DollarSign className="w-5 h-5 text-emerald-600" />
           학생회비 결산 보고 ({reports.length})
         </button>
         <button
           onClick={() => setActiveTab('minutes')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+          className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'minutes'
               ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <FileText className="w-4 h-4 text-indigo-600" />
+          <FileText className="w-5 h-5 text-indigo-600" />
           임원회·총회 회의록 ({minutes.length})
         </button>
         <button
           onClick={() => setActiveTab('rules')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+          className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'rules'
               ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <Scale className="w-4 h-4 text-amber-600" />
+          <Scale className="w-5 h-5 text-amber-600" />
           학과 학생회칙 및 세칙
         </button>
       </div>
@@ -110,15 +110,15 @@ export const GovernancePage: React.FC = () => {
           {/* Transparency Pledge Card */}
           <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-700" />
-                <h3 className="font-bold text-emerald-950 text-base">회계 투명성 서약</h3>
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-6 h-6 text-emerald-700" />
+                <h3 className="font-bold text-emerald-950 text-lg">회계 투명성 서약</h3>
               </div>
-              <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed">
+              <p className="text-sm sm:text-base text-emerald-900 leading-relaxed">
                 학생회비는 학우 복지, IT 특강, 실습실 환경 개선, 시험 간식 사업에만 목적대로 사용되며, 모든 영수증은 감사 후 대외 공개됩니다.
               </p>
             </div>
-            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 text-white shrink-0 self-start sm:self-center">
+            <span className="text-sm font-bold px-4 py-2 rounded-xl bg-emerald-600 text-white shrink-0 self-start sm:self-center shadow-xs">
               감사 및 공시 완료
             </span>
           </div>
@@ -129,9 +129,9 @@ export const GovernancePage: React.FC = () => {
               <button
                 key={rep.id}
                 onClick={() => setSelectedReport(rep)}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all border ${
+                className={`px-4.5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all border ${
                   selectedReport?.id === rep.id
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
               >
@@ -144,43 +144,43 @@ export const GovernancePage: React.FC = () => {
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
                 <div>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800">
                     {selectedReport.status}
                   </span>
-                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1.5">
                     {selectedReport.title}
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    집행 기간: {selectedReport.period} | 공시일: {formatDate(selectedReport.published_date)}
+                  <p className="text-sm text-slate-600 mt-1">
+                    집행 기간: <strong className="text-slate-800">{selectedReport.period}</strong> | 공시일: {formatDate(selectedReport.published_date)}
                   </p>
                 </div>
 
                 <button
                   onClick={() => alert('PDF 결산 영수증 모음집 다운로드 준비 중입니다.')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold self-start sm:self-center"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold self-start sm:self-center transition-colors"
                 >
-                  <Receipt className="w-3.5 h-3.5" />
+                  <Receipt className="w-4 h-4" />
                   영수증 증빙 확인
                 </button>
               </div>
 
               {/* Financial Balance Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100">
-                  <span className="text-xs text-blue-700 font-semibold">총 수입 (이월+납부)</span>
-                  <div className="text-xl sm:text-2xl font-black text-blue-900 mt-1">
+                <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-100">
+                  <span className="text-sm text-blue-800 font-bold">총 수입 (이월+납부)</span>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-950 mt-1">
                     ₩{selectedReport.income_total.toLocaleString()}
                   </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-100">
-                  <span className="text-xs text-rose-700 font-semibold">총 지출 (사업 집행)</span>
-                  <div className="text-xl sm:text-2xl font-black text-rose-900 mt-1">
+                <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-100">
+                  <span className="text-sm text-rose-800 font-bold">총 지출 (사업 집행)</span>
+                  <div className="text-2xl sm:text-3xl font-black text-rose-950 mt-1">
                     ₩{selectedReport.expense_total.toLocaleString()}
                   </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-                  <span className="text-xs text-emerald-700 font-semibold">현재 잔액 (이월 예정)</span>
-                  <div className="text-xl sm:text-2xl font-black text-emerald-900 mt-1">
+                <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                  <span className="text-sm text-emerald-800 font-bold">현재 잔액 (이월 예정)</span>
+                  <div className="text-2xl sm:text-3xl font-black text-emerald-950 mt-1">
                     ₩{selectedReport.balance.toLocaleString()}
                   </div>
                 </div>
@@ -188,24 +188,24 @@ export const GovernancePage: React.FC = () => {
 
               {/* Detailed Ledger Items Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse">
+                <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 font-bold">
-                      <th className="py-3 px-3">일자</th>
-                      <th className="py-3 px-2">구분</th>
-                      <th className="py-3 px-3">항목</th>
-                      <th className="py-3 px-4">적요 (상세 내역)</th>
-                      <th className="py-3 px-3 text-right">금액</th>
-                      <th className="py-3 px-3 text-center">비고</th>
+                    <tr className="bg-slate-50 border-y border-slate-200 text-slate-600 font-bold">
+                      <th className="py-3.5 px-3">일자</th>
+                      <th className="py-3.5 px-2">구분</th>
+                      <th className="py-3.5 px-3">항목</th>
+                      <th className="py-3.5 px-4">적요 (상세 내역)</th>
+                      <th className="py-3.5 px-3 text-right">금액</th>
+                      <th className="py-3.5 px-3 text-center">비고</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedReport.items.map((it) => (
                       <tr key={it.id} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-3 font-mono text-slate-500">{it.date}</td>
-                        <td className="py-3 px-2">
+                        <td className="py-3.5 px-3 font-mono text-slate-600 font-medium">{it.date}</td>
+                        <td className="py-3.5 px-2">
                           <span
-                            className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                            className={`font-bold px-2.5 py-0.5 rounded text-xs ${
                               it.type === '수입'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-rose-100 text-rose-800'
@@ -214,14 +214,14 @@ export const GovernancePage: React.FC = () => {
                             {it.type}
                           </span>
                         </td>
-                        <td className="py-3 px-3 font-semibold text-slate-700">{it.category}</td>
-                        <td className="py-3 px-4 text-slate-800 font-medium">{it.description}</td>
-                        <td className={`py-3 px-3 text-right font-bold ${
+                        <td className="py-3.5 px-3 font-bold text-slate-800">{it.category}</td>
+                        <td className="py-3.5 px-4 text-slate-800 font-medium">{it.description}</td>
+                        <td className={`py-3.5 px-3 text-right font-extrabold text-base ${
                           it.type === '수입' ? 'text-blue-700' : 'text-rose-700'
                         }`}>
                           {it.type === '수입' ? '+' : '-'}₩{it.amount.toLocaleString()}
                         </td>
-                        <td className="py-3 px-3 text-center text-slate-400 text-[11px]">
+                        <td className="py-3.5 px-3 text-center text-slate-500 text-xs">
                           {it.note || '-'}
                         </td>
                       </tr>
@@ -241,8 +241,8 @@ export const GovernancePage: React.FC = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">의결기구 회의록 아카이브</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">의결기구 회의록 아카이브</h2>
+              <p className="text-sm sm:text-base text-slate-600 mt-1">
                 정기 임원회의 및 개강·종강총회의 안건 논의 내용과 의결 결과를 투명하게 기록합니다.
               </p>
             </div>
@@ -254,19 +254,19 @@ export const GovernancePage: React.FC = () => {
                   <div key={m.id} className="border border-slate-200 rounded-2xl overflow-hidden transition-all">
                     <button
                       onClick={() => setOpenMinuteId(isOpen ? null : m.id)}
-                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50 transition-colors"
+                      className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50 transition-colors"
                     >
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-800">
                             {m.meeting_type}
                           </span>
-                          <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
+                          <span className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
                             {m.meeting_date}
                           </span>
                         </div>
-                        <h3 className="font-bold text-base text-slate-900">{m.title}</h3>
+                        <h3 className="font-bold text-base sm:text-lg text-slate-900">{m.title}</h3>
                       </div>
 
                       {isOpen ? (
@@ -277,28 +277,28 @@ export const GovernancePage: React.FC = () => {
                     </button>
 
                     {isOpen && (
-                      <div className="p-5 sm:p-6 bg-white border-t border-slate-100 text-xs sm:text-sm text-slate-700 space-y-4">
-                        <div className="p-3 bg-slate-50 rounded-xl space-y-1">
-                          <div className="font-semibold text-slate-900">참석자:</div>
-                          <div className="text-slate-600">{m.attendees}</div>
+                      <div className="p-5 sm:p-6 bg-white border-t border-slate-100 text-sm sm:text-base text-slate-700 space-y-4 leading-relaxed">
+                        <div className="p-3.5 bg-slate-50 rounded-xl space-y-1">
+                          <div className="font-bold text-slate-900">참석자:</div>
+                          <div className="text-slate-700">{m.attendees}</div>
                         </div>
 
                         <div>
-                          <div className="font-bold text-slate-900 mb-1">상정 안건:</div>
-                          <div className="whitespace-pre-line text-slate-600 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                          <div className="font-bold text-slate-900 mb-1.5">상정 안건:</div>
+                          <div className="whitespace-pre-line text-slate-800 bg-blue-50/60 p-4 rounded-xl border border-blue-100">
                             {m.agenda}
                           </div>
                         </div>
 
                         <div>
-                          <div className="font-bold text-slate-900 mb-1">회의 내용:</div>
-                          <div className="whitespace-pre-line text-slate-700 leading-relaxed">
+                          <div className="font-bold text-slate-900 mb-1.5">회의 내용:</div>
+                          <div className="whitespace-pre-line text-slate-800 leading-relaxed">
                             {m.content}
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-indigo-900 font-bold">
-                          <FileCheck className="w-4 h-4 text-indigo-600" />
+                        <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-indigo-950 font-bold text-base">
+                          <FileCheck className="w-5 h-5 text-indigo-600 shrink-0" />
                           <span>최종 의결 결과: {m.decisions}</span>
                         </div>
                       </div>
@@ -318,10 +318,10 @@ export const GovernancePage: React.FC = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
             <div className="pb-4 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
                 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회칙
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              <p className="text-sm sm:text-base text-slate-600 mt-1">
                 본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 기본 규범입니다.
               </p>
             </div>
@@ -333,26 +333,26 @@ export const GovernancePage: React.FC = () => {
                   <div key={chapter.chapter} className="border border-slate-200 rounded-2xl overflow-hidden">
                     <button
                       onClick={() => setOpenRuleChapter(isOpen ? null : chapter.chapter)}
-                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50"
+                      className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50"
                     >
-                      <h3 className="font-bold text-base text-slate-900">
+                      <h3 className="font-bold text-base sm:text-lg text-slate-900">
                         제{chapter.chapter}장 {chapter.title}
                       </h3>
                       {isOpen ? (
-                        <ChevronUp className="w-5 h-5 text-amber-600" />
+                        <ChevronUp className="w-5 h-5 text-amber-600 shrink-0" />
                       ) : (
-                        <ChevronDown className="w-5 h-5 text-slate-400" />
+                        <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
                       )}
                     </button>
 
                     {isOpen && (
                       <div className="p-5 sm:p-6 bg-white border-t border-slate-100 space-y-4 divide-y divide-slate-100">
                         {chapter.articles.map((art) => (
-                          <div key={art.number} className="pt-3 first:pt-0">
-                            <span className="font-bold text-sm text-blue-900 block mb-1">
+                          <div key={art.number} className="pt-3.5 first:pt-0">
+                            <span className="font-bold text-base text-blue-950 block mb-1.5">
                               제{art.number}조 ({art.title})
                             </span>
-                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
                               {art.content}
                             </p>
                           </div>

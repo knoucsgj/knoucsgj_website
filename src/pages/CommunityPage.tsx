@@ -160,18 +160,18 @@ export const CommunityPage: React.FC = () => {
 
       {/* Admin Notice Pill (if logged in) */}
       {isAdmin && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-xs text-amber-900">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-amber-600" />
-            <span className="font-semibold">관리자 접속 중:</span>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-amber-950 font-medium">
+          <div className="flex items-center gap-2.5">
+            <Shield className="w-5 h-5 text-amber-600 shrink-0" />
+            <span className="font-bold">관리자 접속 중:</span>
             <span>스터디 상태 변경(모집중/진행중/마감) 및 삭제(해체)는 관리자 센터에서 바로 가능합니다.</span>
           </div>
           <Link
             to="/admin"
-            className="font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+            className="font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1.5 shrink-0"
           >
             관리자 센터
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       )}
@@ -180,23 +180,23 @@ export const CommunityPage: React.FC = () => {
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">스터디 그룹 목록</h2>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">스터디 그룹 목록</h2>
+            <p className="text-sm sm:text-base text-slate-600 mt-0.5">
               학기별로 개설되고 활동하는 스터디 소그룹입니다.
             </p>
           </div>
 
           {/* Status Filter Pills */}
-          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400 ml-1 hidden sm:inline" />
+          <div className="flex items-center gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+            <Filter className="w-4 h-4 text-slate-400 ml-1.5 hidden sm:inline" />
             {statusOptions.map((opt) => (
               <button
                 key={opt}
                 onClick={() => setSelectedStatus(opt)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
                   selectedStatus === opt
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 {opt}
@@ -206,7 +206,7 @@ export const CommunityPage: React.FC = () => {
         </div>
 
         {filteredStudies.length === 0 ? (
-          <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-400 text-sm">
+          <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-500 text-base font-medium">
             해당 조건의 스터디 그룹이 없습니다.
           </div>
         ) : (
@@ -214,46 +214,46 @@ export const CommunityPage: React.FC = () => {
             {filteredStudies.map((study) => (
               <div
                 key={study.id}
-                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
+                className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3.5">
                     <span
-                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      className={`text-xs font-bold px-3 py-1 rounded-full ${
                         study.status === '모집중'
-                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           : study.status === '진행중'
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300'
                       }`}
                     >
                       {study.status}
                     </span>
-                    <span className="text-xs text-slate-500 font-medium">
+                    <span className="text-sm text-slate-600 font-bold">
                       인원: {study.members_count} / {study.max_members}명
                     </span>
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1.5 leading-snug">
                     {study.title}
                   </h3>
 
-                  <p className="text-xs text-blue-600 font-medium mb-3">
+                  <p className="text-sm font-bold text-blue-700 mb-3.5">
                     주제: {study.subject}
                   </p>
 
-                  <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Laptop className="w-3.5 h-3.5 text-slate-400" />
-                      <span>진행 방식: {study.meeting_type}</span>
+                  <div className="space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-5">
+                    <div className="flex items-center gap-2.5">
+                      <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>진행 방식: <strong className="text-slate-900">{study.meeting_type}</strong></span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
-                      <span>대상 학년: {study.target_grade}</span>
+                    <div className="flex items-center gap-2.5">
+                      <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>대상 학년: <strong className="text-slate-900">{study.target_grade}</strong></span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                      <span>개설자: {study.leader}</span>
+                    <div className="flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>개설자: <strong className="text-slate-900">{study.leader}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -261,13 +261,13 @@ export const CommunityPage: React.FC = () => {
                 <button
                   onClick={() => handleApplyClick(study)}
                   disabled={study.status === '종료' || study.status === '마감'}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`w-full py-3 px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                     study.status === '종료' || study.status === '마감'
                       ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
                   }`}
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-4.5 h-4.5" />
                   {study.status === '종료' || study.status === '마감' ? '모집 마감된 스터디' : '스터디 참여 문의'}
                 </button>
               </div>
@@ -278,17 +278,17 @@ export const CommunityPage: React.FC = () => {
 
       {/* FAQ Section */}
       <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6">
-        <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
-          <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-            <HelpCircle className="w-5 h-5" />
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+            <HelpCircle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">자주 묻는 질문 (FAQ)</h2>
-            <p className="text-xs text-slate-500">신·편입생 및 재학생 학우들이 가장 많이 문의하시는 내용입니다.</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">자주 묻는 질문 (FAQ)</h2>
+            <p className="text-sm text-slate-600 mt-0.5">신·편입생 및 재학생 학우들이 가장 많이 문의하시는 내용입니다.</p>
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {faqs.map((faq, idx) => {
             const isOpen = openFaqIndex === idx;
             return (
@@ -298,9 +298,9 @@ export const CommunityPage: React.FC = () => {
               >
                 <button
                   onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                  className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
                 >
-                  <span className="font-bold text-sm sm:text-base text-slate-900">
+                  <span className="font-bold text-base sm:text-lg text-slate-900 leading-snug">
                     Q. {faq.q}
                   </span>
                   {isOpen ? (
@@ -310,7 +310,7 @@ export const CommunityPage: React.FC = () => {
                   )}
                 </button>
                 {isOpen && (
-                  <div className="p-4 sm:p-5 bg-white text-xs sm:text-sm text-slate-700 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-in fade-in duration-150">
+                  <div className="p-5 sm:p-6 bg-white text-sm sm:text-base text-slate-700 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-in fade-in duration-150">
                     {faq.a}
                   </div>
                 )}
@@ -323,35 +323,35 @@ export const CommunityPage: React.FC = () => {
       {/* Apply Info Modal */}
       {isApplyModalOpen && selectedStudy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="font-bold text-base text-slate-900">스터디 참여 문의</h3>
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-7 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+              <h3 className="font-bold text-lg text-slate-900">스터디 참여 문의</h3>
               <button
                 onClick={() => setIsApplyModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-              선택하신 <span className="font-bold text-blue-600">[{selectedStudy.title}]</span> 스터디에 참여를 희망하시나요?
+            <p className="text-sm sm:text-base text-slate-700 mb-4 leading-relaxed">
+              선택하신 <span className="font-bold text-blue-700">[{selectedStudy.title}]</span> 스터디에 참여를 희망하시나요?
             </p>
 
-            <div className="bg-blue-50 p-4 rounded-2xl text-xs text-blue-900 space-y-2 mb-4 border border-blue-100">
-              <p className="font-semibold text-blue-950">참여 방법 안내:</p>
+            <div className="bg-blue-50 p-5 rounded-2xl text-sm text-blue-950 space-y-2.5 mb-5 border border-blue-100 leading-relaxed">
+              <p className="font-bold text-blue-950 text-base">참여 방법 안내:</p>
               {selectedStudy.leader_contact ? (
-                <div>
-                  <span className="font-medium text-slate-700">개설자 직접 연락처:</span>
-                  <p className="font-bold text-blue-700 mt-0.5 break-all">{selectedStudy.leader_contact}</p>
+                <div className="bg-white p-3 rounded-xl border border-blue-200">
+                  <span className="font-semibold text-slate-700">개설자 직접 연락처:</span>
+                  <p className="font-bold text-blue-700 mt-1 text-base break-all">{selectedStudy.leader_contact}</p>
                 </div>
               ) : null}
-              <p>1. 광주전남 컴퓨터과학과 학생회 오픈카톡방 또는 학술부장(academic@knou-cs-gj.org)에게 학번과 성함을 알려주세요.</p>
+              <p>1. 광주전남 컴퓨터과학과 학생회 오픈카톡방 또는 학술부장에게 학번과 성함을 알려주세요.</p>
               <p>2. 스터디 리더({selectedStudy.leader})에게 전달 후 스터디 모임 단톡방 및 온라인 회의 링크를 전달해 드립니다.</p>
             </div>
 
             <button
               onClick={() => setIsApplyModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors"
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base transition-colors"
             >
               확인 완료
             </button>
@@ -362,48 +362,48 @@ export const CommunityPage: React.FC = () => {
       {/* Create Study Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="font-bold text-base text-slate-900">새 스터디 그룹 개설 신청</h3>
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-7 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+              <h3 className="font-bold text-lg text-slate-900">새 스터디 그룹 개설 신청</h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStudy} className="space-y-4 text-xs">
+            <form onSubmit={handleCreateStudy} className="space-y-4 text-sm">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">스터디 명칭</label>
+                <label className="block font-bold text-slate-800 mb-1.5">스터디 명칭</label>
                 <input
                   type="text"
                   required
                   value={newStudyTitle}
                   onChange={(e) => setNewStudyTitle(e.target.value)}
                   placeholder="예: 2학기 자료구조 스터디반"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">주요 학습 주제/교과목</label>
+                <label className="block font-bold text-slate-800 mb-1.5">주요 학습 주제/교과목</label>
                 <input
                   type="text"
                   required
                   value={newSubject}
                   onChange={(e) => setNewSubject(e.target.value)}
                   placeholder="예: 자료구조, 백준 알고리즘"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">진행 방식</label>
+                <label className="block font-bold text-slate-800 mb-1.5">진행 방식</label>
                 <select
                   value={newMeetingType}
                   onChange={(e) => setNewMeetingType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="온/오프라인 병행">온/오프라인 병행</option>
                   <option value="온라인 (Zoom/Discord)">온라인 (Zoom/Discord)</option>
@@ -412,64 +412,64 @@ export const CommunityPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">모집 정원 (명)</label>
+                <label className="block font-bold text-slate-800 mb-1.5">모집 정원 (명)</label>
                 <input
                   type="number"
                   min={2}
                   max={20}
                   value={newMaxMembers}
                   onChange={(e) => setNewMaxMembers(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">개설자 성명 (학년)</label>
+                  <label className="block font-bold text-slate-800 mb-1.5">개설자 성명 (학년)</label>
                   <input
                     type="text"
                     required
                     value={newLeader}
                     onChange={(e) => setNewLeader(e.target.value)}
                     placeholder="예: 홍길동 (3학년)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">연락처 / 카톡 링크</label>
+                  <label className="block font-bold text-slate-800 mb-1.5">연락처 / 카톡 링크</label>
                   <input
                     type="text"
                     value={newLeaderContact}
                     onChange={(e) => setNewLeaderContact(e.target.value)}
                     placeholder="오픈카톡 링크 등"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">소개 / 목표 (선택)</label>
+                <label className="block font-bold text-slate-800 mb-1.5">소개 / 목표 (선택)</label>
                 <textarea
                   rows={2}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="스터디 진행 계획 및 목표..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+              <div className="pt-3.5 border-t border-slate-100 flex justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
                   {isSubmitting ? '등록 중...' : '개설 등록'}
                 </button>

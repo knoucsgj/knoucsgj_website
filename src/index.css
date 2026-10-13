@@ -20,6 +20,11 @@
     letter-spacing: -0.025em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 16px;
+  }
+
+  html.large-text {
+    font-size: 115%;
   }
 
   body {
@@ -27,10 +32,11 @@
     letter-spacing: -0.025em;
     background-color: #f8fafc;
     color: #0f172a;
+    line-height: 1.6;
   }
 
   /* Refined typography defaults */
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.035em;
+    letter-spacing: -0.03em;
   }
 }

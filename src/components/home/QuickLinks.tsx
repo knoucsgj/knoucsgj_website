@@ -53,10 +53,10 @@ export const QuickLinks: React.FC = () => {
     <section className="mb-12">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             주요 학생회 서비스 바로가기
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             학우들의 학업과 대학 생활에 자주 필요한 핵심 서비스 모음입니다.
           </p>
         </div>
@@ -69,27 +69,27 @@ export const QuickLinks: React.FC = () => {
             <div className="h-full bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 hover:border-blue-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
               <div>
                 <div className="flex items-center justify-between mb-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all">
+                  <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all shrink-0">
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
                     {card.badge}
                   </span>
                 </div>
 
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-1">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-1.5 leading-snug">
                   {card.title}
-                  {card.isExternal && <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />}
+                  {card.isExternal && <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500" />}
                 </h3>
 
-                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
+                <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed line-clamp-2 font-medium">
                   {card.desc}
                 </p>
               </div>
 
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center text-[11px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors">
+              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center text-xs sm:text-sm font-semibold text-slate-500 group-hover:text-blue-600 transition-colors">
                 <span>자세히 보기</span>
-                <ChevronRight className="w-3 h-3 ml-auto group-hover:translate-x-0.5 transition-transform" />
+                <ChevronRight className="w-4 h-4 ml-auto group-hover:translate-x-0.5 transition-transform" />
               </div>
             </div>
           );
