@@ -1,50 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { PartnershipItem } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
-  Sparkles,
   Image as ImageIcon,
   MessageSquare,
   CheckCircle2,
   MapPin,
-  ExternalLink,
   Send,
-  AlertCircle,
-  Copy,
-  Check
+  AlertCircle
 } from 'lucide-react';
 
 export const WelfarePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'partnerships' | 'gallery' | 'feedback'>('partnerships');
-  const [partnerships, setPartnerships] = useState<PartnershipItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'gallery' | 'feedback'>('gallery');
   const [gallery, setGallery] = useState<Array<{ id: string; title: string; date: string; location: string; image_url: string; desc: string }>>([]);
 
   // 건의함 State
   const [feedbackTitle, setFeedbackTitle] = useState('');
-  const [feedbackCategory, setFeedbackCategory] = useState<'제휴/복지' | '학사/수업' | '행사/스터디' | '기타'>('제휴/복지');
+  const [feedbackCategory, setFeedbackCategory] = useState<'학사/수업' | '행사/스터디' | '학생회운영' | '기타'>('학사/수업');
   const [feedbackAuthor, setFeedbackAuthor] = useState('');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
-      const [pData, gData] = await Promise.all([
-        api.getPartnerships(),
-        api.getGalleryPhotos()
-      ]);
-      setPartnerships(pData);
+      const gData = await api.getGalleryPhotos();
       setGallery(gData);
     }
     loadData();
   }, []);
-
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
 
   const handleFeedbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,22 +47,22 @@ export const WelfarePage: React.FC = () => {
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4 sm:gap-5">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-emerald-50/70 border border-emerald-100 p-1.5 shrink-0 flex items-center justify-center shadow-xs">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-blue-50/70 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center shadow-xs">
             <img
-              src={ASSETS.characters.best}
-              alt="복지 엄지척 마스코트"
+              src={ASSETS.characters.heart}
+              alt="소통 하트 마스코트"
               className="w-full h-full object-contain drop-shadow-xs"
             />
           </div>
           <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-700 tracking-wider uppercase mb-1">
-              <span>Student Welfare & Communication</span>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
+              <span>Photo Gallery & Communication</span>
             </div>
             <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
-              학생 복지 & 소통 센터
+              학과 갤러리 & 소통 창구
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-              광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 IT 교육 및 도서 제휴 혜택, 학과 활동 갤러리, 열린 소통 창구를 운영합니다.
+              한국방송통신대학교 광주전남지역대학 컴퓨터과학과의 생생한 활동 현장 기록과 학우 여러분의 목소리를 듣는 열린 소통 공간입니다.
             </p>
           </div>
         </div>
@@ -88,120 +71,31 @@ export const WelfarePage: React.FC = () => {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
         <button
-          onClick={() => setActiveTab('partnerships')}
-          className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'partnerships'
-              ? 'bg-white text-emerald-700 border-t-2 border-x border-emerald-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Sparkles className="w-5 h-5 text-amber-500" />
-          학우 제휴 혜택 ({partnerships.length})
-        </button>
-        <button
           onClick={() => setActiveTab('gallery')}
           className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'gallery'
-              ? 'bg-white text-emerald-700 border-t-2 border-x border-emerald-600 shadow-xs'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <ImageIcon className="w-5 h-5 text-blue-500" />
-          활동 갤러리 ({gallery.length})
+          <ImageIcon className="w-5 h-5 text-blue-600" />
+          학과 활동 갤러리 ({gallery.length})
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
           className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'feedback'
-              ? 'bg-white text-emerald-700 border-t-2 border-x border-emerald-600 shadow-xs'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <MessageSquare className="w-5 h-5 text-indigo-500" />
-          학우 소통 및 건의함
+          <MessageSquare className="w-5 h-5 text-indigo-600" />
+          학우 소통 및 열린 건의함
         </button>
       </div>
 
       {/* ========================================== */}
-      {/* TAB 1: 제휴 혜택                            */}
-      {/* ========================================== */}
-      {activeTab === 'partnerships' && (
-        <div className="space-y-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6 text-amber-950 flex items-start gap-3.5">
-            <Sparkles className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm sm:text-base">
-              <p className="font-bold text-amber-950 text-base sm:text-lg mb-1">컴퓨터과학과 학우 전용 특별 제휴</p>
-              <p className="text-amber-900 leading-relaxed">
-                학생회는 학우들의 자기계발 및 수강 편의를 위해 온라인 IT 교육 플랫폼 및 전공 출판사, 지역 스터디 공간과 협력 제휴를 맺고 있습니다.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {partnerships.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3.5">
-                    <span className="text-xs font-bold px-3 py-1 rounded-md bg-amber-100 text-amber-800">
-                      {p.category}
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">{p.period}</span>
-                  </div>
-
-                  <h3 className="font-bold text-slate-900 text-lg sm:text-xl mb-2.5">{p.partner_name}</h3>
-                  <div className="bg-slate-50 rounded-2xl p-3.5 mb-4 border border-slate-100">
-                    <p className="text-xs font-bold text-slate-500 mb-1">제휴 혜택</p>
-                    <p className="text-base font-bold text-emerald-700">{p.benefit}</p>
-                  </div>
-
-                  <div className="text-sm text-slate-700 space-y-2">
-                    <p className="font-bold text-slate-900">이용 방법:</p>
-                    <p className="leading-relaxed bg-slate-100/70 p-3 rounded-xl border border-slate-200 text-xs sm:text-sm">
-                      {p.instructions}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2.5">
-                  <button
-                    onClick={() => handleCopyCode('KNOUCS2026')}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-                  >
-                    {copiedCode === 'KNOUCS2026' ? (
-                      <>
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        복사 완료!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        제휴 코드 복사
-                      </>
-                    )}
-                  </button>
-                  {p.link && (
-                    <a
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2.5 px-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-bold flex items-center gap-1.5 transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      바로가기
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================== */}
-      {/* TAB 3: 활동 갤러리                          */}
+      {/* TAB 1: 활동 갤러리                          */}
       {/* ========================================== */}
       {activeTab === 'gallery' && (
         <div className="space-y-6">
@@ -239,7 +133,7 @@ export const WelfarePage: React.FC = () => {
       )}
 
       {/* ========================================== */}
-      {/* TAB 4: 소통 & 건의함                        */}
+      {/* TAB 2: 소통 & 건의함                        */}
       {/* ========================================== */}
       {activeTab === 'feedback' && (
         <div className="max-w-2xl mx-auto space-y-6">

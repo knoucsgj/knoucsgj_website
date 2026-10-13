@@ -32,7 +32,7 @@ export const Navbar: React.FC = () => {
     { name: '공지사항', path: '/notices' },
     { name: '학사일정', path: '/calendar' },
     { name: '투명재정·자치', path: '/governance' },
-    { name: '학생복지·소통', path: '/welfare' },
+    { name: '소통·갤러리', path: '/welfare' },
     { name: '학술·스터디', path: '/community' },
   ];
 
