@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, Camera, FileText, ChevronRight } from 'lucide-react';
+import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, FileText, ChevronRight } from 'lucide-react';
 
 export const QuickLinks: React.FC = () => {
   const cards = [
@@ -12,11 +12,11 @@ export const QuickLinks: React.FC = () => {
       badge: '재정 공개'
     },
     {
-      title: '활동 갤러리 & 소통',
-      desc: '경진대회, 스터디 현장 사진 및 학우 건의함',
-      icon: Camera,
+      title: '학우 소통 & 건의함',
+      desc: '학업 문의, 스터디 참여, 학생회 건의사항',
+      icon: FileText,
       to: '/welfare',
-      badge: '사진·소통'
+      badge: '열린 소통'
     },
     {
       title: '학사일정 캘린더',

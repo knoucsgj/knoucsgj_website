@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Calendar, ChevronRight, Scale, Camera, Users, CheckCircle } from 'lucide-react';
+import { Bell, Calendar, ChevronRight, Scale, Camera, Users } from 'lucide-react';
 import { getDDay } from '../../lib/dateUtils';
 import { ASSETS } from '../../lib/assets';
 
@@ -63,70 +63,83 @@ export const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Urgent Academic Card */}
-          <div className="lg:col-span-5 space-y-3">
-            {/* Mascot Greeting Callout */}
-            <div className="flex items-center gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-blue-950/60 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-800/80 border border-slate-700/80 p-2 shrink-0 flex items-center justify-center shadow-inner">
+          {/* Right Column: Dynamic Department Showcase with Real Photos & D-Day */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Real Activity Photo Showcase Card */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden group">
+              {/* Photo Frame */}
+              <div className="relative aspect-16/10 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-inner">
                 <img
-                  src={ASSETS.characters.practice}
-                  alt="방송대 실습 마스코트"
-                  className="w-full h-full object-contain drop-shadow-md"
+                  src={ASSETS.pictures.competition2}
+                  alt="광주전남 컴퓨터과학과 활동 현장"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
-              </div>
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-400/20">
-                  <span>컴퓨터과학과 마스코트</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                
+                {/* Photo Tag */}
+                <div className="absolute top-3 left-3 bg-blue-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 border border-blue-400/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  우리 학과 활동 현장
                 </div>
-                <h4 className="font-bold text-white text-base sm:text-lg leading-snug">
-                  "함께 공부하며 완주해요!"
-                </h4>
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                  선배·동료 학우가 곁에서 끝까지 함께 응원합니다.
-                </p>
-              </div>
-            </div>
 
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-lg space-y-4 relative overflow-hidden">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <span className="text-xs sm:text-sm font-bold text-slate-300 tracking-wider uppercase">
-                  학사 마감 알림 (D-Day)
-                </span>
-                <span className="text-xs sm:text-sm font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  {assignmentDDay.label}
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-2 leading-snug">
-                  2026학년도 2학기 중간과제물 정규 제출
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  컴퓨터과학과 전공 과제물 온라인 접수가 진행 중입니다. 마감일 시스템 접속 폭주에 대비하여 미리 제출해 주세요.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs sm:text-sm space-y-2 text-slate-200">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">제출 기간</span>
-                  <span className="font-semibold text-slate-100">2026.10.15(목) ~ 10.25(일) 18:00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">제출 방법</span>
-                  <span className="font-bold text-blue-400">U-KNOU 온라인 직접 제출</span>
+                {/* Photo Caption Bottom */}
+                <div className="absolute bottom-3 left-3 right-3 text-left">
+                  <p className="text-xs text-blue-300 font-semibold mb-0.5">제18회 총장배 S/W 경진대회 본선</p>
+                  <h4 className="text-base sm:text-lg font-bold text-white leading-snug drop-shadow-md">
+                    광주·전남 지역대학 출전팀 단체
+                  </h4>
                 </div>
               </div>
 
-              <div className="pt-1 flex items-center justify-between text-xs sm:text-sm">
-                <span className="text-slate-300 flex items-center gap-1.5 font-medium">
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  표절 검사는 중앙도서관 카피킬러 권장
-                </span>
+              {/* Mini Photo Strip */}
+              <div className="grid grid-cols-3 gap-2.5 mt-3">
+                <div className="relative rounded-xl overflow-hidden aspect-4/3 border border-slate-800 bg-slate-950">
+                  <img
+                    src={ASSETS.pictures.studyActivity}
+                    alt="CODE AI 스터디"
+                    className="w-full h-full object-cover opacity-85 hover:opacity-100 transition-opacity"
+                  />
+                  <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-white bg-black/60 px-1 py-0.5 rounded text-center truncate">
+                    스터디 실습
+                  </span>
+                </div>
+                <div className="relative rounded-xl overflow-hidden aspect-4/3 border border-slate-800 bg-slate-950">
+                  <img
+                    src={ASSETS.pictures.competition1}
+                    alt="경진대회 부스"
+                    className="w-full h-full object-cover opacity-85 hover:opacity-100 transition-opacity"
+                  />
+                  <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-white bg-black/60 px-1 py-0.5 rounded text-center truncate">
+                    경진대회 부스
+                  </span>
+                </div>
+                <div className="relative rounded-xl overflow-hidden aspect-4/3 border border-slate-800 bg-slate-950">
+                  <img
+                    src={ASSETS.pictures.councilMeeting}
+                    alt="정기 임원 회의"
+                    className="w-full h-full object-cover opacity-85 hover:opacity-100 transition-opacity"
+                  />
+                  <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-white bg-black/60 px-1 py-0.5 rounded text-center truncate">
+                    임원 회의
+                  </span>
+                </div>
+              </div>
+
+              {/* Urgent D-Day Mini Notice Strip */}
+              <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs sm:text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30 text-xs">
+                    {assignmentDDay.label}
+                  </span>
+                  <span className="text-slate-200 font-medium truncate max-w-[190px] sm:max-w-xs">
+                    2학기 중간과제물 제출 마감 임박
+                  </span>
+                </div>
                 <Link
                   to="/calendar"
-                  className="font-bold text-blue-400 hover:text-blue-300 flex items-center gap-0.5 transition-colors"
+                  className="text-blue-400 hover:text-blue-300 font-bold flex items-center shrink-0 ml-2"
                 >
-                  전체 일정 보기
+                  일정 확인
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -151,8 +164,8 @@ export const HeroSection: React.FC = () => {
               <Camera className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-white">학과 활동 갤러리</div>
-              <div className="text-[11px] text-slate-400">경진대회·스터디 현장</div>
+              <div className="text-xs font-bold text-white">생생한 학과 현장</div>
+              <div className="text-[11px] text-slate-400">경진대회·스터디 모임</div>
             </div>
           </div>
 

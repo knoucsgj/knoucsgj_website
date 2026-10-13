@@ -56,13 +56,13 @@ export const WelfarePage: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
-              <span>Photo Gallery & Communication</span>
+              <span>Student Council Communication Channel</span>
             </div>
             <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
-              학과 갤러리 & 소통 창구
+              학우 소통 및 열린 건의함
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-              한국방송통신대학교 광주전남지역대학 컴퓨터과학과의 생생한 활동 현장 기록과 학우 여러분의 목소리를 듣는 열린 소통 공간입니다.
+              한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학우 여러분들의 소중한 의견과 질문을 경청합니다. 언제든 편하게 남겨주세요.
             </p>
           </div>
         </div>
@@ -143,7 +143,7 @@ export const WelfarePage: React.FC = () => {
               학우 여러분의 소중한 의견을 들려주세요
             </h3>
             <p className="text-sm text-indigo-900 leading-relaxed mt-1">
-              학우 제휴 혜택 건의, 출석수업 및 학사 건의, 학술 스터디 지원 요청 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
+              출석수업 및 학사 문의, 학술 스터디 참여 지원 요청, 학생회 운영 제안 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
             </p>
           </div>
 
@@ -175,9 +175,9 @@ export const WelfarePage: React.FC = () => {
                     onChange={(e) => setFeedbackCategory(e.target.value as any)}
                     className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                   >
-                    <option value="제휴/복지">학우 제휴 & 복지 혜택</option>
-                    <option value="학사/수업">학사 일정 & 출석수업</option>
-                    <option value="행사/스터디">학과 행사 & 스터디 지원</option>
+                    <option value="학사/수업">학사 일정 & 출석수업 문의</option>
+                    <option value="행사/스터디">학과 스터디 지원 & 행사 문의</option>
+                    <option value="학생회운영">학생회 운영 건의</option>
                     <option value="기타">기타 자유 제안</option>
                   </select>
                 </div>

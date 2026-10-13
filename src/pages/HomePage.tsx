@@ -51,82 +51,80 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Recent Activities Photo Showcase Banner */}
-      <section className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 lg:p-10 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      {/* Real Campus Life Decorative Showcase */}
+      <section className="rounded-3xl bg-linear-to-b from-slate-900 to-slate-950 text-white p-7 sm:p-9 lg:p-10 shadow-xl border border-slate-800 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold mb-2 border border-blue-100">
-              <span>학과 현장 스케치</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs sm:text-sm font-semibold mb-2.5 border border-blue-400/20">
+              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+              <span>우리들의 생생한 학과 캠퍼스 라이프</span>
             </div>
-            <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              함께 배우고 성장하는 우리 학과 활동
+            <h2 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
+              일터에서 캠퍼스로, 함께 도전하고 성장합니다
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base mt-1">
-              소프트웨어 경진대회 본선, CODE & AI 학술 스터디, 학생회 자치 회의 등 생생한 학과 현장입니다.
+            <p className="text-slate-300 text-sm sm:text-base mt-1.5 font-normal max-w-2xl">
+              소프트웨어 경진대회 본선 현장부터 CODE & AI 실습 스터디, 정기 임원회의까지 광주전남 컴퓨터과학과의 따뜻한 열정이 함께합니다.
             </p>
           </div>
-          <Link
-            to="/welfare"
-            className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-blue-600 hover:text-blue-800 shrink-0"
-          >
-            활동 갤러리 전체보기 →
-          </Link>
+          <div className="text-xs sm:text-sm text-slate-400 font-medium shrink-0">
+            광주전남지역대학 컴퓨터과학과
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
-            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+          <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 group shadow-md hover:border-slate-700 transition-all">
+            <div className="aspect-4/3 overflow-hidden bg-slate-950">
               <img
                 src={ASSETS.pictures.competition1}
                 alt="총장배 경진대회 본선 부스"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            <div className="p-3.5">
-              <span className="text-xs font-bold text-blue-600">본교 경진대회</span>
-              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">총장배 S/W 경진대회 본선</p>
+            <div className="p-4">
+              <span className="text-xs font-bold text-blue-400">제18회 총장배 S/W 경진대회</span>
+              <p className="text-sm font-bold text-white mt-0.5">열정 가득한 본선 전시대 부스</p>
             </div>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
-            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+          <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 group shadow-md hover:border-slate-700 transition-all">
+            <div className="aspect-4/3 overflow-hidden bg-slate-950">
               <img
                 src={ASSETS.pictures.competition2}
                 alt="총장배 경진대회 광주전남 출전팀"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            <div className="p-3.5">
-              <span className="text-xs font-bold text-emerald-600">출전팀 단체</span>
-              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">광주전남 출전팀 기념</p>
+            <div className="p-4">
+              <span className="text-xs font-bold text-emerald-400">광주·전남 출전팀</span>
+              <p className="text-sm font-bold text-white mt-0.5">본선 진출 학우들의 단체 기념</p>
             </div>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
-            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+          <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 group shadow-md hover:border-slate-700 transition-all">
+            <div className="aspect-4/3 overflow-hidden bg-slate-950">
               <img
                 src={ASSETS.pictures.studyActivity}
                 alt="CODE AI 스터디 활동"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            <div className="p-3.5">
-              <span className="text-xs font-bold text-amber-600">학술 스터디</span>
-              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">CODE & AI 전산실습</p>
+            <div className="p-4">
+              <span className="text-xs font-bold text-amber-400">전산실습실 스터디</span>
+              <p className="text-sm font-bold text-white mt-0.5">CODE & AI 함께하는 코딩 모임</p>
             </div>
           </div>
 
-          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
-            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+          <div className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 group shadow-md hover:border-slate-700 transition-all">
+            <div className="aspect-4/3 overflow-hidden bg-slate-950">
               <img
                 src={ASSETS.pictures.councilMeeting}
                 alt="학생회 임원회의"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
-            <div className="p-3.5">
-              <span className="text-xs font-bold text-indigo-600">학생회 자치</span>
-              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">정기 임원회의 진행</p>
+            <div className="p-4">
+              <span className="text-xs font-bold text-purple-400">본관 405호 학생회</span>
+              <p className="text-sm font-bold text-white mt-0.5">학우들을 위한 정기 임원 회의</p>
             </div>
           </div>
         </div>
