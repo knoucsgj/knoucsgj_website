@@ -15,7 +15,7 @@ export const initialBudgetReports: BudgetReport[] = [
       { id: 'b2', date: '2026-08-28', type: '수입', category: '학생회비', description: '2026-2학기 신·편입생 및 재학생 학생회비 납부금', amount: 1000000 },
       { id: 'b3', date: '2026-09-05', type: '지출', category: '행사비', description: '2학기 개강총회 다과 및 음료 구입', amount: 320000, note: '영수증 증빙 완료' },
       { id: 'b4', date: '2026-09-12', type: '지출', category: '복지사업', description: '전산실습실 302호 환경정비 및 소모품(마우스패드, 물티슈 등) 구입', amount: 180000, note: '품의서 첨부' },
-      { id: 'b5', date: '2026-09-20', type: '지출', category: '학술비', description: '과제물 대비 IT 전공 서적 및 대여용 참고도서 구매 (4권)', amount: 220000, note: '학생회실 비치' },
+      { id: 'b5', date: '2026-09-20', type: '지출', category: '학술비', description: '과제물 대비 IT 전공 서적 및 열람용 참고도서 구매 (4권)', amount: 220000, note: '학생회실 비치' },
       { id: 'b6', date: '2026-09-28', type: '지출', category: '운영비', description: '학생회 홈페이지 호스팅 도메인 및 운영 소모품비', amount: 400000, note: 'Cloudflare 연계' }
     ]
   },

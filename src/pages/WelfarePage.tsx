@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { RentalItem, PartnershipItem } from '../lib/types';
+import type { PartnershipItem } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
-  Package,
   Sparkles,
   Image as ImageIcon,
   MessageSquare,
   CheckCircle2,
-  Clock,
   MapPin,
   ExternalLink,
-  Info,
   Send,
   AlertCircle,
   Copy,
@@ -19,15 +16,13 @@ import {
 } from 'lucide-react';
 
 export const WelfarePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'rentals' | 'partnerships' | 'gallery' | 'feedback'>('rentals');
-  const [rentals, setRentals] = useState<RentalItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'partnerships' | 'gallery' | 'feedback'>('partnerships');
   const [partnerships, setPartnerships] = useState<PartnershipItem[]>([]);
   const [gallery, setGallery] = useState<Array<{ id: string; title: string; date: string; location: string; image_url: string; desc: string }>>([]);
-  const [selectedRentalCategory, setSelectedRentalCategory] = useState<string>('전체');
 
   // 건의함 State
   const [feedbackTitle, setFeedbackTitle] = useState('');
-  const [feedbackCategory, setFeedbackCategory] = useState<'복지/비품' | '학사/수업' | '행사/스터디' | '기타'>('복지/비품');
+  const [feedbackCategory, setFeedbackCategory] = useState<'제휴/복지' | '학사/수업' | '행사/스터디' | '기타'>('제휴/복지');
   const [feedbackAuthor, setFeedbackAuthor] = useState('');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -35,12 +30,10 @@ export const WelfarePage: React.FC = () => {
 
   useEffect(() => {
     async function loadData() {
-      const [rData, pData, gData] = await Promise.all([
-        api.getRentalItems(),
+      const [pData, gData] = await Promise.all([
         api.getPartnerships(),
         api.getGalleryPhotos()
       ]);
-      setRentals(rData);
       setPartnerships(pData);
       setGallery(gData);
     }
@@ -66,11 +59,6 @@ export const WelfarePage: React.FC = () => {
     setFeedbackAuthor('');
   };
 
-  const filteredRentals = rentals.filter((item) => {
-    if (selectedRentalCategory === '전체') return true;
-    return item.category === selectedRentalCategory;
-  });
-
   return (
     <div className="space-y-10">
       {/* Clean Editorial Page Header */}
@@ -91,25 +79,14 @@ export const WelfarePage: React.FC = () => {
               학생 복지 & 소통 센터
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-              광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 실습 교재 및 비품 대여, IT 제휴 혜택, 열린 소통 창구를 운영합니다.
+              광주전남지역대학 컴퓨터과학과 학생회는 학우들의 원활한 학습과 대학 생활을 위해 IT 교육 및 도서 제휴 혜택, 학과 활동 갤러리, 열린 소통 창구를 운영합니다.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Navigation      {/* Tabs */}
+      {/* Tabs */}
       <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
-        <button
-          onClick={() => setActiveTab('rentals')}
-          className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'rentals'
-              ? 'bg-white text-emerald-700 border-t-2 border-x border-emerald-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Package className="w-5 h-5 text-emerald-600" />
-          학생회 비품·교재 대여 ({rentals.length})
-        </button>
         <button
           onClick={() => setActiveTab('partnerships')}
           className={`px-5 py-3 text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -146,99 +123,7 @@ export const WelfarePage: React.FC = () => {
       </div>
 
       {/* ========================================== */}
-      {/* TAB 1: 비품 및 교재 대여                    */}
-      {/* ========================================== */}
-      {activeTab === 'rentals' && (
-        <div className="space-y-6">
-          {/* Information & Instructions Banner */}
-          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-5 sm:p-6 text-emerald-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <Info className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="text-sm sm:text-base">
-                <p className="font-bold text-emerald-950 text-base sm:text-lg mb-1">대여 이용 안내 및 수칙</p>
-                <p className="text-emerald-900 leading-relaxed">
-                  광주전남지역대학 컴퓨터과학과 재학생이라면 누구나 대여 가능합니다. 
-                  대여 시 학생증(모바일 학생증 가능)을 지참해 학생회실(본관 405호)에 방문해 대여 대장을 작성해 주세요.
-                </p>
-              </div>
-            </div>
-            <div className="text-sm bg-white text-emerald-950 font-bold px-4 py-2.5 rounded-xl border border-emerald-300 shadow-xs shrink-0">
-              최대 대여 기간: <span className="text-emerald-700 font-extrabold">7일 (연장 1회 가능)</span>
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {['전체', '전산실습 교재', 'IT 기기/소모품', '생활복지'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedRentalCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  selectedRentalCategory === cat
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRentals.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3.5">
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                      {item.category}
-                    </span>
-                    <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 ${
-                        item.status === '대여가능' && item.available_qty > 0
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {item.status === '대여가능' && item.available_qty > 0 ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          대여 가능 ({item.available_qty}/{item.total_qty})
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-4 h-4" />
-                          모두 대여 중 ({item.available_qty}/{item.total_qty})
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  <h3 className="font-bold text-slate-900 text-lg sm:text-xl mb-2">{item.name}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-4">{item.desc}</p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 space-y-2 text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                    <span>보관 장소: <strong className="text-slate-800">{item.location}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>신청 방법: 당일 방문 또는 사전 문의</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================== */}
-      {/* TAB 2: 제휴 혜택                            */}
+      {/* TAB 1: 제휴 혜택                            */}
       {/* ========================================== */}
       {activeTab === 'partnerships' && (
         <div className="space-y-6">
@@ -364,7 +249,7 @@ export const WelfarePage: React.FC = () => {
               학우 여러분의 소중한 의견을 들려주세요
             </h3>
             <p className="text-sm text-indigo-900 leading-relaxed mt-1">
-              학생회실 비품 희망 품목, 출석수업 및 학사 건의, 학술 스터디 지원 요청 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
+              학우 제휴 혜택 건의, 출석수업 및 학사 건의, 학술 스터디 지원 요청 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
             </p>
           </div>
 
@@ -396,7 +281,7 @@ export const WelfarePage: React.FC = () => {
                     onChange={(e) => setFeedbackCategory(e.target.value as any)}
                     className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                   >
-                    <option value="복지/비품">복지 물품 & 대여 건의</option>
+                    <option value="제휴/복지">학우 제휴 & 복지 혜택</option>
                     <option value="학사/수업">학사 일정 & 출석수업</option>
                     <option value="행사/스터디">학과 행사 & 스터디 지원</option>
                     <option value="기타">기타 자유 제안</option>

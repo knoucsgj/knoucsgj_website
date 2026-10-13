@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Calendar, ChevronRight, Scale, Package, Users, CheckCircle } from 'lucide-react';
+import { Bell, Calendar, ChevronRight, Scale, Sparkles, Users, CheckCircle } from 'lucide-react';
 import { getDDay } from '../../lib/dateUtils';
 import { ASSETS } from '../../lib/assets';
 
@@ -34,7 +34,7 @@ export const HeroSection: React.FC = () => {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-xl font-normal">
-              출석수업 및 과제 가이드, 100% 투명한 학생회비 결산, 실습 교재 및 비품 대여, 동료 학우들과 함께하는 스터디까지 학생회가 든든한 동반자가 되겠습니다.
+              출석수업 및 과제 가이드, 100% 투명한 학생회비 결산, 학우 제휴 혜택, 동료 학우들과 함께하는 스터디까지 학생회가 든든한 동반자가 되겠습니다.
             </p>
 
             {/* Action Buttons */}
@@ -148,11 +148,11 @@ export const HeroSection: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 shrink-0">
-              <Package className="w-5 h-5" />
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-white">비품·실습서 대여</div>
-              <div className="text-[11px] text-slate-400">실습교재·계산기 상시 대여</div>
+              <div className="text-xs font-bold text-white">학우 제휴 & 복지</div>
+              <div className="text-[11px] text-slate-400">IT 도서·인강 제휴 혜택</div>
             </div>
           </div>
 

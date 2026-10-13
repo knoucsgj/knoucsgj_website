@@ -131,12 +131,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/welfare" className="hover:text-white transition-colors">
-                  학생회실 비품 및 교재 대여
-                </Link>
-              </li>
-              <li>
-                <Link to="/welfare" className="hover:text-white transition-colors">
-                  학우 제휴 혜택 안내
+                  학우 제휴 혜택 & 활동 갤러리
                 </Link>
               </li>
               <li>

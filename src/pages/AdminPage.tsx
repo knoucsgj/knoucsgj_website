@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
-import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute, RentalItem } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -25,8 +25,7 @@ import {
   Save,
   RotateCcw,
   BookOpen,
-  FileText,
-  Package
+  FileText
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -34,8 +33,8 @@ export const AdminPage: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'rentals' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'rentals' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'backup'>('notices');
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -100,9 +99,8 @@ export const AdminPage: React.FC = () => {
     email: ''
   });
 
-  // Governance & Rental States
+  // Governance States
   const [minutes, setMeetingMinutes] = useState<MeetingMinute[]>([]);
-  const [rentals, setRentals] = useState<RentalItem[]>([]);
   const [isMinuteModalOpen, setIsMinuteModalOpen] = useState(false);
   const [minuteForm, setMinuteForm] = useState({
     title: '',
@@ -126,14 +124,13 @@ export const AdminPage: React.FC = () => {
   }, [isAdmin]);
 
   const loadAllData = async () => {
-    const [nData, eData, sData, iData, mData, minData, rData] = await Promise.all([
+    const [nData, eData, sData, iData, mData, minData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
       api.getStudies(),
       api.getCouncilIntro(),
       api.getCouncilMembers(),
-      api.getMeetingMinutes(),
-      api.getRentalItems()
+      api.getMeetingMinutes()
     ]);
     setNotices(nData);
     setEvents(eData);
@@ -141,7 +138,6 @@ export const AdminPage: React.FC = () => {
     setCouncilIntro(iData);
     setCouncilMembers(mData);
     setMeetingMinutes(minData);
-    setRentals(rData);
   };
 
   // Login handler
@@ -474,16 +470,6 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleUpdateRentalQty = async (item: RentalItem, delta: number) => {
-    const newAvail = Math.max(0, Math.min(item.total_qty, item.available_qty + delta));
-    const newStatus = newAvail > 0 ? '대여가능' : '대여중';
-    await api.updateRentalItem(item.id, {
-      available_qty: newAvail,
-      status: newStatus
-    });
-    loadAllData();
-  };
-
   // ==========================================
   // Login Gate
   // ==========================================
@@ -644,17 +630,6 @@ export const AdminPage: React.FC = () => {
         >
           <FileText className="w-4 h-4 text-purple-600" />
           자치 회의록 관리 ({minutes.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('rentals')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'rentals'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Package className="w-4 h-4 text-emerald-600" />
-          비품·교재 대여 관리 ({rentals.length})
         </button>
         <button
           onClick={() => setActiveTab('backup')}
@@ -1141,81 +1116,6 @@ export const AdminPage: React.FC = () => {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================== */}
-      {/* TAB 6: Rental Management (비품 대여 관리)   */}
-      {/* ========================================== */}
-      {activeTab === 'rentals' && (
-        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">학생 복지 비품 & 실습 교재 현황 관리</h2>
-              <p className="text-xs text-slate-500">
-                학생회실 비품의 현재 잔여 대여 가능 수량을 [-] [+] 버튼으로 간편하게 업데이트할 수 있습니다.
-              </p>
-            </div>
-            <Link
-              to="/welfare"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
-            >
-              대여 페이지 바로가기
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rentals.map((r) => (
-              <div
-                key={r.id}
-                className="p-5 rounded-2xl border border-slate-200 bg-white flex flex-col justify-between space-y-4 shadow-2xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                      {r.category}
-                    </span>
-                    <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        r.available_qty > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {r.available_qty > 0 ? '대여 가능' : '전체 대여중'}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-slate-900 text-sm mb-1">{r.name}</h3>
-                  <p className="text-slate-500 text-xs">{r.desc}</p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">총 보유: <strong className="text-slate-800">{r.total_qty}개</strong></span>
-                    <span className="text-slate-700 font-semibold">
-                      잔여 가능: <strong className="text-emerald-700 text-sm">{r.available_qty}개</strong>
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleUpdateRentalQty(r, -1)}
-                      disabled={r.available_qty <= 0}
-                      className="flex-1 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40 text-xs font-bold text-slate-700 transition-colors"
-                    >
-                      - 대여 발생 (-1)
-                    </button>
-                    <button
-                      onClick={() => handleUpdateRentalQty(r, 1)}
-                      disabled={r.available_qty >= r.total_qty}
-                      className="flex-1 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 disabled:opacity-40 text-xs font-bold text-emerald-800 transition-colors"
-                    >
-                      + 반납 완료 (+1)
-                    </button>
-                  </div>
                 </div>
               </div>
             ))}
