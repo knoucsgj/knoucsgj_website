@@ -51,6 +51,87 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Recent Activities Photo Showcase Banner */}
+      <section className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 lg:p-10 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs sm:text-sm font-semibold mb-2 border border-blue-100">
+              <span>학과 현장 스케치</span>
+            </div>
+            <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              함께 배우고 성장하는 우리 학과 활동
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base mt-1">
+              소프트웨어 경진대회 본선, CODE & AI 학술 스터디, 학생회 자치 회의 등 생생한 학과 현장입니다.
+            </p>
+          </div>
+          <Link
+            to="/welfare"
+            className="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-blue-600 hover:text-blue-800 shrink-0"
+          >
+            활동 갤러리 전체보기 →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
+            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+              <img
+                src={ASSETS.pictures.competition1}
+                alt="총장배 경진대회 본선 부스"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            <div className="p-3.5">
+              <span className="text-xs font-bold text-blue-600">본교 경진대회</span>
+              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">총장배 S/W 경진대회 본선</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
+            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+              <img
+                src={ASSETS.pictures.competition2}
+                alt="총장배 경진대회 광주전남 출전팀"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            <div className="p-3.5">
+              <span className="text-xs font-bold text-emerald-600">출전팀 단체</span>
+              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">광주전남 출전팀 기념</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
+            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+              <img
+                src={ASSETS.pictures.studyActivity}
+                alt="CODE AI 스터디 활동"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            <div className="p-3.5">
+              <span className="text-xs font-bold text-amber-600">학술 스터디</span>
+              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">CODE & AI 전산실습</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group shadow-xs">
+            <div className="aspect-4/3 overflow-hidden bg-slate-100">
+              <img
+                src={ASSETS.pictures.councilMeeting}
+                alt="학생회 임원회의"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            <div className="p-3.5">
+              <span className="text-xs font-bold text-indigo-600">학생회 자치</span>
+              <p className="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">정기 임원회의 진행</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Student Council Academic Support Banner */}
       <section className="rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 lg:p-10 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-start sm:items-center gap-5">

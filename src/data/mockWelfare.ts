@@ -1,4 +1,5 @@
 import type { RentalItem, PartnershipItem } from '../lib/types';
+import { ASSETS } from '../lib/assets';
 
 export const initialRentalItems: RentalItem[] = [
   {
@@ -93,26 +94,34 @@ export const initialPartnerships: PartnershipItem[] = [
 export const initialGalleryPhotos = [
   {
     id: 'g-1',
-    title: '2026-1학기 종강총회 및 학술 프로젝트 시상식',
-    date: '2026-06-20',
-    location: '광주전남지역대학 본관 세미나실',
-    image_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
-    desc: '한 학기 동안 열심히 달려오신 학우님들과 함께한 종강총회 현장입니다.'
+    title: '제18회 총장배 소프트웨어 경진대회 본선 참가 및 부스 운영',
+    date: '2026-08-29',
+    location: '한국방송통신대학교 본교 (대학본부)',
+    image_url: ASSETS.pictures.competition1,
+    desc: '광주전남 컴퓨터과학과를 대표하여 출전한 학우들의 열정적인 소프트웨어 작품 시연 및 본선 발표 현장입니다.'
   },
   {
     id: 'g-2',
-    title: '2026 봄 IT 실무 특강 (클라우드 & 백엔드 아키텍처)',
-    date: '2026-05-16',
-    location: '지역대학 302호 전산실습실',
-    image_url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&auto=format&fit=crop&q=80',
-    desc: '현업 카카오 개발자 동문 선배님과 함께한 실무 세미나 모습입니다.'
+    title: '총장배 소프트웨어 경진대회 광주전남 출전팀 단체 기념',
+    date: '2026-08-29',
+    location: '한국방송통신대학교 본교 경진대회장',
+    image_url: ASSETS.pictures.competition2,
+    desc: '치열한 예선을 뚫고 본선 무대에서 값진 성과를 거둔 광주전남지역대학 학우들과 지도교수님 기념 촬영입니다.'
   },
   {
     id: 'g-3',
-    title: '2026-1학기 신·편입생 오리엔테이션 및 멘토링 데이',
-    date: '2026-03-08',
-    location: '광주지역대학 4층 대강당',
-    image_url: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80',
-    desc: '새롭게 방송대 컴퓨터과학과 가족이 되신 학우 여러분을 환영하는 자리였습니다.'
+    title: 'CODE & AI 학술 스터디 소그룹 오프라인 정기 모임',
+    date: '2026-04-22',
+    location: '광주전남지역대학 302호 전산실습실',
+    image_url: ASSETS.pictures.studyActivity,
+    desc: '인공지능 및 코딩 실습을 함께 공부하며 전공 역량을 쌓아가는 CODE AI 스터디원들의 실습 토론 모습입니다.'
+  },
+  {
+    id: 'g-4',
+    title: '컴퓨터과학과 학생회 정기 임원회의',
+    date: '2026-04-10',
+    location: '광주전남지역대학 본관 405호 학생회실',
+    image_url: ASSETS.pictures.councilMeeting,
+    desc: '출석수업 지원, 스터디 활성화 방안 및 학우 복지 사업 안건을 의결하는 학생회 임원진 정기 회의 현장입니다.'
   }
 ];

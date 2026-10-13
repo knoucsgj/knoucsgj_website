@@ -30,5 +30,13 @@ export const ASSETS = {
     celebrate: encodeURI('/character/03 축하.png'),         // 축하/행사
     joy: encodeURI('/character/01 희(기쁨).png'),           // 기쁨/환영
     heart: encodeURI('/character/18 하트.png'),             // 애정/소통
+  },
+
+  // Real Council & Academic Activity Photos
+  pictures: {
+    studyActivity: encodeURI('/pictures/CODEAI스터디활동260422.jpg'),
+    councilMeeting: encodeURI('/pictures/임원회의.jpg'),
+    competition1: encodeURI('/pictures/총장배소프트웨어경진대회260829-1.jpg'),
+    competition2: encodeURI('/pictures/총장배소프트웨어경진대회260829-2.jpg'),
   }
 } as const;
