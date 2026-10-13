@@ -107,7 +107,7 @@ export const AboutPage: React.FC = () => {
                 {councilIntro.title}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-                한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회
+                한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회
               </p>
             </div>
             <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-2xl bg-blue-50/70 border border-blue-100 p-2 shrink-0 flex items-center justify-center shadow-xs">
@@ -171,7 +171,7 @@ export const AboutPage: React.FC = () => {
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">제43대 학생회 임원진</h2>
+              <h2 className="text-xl font-bold text-slate-900">학생회 임원진</h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                 학우 여러분의 편리한 학업과 권익을 위해 봉사하는 임원진입니다.
               </p>

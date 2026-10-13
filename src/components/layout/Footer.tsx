@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-knou text-white font-bold text-base tracking-tight">
-                  컴퓨터과학과 제43대 학생회
+                  컴퓨터과학과 학생회
                 </h3>
                 <p className="text-slate-400 text-xs">한국방송통신대학교 광주전남지역대학</p>
               </div>

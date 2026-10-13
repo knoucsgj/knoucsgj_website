@@ -373,7 +373,7 @@ export const api = {
     const backupData = {
       version: '2.0',
       exported_at: new Date().toISOString(),
-      organization: '한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회',
+      organization: '한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회',
       data: {
         notices,
         events,

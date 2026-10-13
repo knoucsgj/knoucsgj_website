@@ -32,7 +32,7 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-2 text-slate-300 font-medium">
             <span>한국방송통신대학교 광주전남지역대학</span>
             <span className="text-slate-600">/</span>
-            <span className="text-slate-400">컴퓨터과학과 제43대 학생회</span>
+            <span className="text-slate-400">컴퓨터과학과 학생회</span>
           </div>
 
           <div className="flex items-center gap-4 text-xs">
@@ -78,14 +78,9 @@ export const Navbar: React.FC = () => {
               className="h-8 sm:h-9 md:h-10 w-auto object-contain shrink-0"
             />
             <div className="h-8 w-px bg-slate-200" />
-            <div className="flex flex-col justify-center">
-              <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 tracking-wider">
-                제43대
-              </span>
-              <span className="font-knou text-base sm:text-lg md:text-xl font-bold text-slate-950 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
-                컴퓨터과학과 학생회
-              </span>
-            </div>
+            <span className="font-knou text-base sm:text-lg md:text-xl font-bold text-slate-950 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
+              컴퓨터과학과 학생회
+            </span>
           </Link>
 
           {/* Desktop Navigation Links */}

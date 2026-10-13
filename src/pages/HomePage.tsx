@@ -63,7 +63,7 @@ export const HomePage: React.FC = () => {
           </div>
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-semibold mb-2 border border-blue-100">
-              <span>제43대 컴퓨터과학과 학생회 소통 창구</span>
+              <span>컴퓨터과학과 학생회 소통 창구</span>
             </div>
             <h2 className="font-knou text-lg sm:text-xl font-bold text-slate-900 tracking-tight mb-1.5">
               수업이나 과제, 혼자 고민하지 마세요

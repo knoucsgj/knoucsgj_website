@@ -25,7 +25,7 @@ export const HeroSection: React.FC = () => {
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-300 text-xs font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-              <span>한국방송통신대학교 광주전남지역대학 컴퓨터과학과 제43대 학생회</span>
+              <span>한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회</span>
             </div>
 
             <h1 className="font-knou text-2xl sm:text-3xl lg:text-[2.25rem] font-bold tracking-tight text-white leading-snug">
