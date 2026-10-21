@@ -109,17 +109,21 @@ export const Navbar: React.FC = () => {
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          {/* Official Emblem & Wordmark (컴퓨터과학과 학생회 핵심 강조) */}
-          <Link to="/" className="flex items-center gap-3 sm:gap-4 group shrink-0">
+          {/* Official Emblem (BS16 엠블럼 C) & 2-Line Aligned Identity */}
+          <Link to="/" className="flex items-center gap-3 sm:gap-3.5 group shrink-0">
             <img
-              src={ASSETS.UI.gwangjuJeonnam}
-              alt="한국방송통신대학교 광주전남지역대학"
-              className="h-8 sm:h-9 md:h-10 w-auto object-contain shrink-0"
+              src={ASSETS.UI.emblemC}
+              alt="한국방송통신대학교 엠블럼"
+              className="h-10 sm:h-11 md:h-12 w-auto object-contain shrink-0 drop-shadow-xs"
             />
-            <div className="h-8 w-px bg-slate-200" />
-            <span className="font-knou text-base sm:text-lg md:text-xl font-bold text-slate-950 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
-              컴퓨터과학과 학생회
-            </span>
+            <div className="flex flex-col justify-center select-none">
+              <span className="font-knou text-[13px] sm:text-[14px] font-bold text-slate-600 tracking-[0.16em] group-hover:text-blue-800 transition-colors leading-tight">
+                광주전남지역대학
+              </span>
+              <span className="font-knou text-[15px] sm:text-[16.5px] font-bold text-slate-950 tracking-[0.02em] group-hover:text-blue-700 transition-colors leading-tight mt-0.5">
+                컴퓨터과학과 학생회
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation Links */}

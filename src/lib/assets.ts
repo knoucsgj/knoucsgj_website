@@ -10,6 +10,7 @@ export const ASSETS = {
     mainUniversity: encodeURI('/UI/knou_main_logo.png'),
     communicationMark: encodeURI('/UI/방송대 커뮤니케이션마크.png'),
     rawGwangjuJeonnam: encodeURI('/UI/5. 광주전남지역대학.png'),
+    emblemC: encodeURI('/UI/knou_emblem_c.png'),
   },
 
   // Official Mascot Characters
