@@ -20,7 +20,8 @@ import {
   Shield,
   ArrowRight,
   GraduationCap,
-  FileCode
+  FileCode,
+  Upload
 } from 'lucide-react';
 
 export const StudyMaterialsPage: React.FC = () => {
@@ -63,6 +64,8 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newMatCategory, setNewMatCategory] = useState<'기출문제/해설' | '출석수업요약' | '과제물참고자료' | '강의노트' | '기타자료'>('출석수업요약');
   const [newMatAuthor, setNewMatAuthor] = useState('');
   const [newMatFileName, setNewMatFileName] = useState('');
+  const [newMatFileSize, setNewMatFileSize] = useState('');
+  const [newMatFileDataUrl, setNewMatFileDataUrl] = useState<string>('');
   const [isSubmittingMaterial, setIsSubmittingMaterial] = useState(false);
 
   const isAdmin = auth.isAdmin();
@@ -80,12 +83,61 @@ export const StudyMaterialsPage: React.FC = () => {
     setMaterials(matsData);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size (max 5MB for localStorage/client storage)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('파일 크기는 5MB 이하여야 합니다.');
+      e.target.value = '';
+      return;
+    }
+
+    const sizeFormatted =
+      file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+        : `${Math.round(file.size / 1024)}KB`;
+
+    setNewMatFileName(file.name);
+    setNewMatFileSize(sizeFormatted);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewMatFileDataUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDownload = async (mat: AcademicMaterial) => {
     await api.incrementMaterialDownload(mat.id);
     setMaterials((prev) =>
       prev.map((m) => (m.id === mat.id ? { ...m, downloads: m.downloads + 1 } : m))
     );
-    alert(`[${mat.file_name || mat.title}] 자료 다운로드가 시작되었습니다.`);
+
+    const fileName = mat.file_name || `${mat.title}.pdf`;
+
+    if (mat.file_url && mat.file_url.startsWith('data:')) {
+      // Trigger download for uploaded data URL
+      const a = document.createElement('a');
+      a.href = mat.file_url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Create a virtual text/pdf download blob for mock materials
+      const dummyContent = `[한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학습자료실]\n\n과목명: ${mat.course_name}\n자료명: ${mat.title}\n분류: ${mat.category} (${mat.grade}학년 ${mat.semester}학기)\n작성자: ${mat.author}\n등록일: ${mat.created_at}\n\n[상세 내용]\n${mat.description}\n\n※ 본 자료는 학우들의 학습 목적으로 제공됩니다.`;
+      const blob = new Blob([dummyContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName.endsWith('.pdf') ? fileName.replace('.pdf', '.txt') : `${fileName}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleCreateStudy = async (e: React.FormEvent) => {
@@ -141,14 +193,17 @@ export const StudyMaterialsPage: React.FC = () => {
         category: newMatCategory,
         author: newMatAuthor.trim() || '학우',
         file_name: newMatFileName.trim() || `${newMatCourse}_참고자료.pdf`,
-        file_size: '2.5MB'
+        file_size: newMatFileSize.trim() || '2.5MB',
+        file_url: newMatFileDataUrl || undefined
       });
       await loadData();
       setIsCreateMaterialModalOpen(false);
       setNewMatTitle('');
       setNewMatDescription('');
       setNewMatFileName('');
-      alert('자료가 성공적으로 자료실에 등록되었습니다!');
+      setNewMatFileSize('');
+      setNewMatFileDataUrl('');
+      alert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
     } catch (err) {
       console.error(err);
       alert('자료 등록 중 오류가 발생했습니다.');
@@ -885,13 +940,15 @@ export const StudyMaterialsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">전공 교과목명 *</label>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    {newMatCategory === '기타자료' ? '구분/소프트웨어명 *' : '전공 교과목명 *'}
+                  </label>
                   <input
                     type="text"
                     required
                     value={newMatCourse}
                     onChange={(e) => setNewMatCourse(e.target.value)}
-                    placeholder="예: C프로그래밍, 자료구조"
+                    placeholder={newMatCategory === '기타자료' ? '예: VS Code, Git, 정보처리기사' : '예: C프로그래밍, 자료구조'}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200"
                   />
                 </div>
@@ -906,7 +963,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     <option value="기출문제/해설">기출문제/해설</option>
                     <option value="과제물참고자료">과제물참고자료</option>
                     <option value="강의노트">강의노트</option>
-                    <option value="기타자료">기타자료</option>
+                    <option value="기타자료">기타자료 (개발환경/IT/자격증)</option>
                   </select>
                 </div>
               </div>
@@ -934,27 +991,55 @@ export const StudyMaterialsPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1">작성자 / 기여자</label>
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  자료 파일 첨부 (PDF, HWP, ZIP, 코드 등)
+                </label>
+                <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-4 transition-colors bg-slate-50 text-center relative cursor-pointer">
                   <input
-                    type="text"
-                    value={newMatAuthor}
-                    onChange={(e) => setNewMatAuthor(e.target.value)}
-                    placeholder="예: 학생회 학술부"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
+                    type="file"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.7z,.txt,.c,.cpp,.java,.py,.sql,.html,.css,.js"
                   />
+                  {newMatFileName ? (
+                    <div className="flex items-center justify-between px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-left">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                        <span className="font-bold text-xs sm:text-sm text-slate-800 truncate">
+                          {newMatFileName}
+                        </span>
+                        <span className="text-xs text-blue-600 font-semibold shrink-0">
+                          ({newMatFileSize})
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-500 hover:text-slate-800 shrink-0 ml-2">
+                        변경
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 py-2">
+                      <Upload className="w-7 h-7 text-slate-400 mx-auto" />
+                      <p className="text-xs sm:text-sm font-semibold text-slate-700">
+                        클릭하여 파일을 선택하거나 이곳으로 드래그하세요
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 5MB)
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1">파일명 (표시용)</label>
-                  <input
-                    type="text"
-                    value={newMatFileName}
-                    onChange={(e) => setNewMatFileName(e.target.value)}
-                    placeholder="예: 자료요약본.pdf"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">작성자 / 기여자</label>
+                <input
+                  type="text"
+                  value={newMatAuthor}
+                  onChange={(e) => setNewMatAuthor(e.target.value)}
+                  placeholder="예: 학생회 학술부, 23학번 홍길동"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200"
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
