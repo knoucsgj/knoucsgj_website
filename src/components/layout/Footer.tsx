@@ -67,13 +67,13 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="https://cs.knou.ac.kr"
+                  href="https://cs.knou.ac.kr/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  컴퓨터과학과 학과본부
+                  컴퓨터과학과
                 </a>
               </li>
               <li>

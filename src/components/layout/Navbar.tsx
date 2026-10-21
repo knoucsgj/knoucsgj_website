@@ -76,12 +76,12 @@ export const Navbar: React.FC = () => {
             </a>
             <span className="text-slate-700">|</span>
             <a
-              href="https://cs.knou.ac.kr"
+              href="https://cs.knou.ac.kr/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-300 hover:text-white transition-colors"
             >
-              학과본부
+              컴퓨터과학과
             </a>
             <span className="text-slate-700">|</span>
             <Link
