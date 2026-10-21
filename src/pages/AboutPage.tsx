@@ -8,6 +8,10 @@ import {
   Users,
   MapPin,
   Phone,
+  Printer,
+  Clock,
+  Building,
+  Info,
   Mail,
   Shield,
   Heart,
@@ -376,8 +380,8 @@ export const AboutPage: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <Phone className="w-6 h-6 text-blue-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold block text-slate-900 text-base">대표 전화</span>
-                    <span className="text-slate-700 text-sm sm:text-base">전화: {regionalInfo.tel} / 팩스: {regionalInfo.fax}</span>
+                    <span className="font-bold block text-slate-900 text-base">지역대학 행정실 대표전화</span>
+                    <span className="text-slate-700 text-sm sm:text-base">{regionalInfo.tel}</span>
                   </div>
                 </div>
               </div>
@@ -402,25 +406,100 @@ export const AboutPage: React.FC = () => {
 
           {/* Sub-center 학습관 List */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
-            <h3 className="text-xl font-bold text-slate-900 mb-2">전남 관할 시·군 학습관</h3>
-            <p className="text-sm sm:text-base text-slate-600 mb-6">
-              광주 본관 외에도 각 지역 학습관에서 시험 응시 및 강의실 이용이 가능합니다.
-            </p>
+            <div className="pb-4 border-b border-slate-100 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-1">전남 관할 시·군 학습관 (2개소)</h3>
+              <p className="text-sm sm:text-base text-slate-600">
+                광주 본관 외에도 각 지역 학습관에서 시험(출석대체시험, 기말시험) 응시 및 사전 신청을 통한 스터디 진행이 가능합니다.
+              </p>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {regionalInfo.sub_centers.map((center, idx) => (
                 <div
                   key={idx}
-                  className="p-5 rounded-2xl border border-slate-200 bg-slate-50/40 hover:bg-blue-50/40 transition-colors"
+                  className="p-6 rounded-2xl border border-slate-200 bg-slate-50/50 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between"
                 >
-                  <span className="font-bold text-base text-slate-900 block mb-1.5">
-                    {center.name}
-                  </span>
-                  <p className="text-sm text-slate-600 mb-3 leading-relaxed">{center.address}</p>
-                  <p className="text-sm font-bold text-blue-700 flex items-center gap-1.5">
-                    <Phone className="w-4 h-4" />
-                    {center.tel}
-                  </p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                      <span className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                        <Building className="w-5 h-5 text-blue-600" />
+                        {center.name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://map.naver.com/v5/search/${encodeURIComponent(center.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors inline-flex items-center gap-1"
+                        >
+                          네이버 지도 <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <a
+                          href={`https://map.kakao.com/link/search/${encodeURIComponent(center.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-400 text-slate-900 hover:bg-amber-500 transition-colors inline-flex items-center gap-1"
+                        >
+                          카카오맵 <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 text-sm sm:text-base">
+                      <div className="flex items-start gap-2.5 text-slate-700">
+                        <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-1" />
+                        <div>
+                          <span className="font-semibold text-slate-900 mr-2">주소:</span>
+                          <span>{center.address}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span className="font-semibold text-slate-900">전화:</span>
+                          <span className="font-bold text-blue-700">{center.tel}</span>
+                        </div>
+                        {center.fax && (
+                          <div className="flex items-center gap-2">
+                            <Printer className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="font-semibold text-slate-900">팩스:</span>
+                            <span>{center.fax}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {center.facilities && (
+                        <div className="flex items-start gap-2.5 text-slate-700">
+                          <Building className="w-4 h-4 text-indigo-600 shrink-0 mt-1" />
+                          <div>
+                            <span className="font-semibold text-slate-900 mr-2">주요 시설:</span>
+                            <span>{center.facilities}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {center.hours && (
+                        <div className="flex items-start gap-2.5 text-slate-700">
+                          <Clock className="w-4 h-4 text-emerald-600 shrink-0 mt-1" />
+                          <div>
+                            <span className="font-semibold text-slate-900 mr-2">근무 시간:</span>
+                            <span>{center.hours}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {center.notice && (
+                      <div className="mt-4 p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs sm:text-sm text-amber-900 flex items-start gap-2 leading-relaxed">
+                        <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="font-semibold block mb-0.5">이용 안내:</strong>
+                          <span>{center.notice}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
