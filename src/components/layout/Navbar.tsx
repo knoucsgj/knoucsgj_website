@@ -116,20 +116,14 @@ export const Navbar: React.FC = () => {
               alt="한국방송통신대학교 엠블럼"
               className="h-14 sm:h-15 md:h-16 w-auto object-contain shrink-0 drop-shadow-xs transition-transform group-hover:scale-105"
             />
-            <div className="flex flex-col justify-center select-none w-[172px] sm:w-[188px]">
-              {/* 윗줄: 광주전남지역대학 (8글자) - 방송대 전용색상 KNOU Dark Blue (#0054a6) & 컴팩트한 자간 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-[#0054a6] text-[17.5px] sm:text-[19px] leading-none tracking-tight group-hover:text-[#003875] transition-colors">
-                {'광주전남지역대학'.split('').map((char, i) => (
-                  <span key={i}>{char}</span>
-                ))}
+            <div className="flex flex-col justify-center select-none w-fit">
+              {/* 윗줄: 광주전남지역대학 - 방송대 전용색상 KNOU Dark Blue (#0054a6) */}
+              <div className="font-knou font-extrabold text-[#0054a6] text-[18px] sm:text-[19.5px] leading-tight tracking-tight group-hover:text-[#003875] transition-colors">
+                광주전남지역대학
               </div>
-              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자) - 방송대 전용색상 KNOU Deep Blue (#00428e) & 컴팩트한 자간 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-[#00428e] text-[17.5px] sm:text-[19px] leading-none tracking-tight mt-1 group-hover:text-[#002f66] transition-colors">
-                {'컴퓨터과학과 학생회'.split('').map((char, i) => (
-                  <span key={i} className={char === ' ' ? 'w-1 sm:w-1.5 inline-block' : ''}>
-                    {char === ' ' ? '\u00A0' : char}
-                  </span>
-                ))}
+              {/* 아랫줄: 컴퓨터과학과 학생회 - 더 진한 굵기(font-black)와 좁은 자간(tracking-tighter) */}
+              <div className="font-knou font-black text-[#003d80] text-[17.5px] sm:text-[19px] leading-tight tracking-tighter mt-0.5 group-hover:text-[#002855] transition-colors">
+                컴퓨터과학과 학생회
               </div>
             </div>
           </Link>
