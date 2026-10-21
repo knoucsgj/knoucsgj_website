@@ -67,7 +67,7 @@ export const Navbar: React.FC = () => {
 
             <span className="text-slate-700">|</span>
             <a
-              href="https://gj.knou.ac.kr"
+              href="https://wgwangju.knou.ac.kr/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-300 hover:text-white transition-colors"
