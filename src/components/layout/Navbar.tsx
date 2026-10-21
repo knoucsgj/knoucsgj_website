@@ -109,20 +109,28 @@ export const Navbar: React.FC = () => {
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          {/* Official Emblem (BS16 엠블럼 C) & 2-Line Aligned Identity */}
+          {/* Official Emblem (BS16 엠블럼 C) & 2-Line Perfectly Justified Identity */}
           <Link to="/" className="flex items-center gap-3 sm:gap-3.5 group shrink-0">
             <img
               src={ASSETS.UI.emblemC}
               alt="한국방송통신대학교 엠블럼"
-              className="h-10 sm:h-11 md:h-12 w-auto object-contain shrink-0 drop-shadow-xs"
+              className="h-11 sm:h-12 w-auto object-contain shrink-0 drop-shadow-xs"
             />
-            <div className="flex flex-col justify-center select-none">
-              <span className="font-knou text-[13px] sm:text-[14px] font-bold text-slate-600 tracking-[0.16em] group-hover:text-blue-800 transition-colors leading-tight">
-                광주전남지역대학
-              </span>
-              <span className="font-knou text-[15px] sm:text-[16.5px] font-bold text-slate-950 tracking-[0.02em] group-hover:text-blue-700 transition-colors leading-tight mt-0.5">
-                컴퓨터과학과 학생회
-              </span>
+            <div className="flex flex-col justify-center select-none w-[148px] sm:w-[160px]">
+              {/* 윗줄: 광주전남지역대학 (8글자) 양끝 맞춤 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-600 text-[12.5px] sm:text-[13.5px] leading-tight group-hover:text-blue-800 transition-colors">
+                {'광주전남지역대학'.split('').map((char, i) => (
+                  <span key={i}>{char}</span>
+                ))}
+              </div>
+              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자 - 공백 포함) 양끝 맞춤 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-950 text-[14.5px] sm:text-[15.5px] leading-tight mt-1 group-hover:text-blue-700 transition-colors">
+                {'컴퓨터과학과 학생회'.split('').map((char, i) => (
+                  <span key={i} className={char === ' ' ? 'w-1 sm:w-1.5 inline-block' : ''}>
+                    {char === ' ' ? '\u00A0' : char}
+                  </span>
+                ))}
+              </div>
             </div>
           </Link>
 
