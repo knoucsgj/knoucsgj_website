@@ -1,4 +1,3 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type {
   Notice,
   AcademicEvent,
@@ -63,21 +62,6 @@ export const api = {
   // 1. 공지사항 (Notices) CRUD
   // ==========================================
   async getNotices(): Promise<Notice[]> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('notices')
-          .select('*')
-          .order('is_pinned', { ascending: false })
-          .order('created_at', { ascending: false });
-
-        if (!error && data && data.length > 0) {
-          return data as Notice[];
-        }
-      } catch (e) {
-        console.warn('Supabase fetch failed, falling back to local data', e);
-      }
-    }
     return getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
   },
 
@@ -93,22 +77,6 @@ export const api = {
       created_at: new Date().toISOString().split('T')[0],
       views: 1,
     };
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('notices')
-          .insert([newNotice])
-          .select()
-          .single();
-
-        if (!error && data) {
-          return data as Notice;
-        }
-      } catch (e) {
-        console.error('Supabase notice insert error:', e);
-      }
-    }
 
     const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
     const updated = [newNotice, ...current];
@@ -141,20 +109,6 @@ export const api = {
   // 2. 학사일정 (Academic Events) CRUD
   // ==========================================
   async getEvents(): Promise<AcademicEvent[]> {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('academic_events')
-          .select('*')
-          .order('start_date', { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          return data as AcademicEvent[];
-        }
-      } catch (e) {
-        console.warn('Supabase events fetch failed, using local events', e);
-      }
-    }
     return getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
   },
 

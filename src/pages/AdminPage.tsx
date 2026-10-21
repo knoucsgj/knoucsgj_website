@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
-import { isSupabaseConfigured } from '../lib/supabase';
 import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
@@ -545,7 +544,7 @@ export const AdminPage: React.FC = () => {
               관리자 모드 활성화됨
             </span>
             <span className="text-xs text-slate-400">
-              {isSupabaseConfigured ? '• Supabase 실시간 클라우드 DB 연동' : '• 브라우저 로컬 저장소 모드'}
+              • Cloudflare 올인원 모드
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
