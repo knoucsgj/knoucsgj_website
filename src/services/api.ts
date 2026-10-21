@@ -192,30 +192,47 @@ export const api = {
   // 3. 학생회 인사말 & 임원진 (Council) CRUD
   // ==========================================
   async getCouncilIntro(): Promise<typeof mockCouncilIntro> {
+    const cloud = await fetchD1<typeof mockCouncilIntro>('council-intro');
+    if (cloud && cloud.title) {
+      setLocalItem(COUNCIL_INTRO_KEY, cloud);
+      return cloud;
+    }
     return getLocalItem<typeof mockCouncilIntro>(COUNCIL_INTRO_KEY, mockCouncilIntro);
   },
 
   async updateCouncilIntro(intro: typeof mockCouncilIntro): Promise<typeof mockCouncilIntro> {
-    setLocalItem(COUNCIL_INTRO_KEY, intro);
-    return intro;
+    const saved = await fetchStrict<typeof mockCouncilIntro>('council-intro', {
+      method: 'PUT',
+      body: JSON.stringify(intro),
+    });
+    setLocalItem(COUNCIL_INTRO_KEY, saved);
+    return saved;
   },
 
   async getCouncilMembers(): Promise<CouncilMember[]> {
+    const cloud = await fetchD1<CouncilMember[]>('council-members');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      setLocalItem(COUNCIL_MEMBERS_KEY, cloud);
+      return cloud;
+    }
     return getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
   },
 
   async createCouncilMember(member: Omit<CouncilMember, 'id'>): Promise<CouncilMember> {
-    const newMember: CouncilMember = {
-      ...member,
-      id: `cm-${Date.now()}`,
-    };
+    const saved = await fetchStrict<CouncilMember>('council-members', {
+      method: 'POST',
+      body: JSON.stringify(member),
+    });
     const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
-    const updated = [...current, newMember];
-    setLocalItem(COUNCIL_MEMBERS_KEY, updated);
-    return newMember;
+    setLocalItem(COUNCIL_MEMBERS_KEY, [...current, saved]);
+    return saved;
   },
 
   async updateCouncilMember(id: string, updatedFields: Partial<CouncilMember>): Promise<CouncilMember | null> {
+    await fetchStrict<any>(`council-members&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
     const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
     let updatedMember: CouncilMember | null = null;
     const next = current.map((m) => {
@@ -230,6 +247,7 @@ export const api = {
   },
 
   async deleteCouncilMember(id: string): Promise<boolean> {
+    await fetchStrict<any>(`council-members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
     const next = current.filter((m) => m.id !== id);
     setLocalItem(COUNCIL_MEMBERS_KEY, next);
@@ -292,21 +310,27 @@ export const api = {
   // 6. 회의록 (Meeting Minutes) CRUD
   // ==========================================
   async getMeetingMinutes(): Promise<MeetingMinute[]> {
+    const cloud = await fetchD1<MeetingMinute[]>('minutes');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      setLocalItem(MINUTES_STORAGE_KEY, cloud);
+      return cloud;
+    }
     return getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
   },
 
   async createMeetingMinute(minute: Omit<MeetingMinute, 'id'>): Promise<MeetingMinute> {
-    const newMinute: MeetingMinute = {
-      ...minute,
-      id: `minute-${Date.now()}`,
-    };
+    const saved = await fetchStrict<MeetingMinute>('minutes', {
+      method: 'POST',
+      body: JSON.stringify(minute),
+    });
     const current = getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
-    const updated = [newMinute, ...current];
+    const updated = [saved, ...current];
     setLocalItem(MINUTES_STORAGE_KEY, updated);
-    return newMinute;
+    return saved;
   },
 
   async deleteMeetingMinute(id: string): Promise<boolean> {
+    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     const current = getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
     const next = current.filter((m) => m.id !== id);
     setLocalItem(MINUTES_STORAGE_KEY, next);

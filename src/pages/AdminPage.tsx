@@ -29,6 +29,7 @@ import {
 
 export const AdminPage: React.FC = () => {
   const { isAdmin } = useAuth();
+  const [adminIdInput, setAdminIdInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -157,7 +158,7 @@ export const AdminPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await auth.adminLogin(passwordInput);
+      await auth.adminLogin(adminIdInput, passwordInput);
       setLoginError('');
       setPasswordInput('');
     } catch (err) {
@@ -524,6 +525,22 @@ export const AdminPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4 text-left">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              관리자 아이디
+            </label>
+            <div className="relative">
+              <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                value={adminIdInput}
+                onChange={(e) => setAdminIdInput(e.target.value)}
+                placeholder="admin"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               관리자 비밀번호

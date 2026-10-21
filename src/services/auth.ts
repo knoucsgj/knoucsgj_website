@@ -128,11 +128,22 @@ export const auth = {
   async changeMemberPassword(oldPw: string, newPw: string): Promise<void> {
     await call('change-password', 'POST', { old_password: oldPw, new_password: newPw });
   },
+  async resetPassword(payload: {
+    username: string;
+    name: string;
+    student_no: string;
+    phone?: string;
+    new_password: string;
+  }): Promise<{ success: boolean; message: string }> {
+    return await call<{ success: boolean; message: string }>('reset-password', 'POST', payload);
+  },
 
   // ---- admin (student council) session
-  async adminLogin(password: string): Promise<boolean> {
+  async adminLogin(usernameOrPw: string, pw?: string): Promise<boolean> {
+    const username = pw !== undefined ? usernameOrPw : 'admin';
+    const password = pw !== undefined ? pw : usernameOrPw;
     try {
-      await call('admin-login', 'POST', { password });
+      await call('admin-login', 'POST', { username, password });
       setState({ isAdmin: true });
       return true;
     } catch (e: any) {

@@ -2,6 +2,8 @@
 // D1 console work is required. Safe to run repeatedly (CREATE IF NOT EXISTS + guarded ALTERs).
 import { initialNotices } from '../src/data/mockNotices';
 import { initialEvents } from '../src/data/mockEvents';
+import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro } from '../src/data/mockCouncil';
+import { initialMeetingMinutes } from '../src/data/mockGovernance';
 
 type D1 = any;
 
@@ -43,6 +45,9 @@ const CREATE_STATEMENTS = [
     leader_contact TEXT, description TEXT, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS council_members (
     id TEXT PRIMARY KEY, role TEXT NOT NULL, name TEXT NOT NULL, grade_info TEXT, message TEXT, email TEXT)`,
+  `CREATE TABLE IF NOT EXISTS meeting_minutes (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, meeting_type TEXT NOT NULL, meeting_date TEXT NOT NULL,
+    attendees TEXT, agenda TEXT, content TEXT, decisions TEXT)`,
   `CREATE TABLE IF NOT EXISTS members (
     id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL,
     nickname TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, student_no TEXT NOT NULL,
@@ -120,5 +125,28 @@ async function run(db: D1) {
     }
     stmts.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v1', '1')"));
     await db.batch(stmts);
+  }
+
+  // Seed council intro, members, and minutes (v2)
+  const seededV2 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v2'").first();
+  if (!seededV2) {
+    const stmtsV2: any[] = [];
+    stmtsV2.push(
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_intro', ?)").bind(JSON.stringify(initialCouncilIntro))
+    );
+    for (const cm of initialCouncilMembers) {
+      stmtsV2.push(
+        db.prepare('INSERT OR IGNORE INTO council_members (id, role, name, grade_info, message, email) VALUES (?,?,?,?,?,?)')
+          .bind(cm.id, cm.role, cm.name, cm.grade_info, cm.message, cm.email || null)
+      );
+    }
+    for (const mm of initialMeetingMinutes) {
+      stmtsV2.push(
+        db.prepare('INSERT OR IGNORE INTO meeting_minutes (id, title, meeting_type, meeting_date, attendees, agenda, content, decisions) VALUES (?,?,?,?,?,?,?,?)')
+          .bind(mm.id, mm.title, mm.meeting_type, mm.meeting_date, mm.attendees, mm.agenda, mm.content, mm.decisions)
+      );
+    }
+    stmtsV2.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v2', '1')"));
+    await db.batch(stmtsV2);
   }
 }

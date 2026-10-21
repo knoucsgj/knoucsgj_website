@@ -91,9 +91,20 @@ export const RegisterPage: React.FC = () => {
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
           <h2 className="font-bold text-slate-900 text-lg">계정 정보</h2>
           <div>
-            <label className={labelCls}>아이디</label>
-            <input className={inputCls} required value={form.username} onChange={set('username')} autoComplete="username"
-              placeholder="영문 소문자·숫자·밑줄 4~20자" maxLength={20} />
+            <label className={labelCls}>아이디 (이메일 주소)</label>
+            <input
+              type="email"
+              className={inputCls}
+              required
+              value={form.username}
+              onChange={set('username')}
+              autoComplete="email"
+              placeholder="예: user@example.com"
+              maxLength={80}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              비밀번호 찾기 및 계정 인증에 사용되므로 사용 중인 이메일 주소를 입력해 주세요.
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
