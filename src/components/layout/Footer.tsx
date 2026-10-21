@@ -78,6 +78,17 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
+                  href="https://m.knou.ac.kr/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                  MyKNOU 학사정보 시스템
+                </a>
+              </li>
+              <li>
+                <a
                   href="https://ucampus.knou.ac.kr"
                   target="_blank"
                   rel="noopener noreferrer"

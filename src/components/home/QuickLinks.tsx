@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, FileText, ChevronRight } from 'lucide-react';
+import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, FileText, ChevronRight, GraduationCap } from 'lucide-react';
 
 export const QuickLinks: React.FC = () => {
   const cards = [
@@ -46,6 +46,14 @@ export const QuickLinks: React.FC = () => {
       href: 'https://ucampus.knou.ac.kr',
       isExternal: true,
       badge: '원격 강의'
+    },
+    {
+      title: 'MyKNOU 학사정보',
+      desc: '수강신청·출석수업·과제물·기말시험·성적 등 학사행정',
+      icon: GraduationCap,
+      href: 'https://m.knou.ac.kr/',
+      isExternal: true,
+      badge: '학사 종합'
     }
   ];
 
@@ -62,7 +70,7 @@ export const QuickLinks: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
         {cards.map((card, idx) => {
           const Icon = card.icon;
           const cardContent = (

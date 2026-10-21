@@ -67,6 +67,15 @@ export const Navbar: React.FC = () => {
 
             <span className="text-slate-700">|</span>
             <a
+              href="https://m.knou.ac.kr/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-300 hover:text-white transition-colors font-semibold"
+            >
+              MyKNOU 학사정보
+            </a>
+            <span className="text-slate-700">|</span>
+            <a
               href="https://wgwangju.knou.ac.kr/"
               target="_blank"
               rel="noopener noreferrer"
@@ -133,16 +142,25 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Action: U-KNOU Portal */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Right Action: Academic & Learning Portals */}
+          <div className="hidden sm:flex items-center gap-2">
+            <a
+              href="https://m.knou.ac.kr/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xs"
+            >
+              MyKNOU 학사정보
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
             <a
               href="https://ucampus.knou.ac.kr"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xs"
             >
               U-KNOU 원격수강
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
 
@@ -201,6 +219,15 @@ export const Navbar: React.FC = () => {
             })}
 
             <div className="pt-4 border-t border-slate-100 mt-2 space-y-2">
+              <a
+                href="https://m.knou.ac.kr/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-xs"
+              >
+                MyKNOU 학사정보 바로가기
+                <ExternalLink className="w-4 h-4" />
+              </a>
               <a
                 href="https://ucampus.knou.ac.kr"
                 target="_blank"
