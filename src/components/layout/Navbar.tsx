@@ -110,21 +110,21 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Official Emblem (BS16 엠블럼 C) & 2-Line Perfectly Justified Identity */}
-          <Link to="/" className="flex items-center gap-3.5 sm:gap-4 group shrink-0">
+          <Link to="/" className="flex items-center gap-3.5 sm:gap-4 group shrink-0 py-1">
             <img
               src={ASSETS.UI.emblemC}
               alt="한국방송통신대학교 엠블럼"
-              className="h-12 sm:h-13 md:h-14 w-auto object-contain shrink-0 drop-shadow-xs"
+              className="h-14 sm:h-15 md:h-16 w-auto object-contain shrink-0 drop-shadow-xs transition-transform group-hover:scale-105"
             />
-            <div className="flex flex-col justify-center select-none w-[190px] sm:w-[208px]">
-              {/* 윗줄: 광주전남지역대학 (8글자) - 동일한 폰트 크기, 좁아진 자간, 좁은 줄간격 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-800 text-[17px] sm:text-[18.5px] leading-none group-hover:text-blue-800 transition-colors">
+            <div className="flex flex-col justify-center select-none w-[172px] sm:w-[188px]">
+              {/* 윗줄: 광주전남지역대학 (8글자) - 방송대 전용색상 KNOU Dark Blue (#0054a6) & 컴팩트한 자간 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-[#0054a6] text-[17.5px] sm:text-[19px] leading-none tracking-tight group-hover:text-[#003875] transition-colors">
                 {'광주전남지역대학'.split('').map((char, i) => (
                   <span key={i}>{char}</span>
                 ))}
               </div>
-              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자) - 동일한 폰트 크기, 좁아진 자간, 좁은 줄간격 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-950 text-[17px] sm:text-[18.5px] leading-none mt-1 group-hover:text-blue-700 transition-colors">
+              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자) - 방송대 전용색상 KNOU Deep Blue (#00428e) & 컴팩트한 자간 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-[#00428e] text-[17.5px] sm:text-[19px] leading-none tracking-tight mt-1 group-hover:text-[#002f66] transition-colors">
                 {'컴퓨터과학과 학생회'.split('').map((char, i) => (
                   <span key={i} className={char === ' ' ? 'w-1 sm:w-1.5 inline-block' : ''}>
                     {char === ' ' ? '\u00A0' : char}
