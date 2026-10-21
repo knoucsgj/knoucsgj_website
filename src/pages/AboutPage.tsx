@@ -385,16 +385,16 @@ export const AboutPage: React.FC = () => {
               <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-100 text-sm sm:text-base text-slate-700 space-y-2.5">
                 <div className="font-bold text-blue-900 flex items-center gap-2 text-base">
                   <Navigation className="w-5 h-5 text-blue-700" />
-                  대중교통 이용 안내
+                  대중교통 & 방문 안내
+                </div>
+                <div className="leading-relaxed">
+                  <span className="font-semibold text-slate-900">• 시내버스 :</span> 봉선27, 첨단40, 첨단92, 첨단192 (방송통신대 정류장 하차)
+                  <p className="text-xs sm:text-sm text-amber-800 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1.5 mt-1 font-medium">
+                    ※ 2026년 10월 31일 광주시 시내버스 노선 개편으로 경유 노선이 변경될 예정입니다.
+                  </p>
                 </div>
                 <p className="leading-relaxed">
-                  • 시내버스 : 첨단09, 첨단20, 첨단40, 문흥39 등 (광주방송통신대 정류장 하차)
-                </p>
-                <p className="leading-relaxed">
-                  • 지하철 이용 시 : 광주지하철 1호선 상무역 또는 광주송정역에서 버스 환승
-                </p>
-                <p className="leading-relaxed">
-                  • 자가용 이용 시 : 지상 및 지하 무료 주차 가능 (주말 출석수업 시 혼잡할 수 있습니다)
+                  • 자가용 이용 시 : 대학 지상 무료 주차 가능 (주말 출석수업 시 혼잡할 수 있으니 대중교통 이용을 권장합니다)
                 </p>
               </div>
             </div>

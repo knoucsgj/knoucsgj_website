@@ -72,7 +72,7 @@ export const councilMembers: CouncilMember[] = [
 
 export const regionalInfo = {
   center_name: '한국방송통신대학교 광주전남지역대학',
-  address: '광주광역시 광산구 첨단과기로 208번길 43 (오룡동)',
+  address: '전남광주통합특별시 광산구 첨단내촌로 6',
   tel: '062-970-1700',
   fax: '062-970-1719',
   facilities: [
