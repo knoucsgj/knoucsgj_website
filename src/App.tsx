@@ -5,6 +5,7 @@ import { AboutPage } from './pages/AboutPage';
 import { NoticesPage } from './pages/NoticesPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { CommunityPage } from './pages/CommunityPage';
+import { StudyMaterialsPage } from './pages/StudyMaterialsPage';
 import { AdminPage } from './pages/AdminPage';
 
 export function App() {
@@ -16,6 +17,7 @@ export function App() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/notices" element={<NoticesPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/studies" element={<StudyMaterialsPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/governance" element={<Navigate to="/notices?category=결산" replace />} />
           <Route path="/welfare" element={<Navigate to="/community" replace />} />

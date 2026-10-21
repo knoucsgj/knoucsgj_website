@@ -10,7 +10,10 @@ import type {
   PartnershipItem,
   CouncilRuleChapter,
   FeedbackItem,
-  FeedbackReply
+  FeedbackReply,
+  FreePost,
+  FreePostReply,
+  AcademicMaterial
 } from '../lib/types';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
@@ -23,6 +26,8 @@ import { initialBudgetReports } from '../data/mockFinance';
 import { initialMeetingMinutes, councilRules as mockCouncilRules } from '../data/mockGovernance';
 import { initialRentalItems, initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
 import { initialFeedbacks } from '../data/mockFeedback';
+import { initialFreePosts } from '../data/mockFreePosts';
+import { initialMaterials } from '../data/mockMaterials';
 
 const NOTICES_STORAGE_KEY = 'knoucs_local_notices';
 const EVENTS_STORAGE_KEY = 'knoucs_local_events';
@@ -33,6 +38,8 @@ const BUDGET_REPORTS_KEY = 'knoucs_local_budgets';
 const MINUTES_STORAGE_KEY = 'knoucs_local_minutes';
 const RENTALS_STORAGE_KEY = 'knoucs_local_rentals';
 const FEEDBACKS_STORAGE_KEY = 'knoucs_local_feedbacks';
+const FREEPOSTS_STORAGE_KEY = 'knoucs_local_freeposts';
+const MATERIALS_STORAGE_KEY = 'knoucs_local_materials';
 
 function getLocalItem<T>(key: string, fallback: T): T {
   try {
@@ -413,7 +420,95 @@ export const api = {
   },
 
   // ==========================================
-  // 9. 전체 데이터 백업 및 복원 (Export / Import)
+  // 10. 자유게시판 (Free Posts) CRUD
+  // ==========================================
+  async getFreePosts(): Promise<FreePost[]> {
+    return getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
+  },
+
+  async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies'>): Promise<FreePost> {
+    const newPost: FreePost = {
+      ...post,
+      id: `fp-${Date.now()}`,
+      created_at: new Date().toISOString().split('T')[0],
+      views: 1,
+      replies: []
+    };
+    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
+    const updated = [newPost, ...current];
+    setLocalItem(FREEPOSTS_STORAGE_KEY, updated);
+    return newPost;
+  },
+
+  async addFreePostReply(postId: string, reply: Omit<FreePostReply, 'id' | 'created_at'>): Promise<FreePost | null> {
+    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
+    let updatedItem: FreePost | null = null;
+    const next = current.map((p) => {
+      if (p.id === postId) {
+        const newReply: FreePostReply = {
+          ...reply,
+          id: `fpr-${Date.now()}`,
+          created_at: new Date().toISOString().split('T')[0]
+        };
+        updatedItem = {
+          ...p,
+          replies: [...p.replies, newReply]
+        };
+        return updatedItem;
+      }
+      return p;
+    });
+    setLocalItem(FREEPOSTS_STORAGE_KEY, next);
+    return updatedItem;
+  },
+
+  async deleteFreePost(id: string): Promise<boolean> {
+    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
+    const next = current.filter((p) => p.id !== id);
+    setLocalItem(FREEPOSTS_STORAGE_KEY, next);
+    return true;
+  },
+
+  // ==========================================
+  // 11. 학습자료 및 기타자료 (Academic Materials) CRUD
+  // ==========================================
+  async getMaterials(): Promise<AcademicMaterial[]> {
+    return getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+  },
+
+  async createMaterial(material: Omit<AcademicMaterial, 'id' | 'created_at' | 'downloads'>): Promise<AcademicMaterial> {
+    const newMat: AcademicMaterial = {
+      ...material,
+      id: `mat-${Date.now()}`,
+      created_at: new Date().toISOString().split('T')[0],
+      downloads: 0
+    };
+    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+    const updated = [newMat, ...current];
+    setLocalItem(MATERIALS_STORAGE_KEY, updated);
+    return newMat;
+  },
+
+  async incrementMaterialDownload(id: string): Promise<void> {
+    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+    const next = current.map((m) => {
+      if (m.id === id) {
+        return { ...m, downloads: m.downloads + 1 };
+      }
+      return m;
+    });
+    setLocalItem(MATERIALS_STORAGE_KEY, next);
+  },
+
+  async deleteMaterial(id: string): Promise<boolean> {
+    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+    const next = current.filter((m) => m.id !== id);
+    setLocalItem(MATERIALS_STORAGE_KEY, next);
+    return true;
+  },
+
+  // ==========================================
+  // 12. 전체 데이터 백업 및 복원 (Export / Import)
   // ==========================================
   async exportAllData(): Promise<string> {
     const notices = await this.getNotices();

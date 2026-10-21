@@ -19,15 +19,15 @@ export const QuickLinks: React.FC = () => {
       badge: '학사 지원'
     },
     {
-      title: '학술 & 스터디',
-      desc: '전공 과목 및 자격증 준비 소그룹 모임',
+      title: '학술·스터디 & 자료실',
+      desc: '학년·학기별 전공과목 학습자료 및 스터디 소그룹',
       icon: Users,
-      to: '/community',
-      badge: '소그룹 모임'
+      to: '/studies',
+      badge: '전공·스터디'
     },
     {
-      title: '학우 소통 & 건의함',
-      desc: '학업 문의, 스터디 참여, 학생회 건의사항',
+      title: '커뮤니티 & 열린 건의함',
+      desc: '자유게시판, 학생회 소통 및 열린 건의 게시판',
       icon: FileText,
       to: '/community',
       badge: '열린 소통'

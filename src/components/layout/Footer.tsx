@@ -135,8 +135,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/studies" className="hover:text-white transition-colors">
+                  학술·스터디 & 자료실
+                </Link>
+              </li>
+              <li>
                 <Link to="/community" className="hover:text-white transition-colors">
-                  학술 스터디 & 학우 건의함
+                  커뮤니티 & 자유게시판·건의함
                 </Link>
               </li>
               <li className="pt-2">

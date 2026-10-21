@@ -31,6 +31,7 @@ export const Navbar: React.FC = () => {
     { name: '학생회 소개', path: '/about' },
     { name: '공지사항', path: '/notices' },
     { name: '주요일정', path: '/calendar' },
+    { name: '학술·스터디', path: '/studies' },
     { name: '커뮤니티', path: '/community' },
   ];
 

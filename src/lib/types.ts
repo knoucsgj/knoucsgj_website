@@ -143,3 +143,40 @@ export interface FeedbackItem {
   replies: FeedbackReply[];
 }
 
+// 자유게시판 모델
+export interface FreePostReply {
+  id: string;
+  author: string;
+  content: string;
+  created_at: string;
+}
+
+export interface FreePost {
+  id: string;
+  title: string;
+  content: string;
+  category: '자유' | '질문' | '취업·이직' | '정보공유';
+  author: string;
+  created_at: string;
+  views: number;
+  replies: FreePostReply[];
+}
+
+// 학습자료 및 기타자료 모델
+export interface AcademicMaterial {
+  id: string;
+  grade: 1 | 2 | 3 | 4; // 학년 (1~4학년)
+  semester: 1 | 2;     // 1학기 | 2학기
+  course_name: string; // 전공 교과목명 (예: C프로그래밍, 자료구조 등)
+  title: string;
+  description: string;
+  category: '기출문제/해설' | '출석수업요약' | '과제물참고자료' | '강의노트' | '기타자료';
+  author: string;
+  created_at: string;
+  downloads: number;
+  file_name?: string;
+  file_size?: string;
+  file_url?: string;
+}
+
+
