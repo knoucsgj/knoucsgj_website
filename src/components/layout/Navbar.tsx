@@ -116,15 +116,15 @@ export const Navbar: React.FC = () => {
               alt="한국방송통신대학교 엠블럼"
               className="h-12 sm:h-13 md:h-14 w-auto object-contain shrink-0 drop-shadow-xs"
             />
-            <div className="flex flex-col justify-center select-none w-[170px] sm:w-[185px]">
-              {/* 윗줄: 광주전남지역대학 (8글자) 양끝 맞춤 - 폰트 확대 및 자간 최적화 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-700 text-[14.5px] sm:text-[16px] leading-snug group-hover:text-blue-800 transition-colors">
+            <div className="flex flex-col justify-center select-none w-[190px] sm:w-[208px]">
+              {/* 윗줄: 광주전남지역대학 (8글자) - 동일한 폰트 크기, 좁아진 자간, 좁은 줄간격 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-800 text-[17px] sm:text-[18.5px] leading-none group-hover:text-blue-800 transition-colors">
                 {'광주전남지역대학'.split('').map((char, i) => (
                   <span key={i}>{char}</span>
                 ))}
               </div>
-              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자) 양끝 맞춤 - 폰트 확대 및 자간 최적화 */}
-              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-950 text-[16.5px] sm:text-[18px] leading-snug mt-0.5 group-hover:text-blue-700 transition-colors">
+              {/* 아랫줄: 컴퓨터과학과 학생회 (10글자) - 동일한 폰트 크기, 좁아진 자간, 좁은 줄간격 */}
+              <div className="flex justify-between items-center w-full font-knou font-bold text-slate-950 text-[17px] sm:text-[18.5px] leading-none mt-1 group-hover:text-blue-700 transition-colors">
                 {'컴퓨터과학과 학생회'.split('').map((char, i) => (
                   <span key={i} className={char === ' ' ? 'w-1 sm:w-1.5 inline-block' : ''}>
                     {char === ' ' ? '\u00A0' : char}
