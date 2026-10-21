@@ -57,11 +57,32 @@ function setLocalItem<T>(key: string, value: T): void {
   }
 }
 
+// Cloudflare D1 API Request Helper
+async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<T | null> {
+  try {
+    const res = await fetch(`/api?resource=${resource}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch (e) {
+    return null;
+  }
+}
+
 export const api = {
   // ==========================================
   // 1. 공지사항 (Notices) CRUD
   // ==========================================
   async getNotices(): Promise<Notice[]> {
+    const cloudData = await fetchD1<Notice[]>('notices');
+    if (cloudData && cloudData.length > 0) {
+      return cloudData;
+    }
     return getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
   },
 
@@ -78,10 +99,15 @@ export const api = {
       views: 1,
     };
 
+    const cloudSaved = await fetchD1<Notice>('notices', {
+      method: 'POST',
+      body: JSON.stringify(newNotice),
+    });
+
     const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
-    const updated = [newNotice, ...current];
+    const updated = [cloudSaved || newNotice, ...current];
     setLocalItem(NOTICES_STORAGE_KEY, updated);
-    return newNotice;
+    return cloudSaved || newNotice;
   },
 
   async updateNotice(id: string, updatedFields: Partial<Notice>): Promise<Notice | null> {
@@ -99,6 +125,7 @@ export const api = {
   },
 
   async deleteNotice(id: string): Promise<boolean> {
+    await fetchD1<any>(`notices&id=${id}`, { method: 'DELETE' });
     const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
     const next = current.filter((n) => n.id !== id);
     setLocalItem(NOTICES_STORAGE_KEY, next);
@@ -109,6 +136,10 @@ export const api = {
   // 2. 학사일정 (Academic Events) CRUD
   // ==========================================
   async getEvents(): Promise<AcademicEvent[]> {
+    const cloudEvents = await fetchD1<AcademicEvent[]>('events');
+    if (cloudEvents && cloudEvents.length > 0) {
+      return cloudEvents;
+    }
     return getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
   },
 
@@ -117,10 +148,12 @@ export const api = {
       ...event,
       id: `event-${Date.now()}`,
     };
+    await fetchD1<AcademicEvent>('events', {
+      method: 'POST',
+      body: JSON.stringify(newEvent),
+    });
     const current = getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
-    const updated = [...current, newEvent].sort(
-      (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
-    );
+    const updated = [...current, newEvent];
     setLocalItem(EVENTS_STORAGE_KEY, updated);
     return newEvent;
   },
@@ -198,6 +231,10 @@ export const api = {
   // 4. 스터디 그룹 (Studies) CRUD
   // ==========================================
   async getStudies(): Promise<StudyGroup[]> {
+    const cloudStudies = await fetchD1<StudyGroup[]>('studies');
+    if (cloudStudies && cloudStudies.length > 0) {
+      return cloudStudies;
+    }
     return getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
   },
 
@@ -206,8 +243,11 @@ export const api = {
       ...study,
       id: `study-${Date.now()}`,
       created_at: new Date().toISOString().split('T')[0],
-      members_count: study.members_count || 1,
     };
+    await fetchD1<StudyGroup>('studies', {
+      method: 'POST',
+      body: JSON.stringify(newStudy),
+    });
     const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
     const updated = [newStudy, ...current];
     setLocalItem(STUDIES_STORAGE_KEY, updated);
@@ -236,7 +276,7 @@ export const api = {
   },
 
   // ==========================================
-  // 5. 투명 재정 (Budget & Finance) CRUD
+  // 5. 학생회비 결산보고 (Budget Reports) CRUD
   // ==========================================
   async getBudgetReports(): Promise<BudgetReport[]> {
     return getLocalItem<BudgetReport[]>(BUDGET_REPORTS_KEY, initialBudgetReports);
@@ -246,7 +286,7 @@ export const api = {
     const newReport: BudgetReport = {
       ...report,
       id: `budget-${Date.now()}`,
-      published_date: new Date().toISOString().split('T')[0]
+      published_date: new Date().toISOString().split('T')[0],
     };
     const current = getLocalItem<BudgetReport[]>(BUDGET_REPORTS_KEY, initialBudgetReports);
     const updated = [newReport, ...current];
@@ -254,15 +294,8 @@ export const api = {
     return newReport;
   },
 
-  async deleteBudgetReport(id: string): Promise<boolean> {
-    const current = getLocalItem<BudgetReport[]>(BUDGET_REPORTS_KEY, initialBudgetReports);
-    const next = current.filter((r) => r.id !== id);
-    setLocalItem(BUDGET_REPORTS_KEY, next);
-    return true;
-  },
-
   // ==========================================
-  // 6. 의결기구 회의록 (Meeting Minutes) CRUD
+  // 6. 회의록 (Meeting Minutes) CRUD
   // ==========================================
   async getMeetingMinutes(): Promise<MeetingMinute[]> {
     return getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
@@ -271,7 +304,7 @@ export const api = {
   async createMeetingMinute(minute: Omit<MeetingMinute, 'id'>): Promise<MeetingMinute> {
     const newMinute: MeetingMinute = {
       ...minute,
-      id: `min-${Date.now()}`
+      id: `minute-${Date.now()}`,
     };
     const current = getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
     const updated = [newMinute, ...current];
@@ -287,56 +320,50 @@ export const api = {
   },
 
   // ==========================================
-  // 7. 학과 학생회칙 (Council Rules)
+  // 7. 학과 학생회칙 및 세칙
   // ==========================================
   async getCouncilRules(): Promise<CouncilRuleChapter[]> {
     return mockCouncilRules;
   },
 
   // ==========================================
-  // 8. 학생 복지 대여사업 & 제휴 (Welfare & Rentals)
+  // 8. 학생 복지 & 비품 (Welfare)
   // ==========================================
   async getRentalItems(): Promise<RentalItem[]> {
     return getLocalItem<RentalItem[]>(RENTALS_STORAGE_KEY, initialRentalItems);
-  },
-
-  async updateRentalItem(id: string, updatedFields: Partial<RentalItem>): Promise<RentalItem | null> {
-    const current = getLocalItem<RentalItem[]>(RENTALS_STORAGE_KEY, initialRentalItems);
-    let updated: RentalItem | null = null;
-    const next = current.map((item) => {
-      if (item.id === id) {
-        updated = { ...item, ...updatedFields };
-        return updated;
-      }
-      return item;
-    });
-    setLocalItem(RENTALS_STORAGE_KEY, next);
-    return updated;
   },
 
   async getPartnerships(): Promise<PartnershipItem[]> {
     return initialPartnerships;
   },
 
-  async getGalleryPhotos(): Promise<typeof initialGalleryPhotos> {
+  async getGalleryPhotos() {
     return initialGalleryPhotos;
   },
 
   // ==========================================
-  // 9. 학우 소통 & 건의함 (Feedbacks) CRUD
+  // 9. 학우 소통 및 열린 건의함 (Feedbacks) CRUD
   // ==========================================
   async getFeedbacks(): Promise<FeedbackItem[]> {
+    const cloudFeedbacks = await fetchD1<FeedbackItem[]>('feedbacks');
+    if (cloudFeedbacks && cloudFeedbacks.length > 0) {
+      return cloudFeedbacks;
+    }
     return getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
   },
 
-  async createFeedback(item: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies'>): Promise<FeedbackItem> {
+  async createFeedback(feedback: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies'>): Promise<FeedbackItem> {
     const newItem: FeedbackItem = {
-      ...item,
+      ...feedback,
       id: `fb-${Date.now()}`,
       created_at: new Date().toISOString().split('T')[0],
       status: '접수완료',
       replies: []
     };
+    await fetchD1<FeedbackItem>('feedbacks', {
+      method: 'POST',
+      body: JSON.stringify(newItem),
+    });
     const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
     const updated = [newItem, ...current];
     setLocalItem(FEEDBACKS_STORAGE_KEY, updated);
@@ -344,23 +371,27 @@ export const api = {
   },
 
   async addFeedbackReply(feedbackId: string, reply: Omit<FeedbackReply, 'id' | 'created_at'>): Promise<FeedbackItem | null> {
+    const newReply: FeedbackReply = {
+      ...reply,
+      id: `fb-rep-${Date.now()}`,
+      created_at: new Date().toISOString().split('T')[0]
+    };
+    await fetchD1<any>('feedbacks', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'reply', feedback_id: feedbackId, ...reply }),
+    });
     const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
     let updatedItem: FeedbackItem | null = null;
-    const next = current.map((fb) => {
-      if (fb.id === feedbackId) {
-        const newReply: FeedbackReply = {
-          ...reply,
-          id: `reply-${Date.now()}`,
-          created_at: new Date().toISOString().split('T')[0]
-        };
+    const next = current.map((item) => {
+      if (item.id === feedbackId) {
         updatedItem = {
-          ...fb,
+          ...item,
           status: '답변완료',
-          replies: [...fb.replies, newReply]
+          replies: [...item.replies, newReply]
         };
         return updatedItem;
       }
-      return fb;
+      return item;
     });
     setLocalItem(FEEDBACKS_STORAGE_KEY, next);
     return updatedItem;
@@ -368,26 +399,34 @@ export const api = {
 
   async deleteFeedback(id: string): Promise<boolean> {
     const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
-    const next = current.filter((fb) => fb.id !== id);
+    const next = current.filter((item) => item.id !== id);
     setLocalItem(FEEDBACKS_STORAGE_KEY, next);
     return true;
   },
 
   // ==========================================
-  // 10. 자유게시판 (Free Posts) CRUD
+  // 10. 커뮤니티 자유게시판 (Free Posts) CRUD
   // ==========================================
   async getFreePosts(): Promise<FreePost[]> {
+    const cloudPosts = await fetchD1<FreePost[]>('freeposts');
+    if (cloudPosts && cloudPosts.length > 0) {
+      return cloudPosts;
+    }
     return getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
   },
 
   async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies'>): Promise<FreePost> {
     const newPost: FreePost = {
       ...post,
-      id: `fp-${Date.now()}`,
-      created_at: new Date().toISOString().split('T')[0],
+      id: `free-${Date.now()}`,
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
       views: 1,
       replies: []
     };
+    await fetchD1<FreePost>('freeposts', {
+      method: 'POST',
+      body: JSON.stringify(newPost),
+    });
     const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
     const updated = [newPost, ...current];
     setLocalItem(FREEPOSTS_STORAGE_KEY, updated);
@@ -395,15 +434,19 @@ export const api = {
   },
 
   async addFreePostReply(postId: string, reply: Omit<FreePostReply, 'id' | 'created_at'>): Promise<FreePost | null> {
+    const newReply: FreePostReply = {
+      ...reply,
+      id: `freerep-${Date.now()}`,
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 16)
+    };
+    await fetchD1<any>('freeposts', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'reply', post_id: postId, ...reply }),
+    });
     const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
     let updatedItem: FreePost | null = null;
     const next = current.map((p) => {
       if (p.id === postId) {
-        const newReply: FreePostReply = {
-          ...reply,
-          id: `fpr-${Date.now()}`,
-          created_at: new Date().toISOString().split('T')[0]
-        };
         updatedItem = {
           ...p,
           replies: [...p.replies, newReply]
@@ -417,6 +460,7 @@ export const api = {
   },
 
   async deleteFreePost(id: string): Promise<boolean> {
+    await fetchD1<any>(`freeposts&id=${id}`, { method: 'DELETE' });
     const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
     const next = current.filter((p) => p.id !== id);
     setLocalItem(FREEPOSTS_STORAGE_KEY, next);
@@ -427,6 +471,10 @@ export const api = {
   // 11. 학습자료 및 기타자료 (Academic Materials) CRUD
   // ==========================================
   async getMaterials(): Promise<AcademicMaterial[]> {
+    const cloudMaterials = await fetchD1<AcademicMaterial[]>('materials');
+    if (cloudMaterials && cloudMaterials.length > 0) {
+      return cloudMaterials;
+    }
     return getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
   },
 
@@ -437,6 +485,10 @@ export const api = {
       created_at: new Date().toISOString().split('T')[0],
       downloads: 0
     };
+    await fetchD1<AcademicMaterial>('materials', {
+      method: 'POST',
+      body: JSON.stringify(newMat),
+    });
     const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
     const updated = [newMat, ...current];
     setLocalItem(MATERIALS_STORAGE_KEY, updated);
@@ -444,6 +496,10 @@ export const api = {
   },
 
   async incrementMaterialDownload(id: string): Promise<void> {
+    await fetchD1<any>(`materials&id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ increment_download: true }),
+    });
     const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
     const next = current.map((m) => {
       if (m.id === id) {
@@ -455,6 +511,10 @@ export const api = {
   },
 
   async updateMaterial(id: string, updatedFields: Partial<AcademicMaterial>): Promise<AcademicMaterial | null> {
+    await fetchD1<any>(`materials&id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
     const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
     let updatedMat: AcademicMaterial | null = null;
     const next = current.map((m) => {
@@ -469,6 +529,7 @@ export const api = {
   },
 
   async deleteMaterial(id: string): Promise<boolean> {
+    await fetchD1<any>(`materials&id=${id}`, { method: 'DELETE' });
     const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
     const next = current.filter((m) => m.id !== id);
     setLocalItem(MATERIALS_STORAGE_KEY, next);
