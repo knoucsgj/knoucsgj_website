@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { auth } from '../services/auth';
+import { useAuth } from '../services/auth';
+import { useRequireLogin } from '../lib/useRequireLogin';
 import type { StudyGroup, AcademicMaterial } from '../lib/types';
 import { KNOU_CS_COURSES } from '../data/mockMaterials';
 import { ASSETS } from '../lib/assets';
@@ -41,7 +42,6 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newSubject, setNewSubject] = useState('');
   const [newMeetingType, setNewMeetingType] = useState<'온라인 (Zoom/Discord)' | '오프라인 (광주지역대학)' | '온/오프라인 병행'>('온/오프라인 병행');
   const [newMaxMembers, setNewMaxMembers] = useState(8);
-  const [newLeader, setNewLeader] = useState('');
   const [newLeaderContact, setNewLeaderContact] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [isSubmittingStudy, setIsSubmittingStudy] = useState(false);
@@ -65,13 +65,14 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newMatTitle, setNewMatTitle] = useState('');
   const [newMatDescription, setNewMatDescription] = useState('');
   const [newMatCategory, setNewMatCategory] = useState<'기출문제/해설' | '출석수업요약' | '과제물참고자료' | '강의노트' | '기타자료'>('출석수업요약');
-  const [newMatAuthor, setNewMatAuthor] = useState('');
   const [newMatFileName, setNewMatFileName] = useState('');
   const [newMatFileSize, setNewMatFileSize] = useState('');
   const [newMatFileDataUrl, setNewMatFileDataUrl] = useState<string>('');
   const [isSubmittingMaterial, setIsSubmittingMaterial] = useState(false);
 
-  const isAdmin = auth.isAdmin();
+  const { member, isAdmin } = useAuth();
+  const requireLogin = useRequireLogin();
+  const canModify = (authorId?: string | null) => isAdmin || (!!member && !!authorId && authorId === member.id);
 
   useEffect(() => {
     loadData();
@@ -90,9 +91,9 @@ export const StudyMaterialsPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size (max 5MB for localStorage/client storage)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('파일 크기는 5MB 이하여야 합니다.');
+    // Check size (max 1MB: files are stored as data URLs in the D1 database row)
+    if (file.size > 1024 * 1024) {
+      alert('파일 크기는 1MB 이하여야 합니다. 용량이 큰 자료는 클라우드 링크를 설명에 남겨 주세요.');
       e.target.value = '';
       return;
     }
@@ -120,10 +121,12 @@ export const StudyMaterialsPage: React.FC = () => {
 
     const fileName = mat.file_name || `${mat.title}.pdf`;
 
-    if (mat.file_url && mat.file_url.startsWith('data:')) {
+    const fileUrl = mat.file_url || (mat.has_file ? await api.getMaterialFile(mat.id) : null);
+
+    if (fileUrl && fileUrl.startsWith('data:')) {
       // Trigger download for uploaded data URL
       const a = document.createElement('a');
-      a.href = mat.file_url;
+      a.href = fileUrl;
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
@@ -159,7 +162,7 @@ export const StudyMaterialsPage: React.FC = () => {
         max_members: newMaxMembers,
         target_grade: '전학년',
         meeting_type: newMeetingType,
-        leader: newLeader.trim() || '익명 학우',
+        leader: member?.nickname || '',
         leader_contact: newLeaderContact.trim(),
         description: newDescription.trim()
       });
@@ -167,13 +170,12 @@ export const StudyMaterialsPage: React.FC = () => {
       setIsCreateStudyModalOpen(false);
       setNewStudyTitle('');
       setNewSubject('');
-      setNewLeader('');
       setNewLeaderContact('');
       setNewDescription('');
-      alert('새 스터디 그룹이 성공적으로 등록되었습니다!');
+      alert(isAdmin ? '새 스터디 그룹이 등록되었습니다!' : '스터디 개설 신청이 접수되었습니다. 학생회 승인 후 목록에 공개됩니다.');
     } catch (err) {
       console.error(err);
-      alert('스터디 등록 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '스터디 등록 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingStudy(false);
     }
@@ -187,7 +189,6 @@ export const StudyMaterialsPage: React.FC = () => {
     setNewMatTitle('');
     setNewMatDescription('');
     setNewMatCategory(defaultCategory);
-    setNewMatAuthor('');
     setNewMatFileName('');
     setNewMatFileSize('');
     setNewMatFileDataUrl('');
@@ -202,7 +203,6 @@ export const StudyMaterialsPage: React.FC = () => {
     setNewMatTitle(mat.title);
     setNewMatDescription(mat.description);
     setNewMatCategory(mat.category);
-    setNewMatAuthor(mat.author);
     setNewMatFileName(mat.file_name || '');
     setNewMatFileSize(mat.file_size || '');
     setNewMatFileDataUrl(mat.file_url || '');
@@ -219,7 +219,7 @@ export const StudyMaterialsPage: React.FC = () => {
       alert('자료가 삭제되었습니다.');
     } catch (err) {
       console.error(err);
-      alert('자료 삭제 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '자료 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -239,7 +239,6 @@ export const StudyMaterialsPage: React.FC = () => {
           title: newMatTitle.trim(),
           description: newMatDescription.trim(),
           category: newMatCategory,
-          author: newMatAuthor.trim() || '학우',
           file_name: newMatFileName.trim() || editingMaterial.file_name || `${newMatCourse}_참고자료.pdf`,
           file_size: newMatFileSize.trim() || editingMaterial.file_size || '2.5MB',
           ...(newMatFileDataUrl ? { file_url: newMatFileDataUrl } : {})
@@ -253,7 +252,6 @@ export const StudyMaterialsPage: React.FC = () => {
           title: newMatTitle.trim(),
           description: newMatDescription.trim(),
           category: newMatCategory,
-          author: newMatAuthor.trim() || '학우',
           file_name: newMatFileName.trim() || `${newMatCourse}_참고자료.pdf`,
           file_size: newMatFileSize.trim() || '2.5MB',
           file_url: newMatFileDataUrl || undefined
@@ -265,7 +263,7 @@ export const StudyMaterialsPage: React.FC = () => {
       setEditingMaterial(null);
     } catch (err) {
       console.error(err);
-      alert('자료 저장 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '자료 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingMaterial(false);
     }
@@ -327,7 +325,7 @@ export const StudyMaterialsPage: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
           {activeTab === 'materials' && (
             <button
-              onClick={() => openCreateModal('출석수업요약')}
+              onClick={() => requireLogin() && openCreateModal('출석수업요약')}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors shadow-xs"
             >
               <PlusCircle className="w-4 h-4" />
@@ -336,7 +334,7 @@ export const StudyMaterialsPage: React.FC = () => {
           )}
           {activeTab === 'studies' && (
             <button
-              onClick={() => setIsCreateStudyModalOpen(true)}
+              onClick={() => requireLogin() && setIsCreateStudyModalOpen(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shadow-xs"
             >
               <PlusCircle className="w-4 h-4" />
@@ -561,7 +559,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <button
+                      {canModify(mat.author_id) && (<><button
                         onClick={() => openEditModal(mat)}
                         title="자료 수정"
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium text-xs transition-colors"
@@ -576,7 +574,7 @@ export const StudyMaterialsPage: React.FC = () => {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         삭제
-                      </button>
+                      </button></>)}
                       <button
                         onClick={() => handleDownload(mat)}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm transition-colors"
@@ -609,7 +607,7 @@ export const StudyMaterialsPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => openCreateModal('기타자료')}
+              onClick={() => requireLogin() && openCreateModal('기타자료')}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -673,7 +671,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     작성자: {mat.author} | 다운로드 {mat.downloads}회
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <button
+                    {canModify(mat.author_id) && (<><button
                       onClick={() => openEditModal(mat)}
                       title="자료 수정"
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium text-xs transition-colors"
@@ -688,7 +686,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       삭제
-                    </button>
+                    </button></>)}
                     <button
                       onClick={() => handleDownload(mat)}
                       className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs sm:text-sm transition-colors"
@@ -783,6 +781,11 @@ export const StudyMaterialsPage: React.FC = () => {
                       </span>
                     </div>
 
+                    {study.approval && study.approval !== 'approved' && (
+                      <p className="mb-2 inline-block text-xs font-bold px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-300">
+                        {study.approval === 'pending' ? '승인 대기 중 (신청자에게만 보입니다)' : '반려됨'}
+                      </p>
+                    )}
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1.5 leading-snug">
                       {study.title}
                     </h3>
@@ -934,15 +937,8 @@ export const StudyMaterialsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1.5">개설자 성명 (학년)</label>
-                  <input
-                    type="text"
-                    required
-                    value={newLeader}
-                    onChange={(e) => setNewLeader(e.target.value)}
-                    placeholder="예: 홍길동 (3학년)"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block font-bold text-slate-800 mb-1.5">개설자</label>
+                  <div className="w-full px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold">{member?.nickname}</div>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-800 mb-1.5">연락처 / 카톡 링크</label>
@@ -980,7 +976,7 @@ export const StudyMaterialsPage: React.FC = () => {
                   disabled={isSubmittingStudy}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {isSubmittingStudy ? '등록 중...' : '개설 등록'}
+                  {isSubmittingStudy ? '신청 중...' : '개설 신청'}
                 </button>
               </div>
             </form>
@@ -1121,7 +1117,7 @@ export const StudyMaterialsPage: React.FC = () => {
                         클릭하여 파일을 선택하거나 이곳으로 드래그하세요
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 5MB)
+                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 1MB)
                       </p>
                     </div>
                   )}
@@ -1129,14 +1125,8 @@ export const StudyMaterialsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-800 mb-1">작성자 / 기여자</label>
-                <input
-                  type="text"
-                  value={newMatAuthor}
-                  onChange={(e) => setNewMatAuthor(e.target.value)}
-                  placeholder="예: 학생회 학술부, 23학번 홍길동"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                />
+                <label className="block font-bold text-slate-800 mb-1">작성자</label>
+                <div className="w-full px-3 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold">{editingMaterial ? editingMaterial.author : member?.nickname}</div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">

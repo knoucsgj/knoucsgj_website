@@ -7,6 +7,10 @@ import { CalendarPage } from './pages/CalendarPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { StudyMaterialsPage } from './pages/StudyMaterialsPage';
 import { AdminPage } from './pages/AdminPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { AccountPage } from './pages/AccountPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 
 export function App() {
   return (
@@ -21,6 +25,10 @@ export function App() {
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/governance" element={<Navigate to="/notices?category=결산" replace />} />
           <Route path="/welfare" element={<Navigate to="/community" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

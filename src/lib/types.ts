@@ -53,6 +53,8 @@ export interface StudyGroup {
   meeting_type: '온라인 (Zoom/Discord)' | '오프라인 (광주지역대학)' | '온/오프라인 병행';
   leader: string;
   leader_contact?: string;
+  author_id?: string | null;
+  approval?: 'approved' | 'pending' | 'rejected';
   description?: string;
   created_at: string;
 }
@@ -127,6 +129,7 @@ export interface CouncilRuleChapter {
 // 학우 소통 및 건의사항 게시판 모델
 export interface FeedbackReply {
   id: string;
+  author_id?: string | null;
   author: string; // 예: 학생회장, 총무부 등
   content: string;
   created_at: string;
@@ -140,12 +143,14 @@ export interface FeedbackItem {
   author: string;
   created_at: string;
   status: '접수완료' | '답변완료';
+  author_id?: string | null;
   replies: FeedbackReply[];
 }
 
 // 자유게시판 모델
 export interface FreePostReply {
   id: string;
+  author_id?: string | null;
   author: string;
   content: string;
   created_at: string;
@@ -158,6 +163,7 @@ export interface FreePost {
   category: '자유' | '질문' | '취업·이직' | '정보공유';
   author: string;
   created_at: string;
+  author_id?: string | null;
   views: number;
   replies: FreePostReply[];
 }
@@ -177,6 +183,22 @@ export interface AcademicMaterial {
   file_name?: string;
   file_size?: string;
   file_url?: string;
+  author_id?: string | null;
+  has_file?: boolean; // 목록 조회 시 첨부 파일 존재 여부 (파일 데이터는 다운로드 시 개별 조회)
 }
 
-
+// 관리자 회원 관리용 (개인정보 포함, 관리자 세션에서만 조회 가능)
+export interface AdminMember {
+  id: string;
+  username: string;
+  nickname: string;
+  name: string;
+  phone: string;
+  address: string;
+  student_no: string;
+  regional_college: string;
+  department: string;
+  consent_version: string;
+  consented_at: string;
+  created_at: string;
+}

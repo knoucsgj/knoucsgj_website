@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { auth } from '../services/auth';
-import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute } from '../lib/types';
+import { auth, useAuth } from '../services/auth';
+import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -28,17 +28,18 @@ import {
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
-  const [isAdmin, setIsAdmin] = useState(auth.isAdmin());
+  const { isAdmin } = useAuth();
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Active Tab: 'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'council' | 'minutes' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'>('notices');
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [studies, setStudies] = useState<StudyGroup[]>([]);
+  const [members, setMembers] = useState<AdminMember[]>([]);
   const [councilIntro, setCouncilIntro] = useState({
     title: '',
     president_greeting: '',
@@ -117,20 +118,33 @@ export const AdminPage: React.FC = () => {
   const [pwChangeMessage, setPwChangeMessage] = useState<{ isError: boolean; text: string } | null>(null);
 
   useEffect(() => {
+    const onRejection = (ev: PromiseRejectionEvent) => {
+      if (ev.reason instanceof Error) {
+        ev.preventDefault();
+        alert(ev.reason.message);
+      }
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => window.removeEventListener('unhandledrejection', onRejection);
+  }, []);
+
+  useEffect(() => {
     if (isAdmin) {
       loadAllData();
     }
   }, [isAdmin]);
 
   const loadAllData = async () => {
-    const [nData, eData, sData, iData, mData, minData] = await Promise.all([
+    const [nData, eData, sData, iData, mData, minData, memberData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
       api.getStudies(),
       api.getCouncilIntro(),
       api.getCouncilMembers(),
-      api.getMeetingMinutes()
+      api.getMeetingMinutes(),
+      api.getMembers().catch(() => [] as AdminMember[])
     ]);
+    setMembers(memberData);
     setNotices(nData);
     setEvents(eData);
     setStudies(sData);
@@ -140,20 +154,19 @@ export const AdminPage: React.FC = () => {
   };
 
   // Login handler
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (auth.login(passwordInput)) {
-      setIsAdmin(true);
+    try {
+      await auth.adminLogin(passwordInput);
       setLoginError('');
       setPasswordInput('');
-    } else {
-      setLoginError('비밀번호가 올바르지 않습니다.');
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : '비밀번호가 올바르지 않습니다.');
     }
   };
 
-  const handleLogout = () => {
-    auth.logout();
-    setIsAdmin(false);
+  const handleLogout = async () => {
+    await auth.adminLogout();
   };
 
   // ==========================================
@@ -316,6 +329,30 @@ export const AdminPage: React.FC = () => {
     loadAllData();
   };
 
+  const handleStudyApproval = async (studyId: string, approval: 'approved' | 'rejected') => {
+    await api.updateStudy(studyId, { approval });
+    loadAllData();
+  };
+
+  const handleDeleteSiteMember = async (m: AdminMember) => {
+    if (!confirm(`'${m.nickname}'(${m.name}) 회원을 강제 탈퇴(개인정보 삭제) 처리하시겠습니까?`)) return;
+    await api.deleteMember(m.id);
+    loadAllData();
+  };
+
+  const handleDownloadMembersCsv = () => {
+    const esc = (v: string) => '"' + String(v).replace(/"/g, '""') + '"';
+    const header = ['가입일', '아이디', '닉네임', '성명', '연락처', '주소', '학번', '지역대학', '학과'];
+    const rows = members.map((m) => [m.created_at.split('T')[0], m.username, m.nickname, m.name, m.phone, m.address, m.student_no, m.regional_college, m.department]);
+    const csv = '\uFEFF' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `회원명단_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleQuickStatusChange = async (studyId: string, newStatus: StudyStatus) => {
     await api.updateStudy(studyId, { status: newStatus });
     loadAllData();
@@ -425,9 +462,9 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = auth.changePassword(oldPassword, newPassword);
+    const result = await auth.adminChangePassword(oldPassword, newPassword);
     setPwChangeMessage({ isError: !result.success, text: result.message });
     if (result.success) {
       setOldPassword('');
@@ -518,14 +555,8 @@ export const AdminPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 space-y-1">
-          <div className="font-semibold text-slate-700">💡 초기 기본 비밀번호 안내:</div>
-          <div className="font-mono text-blue-600 font-bold bg-white py-1 px-2 rounded-lg border border-slate-200 inline-block">
-            {auth.getDefaultPasswordHint()}
-          </div>
-          <p className="text-[11px] text-slate-400">
-            (로그인 후 관리자 센터에서 언제든 비밀번호를 변경할 수 있습니다)
-          </p>
+        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
+          관리자 비밀번호는 학생회 임원진만 공유하며, 로그인 후 관리자 센터에서 변경할 수 있습니다.
         </div>
       </div>
     );
@@ -607,6 +638,17 @@ export const AdminPage: React.FC = () => {
         >
           <BookOpen className="w-4 h-4 text-teal-600" />
           스터디 그룹 관리 ({studies.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'members'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Users className="w-4 h-4 text-rose-600" />
+          회원 관리 (${members.length})
         </button>
         <button
           onClick={() => setActiveTab('council')}
@@ -810,6 +852,11 @@ export const AdminPage: React.FC = () => {
                     <span className="text-xs text-slate-500 font-medium">
                       인원: {s.members_count} / {s.max_members}명
                     </span>
+                    {s.approval && s.approval !== 'approved' && (
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                        {s.approval === 'pending' ? '승인 대기' : '반려됨'}
+                      </span>
+                    )}
                     <span className="text-xs text-slate-400">대상: {s.target_grade}</span>
                     <span className="text-xs text-slate-400">진행: {s.meeting_type}</span>
                   </div>
@@ -824,6 +871,24 @@ export const AdminPage: React.FC = () => {
 
                 {/* Quick Status Toggles & Actions */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {s.approval && s.approval !== 'approved' && (
+                    <>
+                      <button
+                        onClick={() => handleStudyApproval(s.id, 'approved')}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                      >
+                        승인
+                      </button>
+                      {s.approval === 'pending' && (
+                        <button
+                          onClick={() => handleStudyApproval(s.id, 'rejected')}
+                          className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold"
+                        >
+                          반려
+                        </button>
+                      )}
+                    </>
+                  )}
                   {/* Quick Status Dropdown */}
                   <select
                     value={s.status}
@@ -860,6 +925,71 @@ export const AdminPage: React.FC = () => {
       {/* ========================================== */}
       {/* TAB 4: Council Intro & Members             */}
       {/* ========================================== */}
+      {/* ========================================== */}
+      {/* TAB: Members (개인정보 - 관리자 전용)      */}
+      {/* ========================================== */}
+      {activeTab === 'members' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">회원 관리 ({members.length}명)</h2>
+              <p className="text-xs text-slate-500">
+                회원 개인정보(성명·연락처·주소·학번)가 포함되어 있습니다. 목적 외 사용·외부 유출에 유의하고, CSV 파일은 사용 후 즉시 삭제하세요.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadMembersCsv}
+              disabled={members.length === 0}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-xs"
+            >
+              <Download className="w-4 h-4" />
+              명단 CSV 내려받기
+            </button>
+          </div>
+
+          {members.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-500">아직 가입한 회원이 없습니다.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    {['가입일', '닉네임(아이디)', '성명', '연락처', '학번', '지역대학 / 학과', '주소', ''].map((h) => (
+                      <th key={h} className="px-3 py-2 font-semibold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {members.map((m) => (
+                    <tr key={m.id} className="align-top">
+                      <td className="px-3 py-2.5 whitespace-nowrap">{m.created_at.split('T')[0]}</td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-bold text-slate-900">{m.nickname}</span>
+                        <span className="block text-slate-400">{m.username}</span>
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{m.name}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{m.phone}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{m.regional_college} / {m.department}</td>
+                      <td className="px-3 py-2.5 min-w-[200px]">{m.address}</td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={() => handleDeleteSiteMember(m)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold whitespace-nowrap"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          강제 탈퇴
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'council' && (
         <div className="space-y-8">
           {/* President Greeting Editor */}

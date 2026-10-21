@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { auth } from '../services/auth';
+import { useAuth } from '../services/auth';
+import { useRequireLogin } from '../lib/useRequireLogin';
 import type { FeedbackItem, FeedbackReply, FreePost } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
@@ -32,13 +33,11 @@ export const CommunityPage: React.FC = () => {
   const [isWriteFreeModalOpen, setIsWriteFreeModalOpen] = useState(false);
   const [freeTitle, setFreeTitle] = useState('');
   const [freeCategory, setFreeCategory] = useState<'자유' | '질문' | '취업·이직' | '정보공유'>('자유');
-  const [freeAuthor, setFreeAuthor] = useState('');
   const [freeContent, setFreeContent] = useState('');
   const [isSubmittingFree, setIsSubmittingFree] = useState(false);
 
   // 자유게시판 댓글 State
   const [freeReplyInputMap, setFreeReplyInputMap] = useState<Record<string, string>>({});
-  const [freeReplyAuthorMap, setFreeReplyAuthorMap] = useState<Record<string, string>>({});
 
   // ==========================================
   // 열린 건의함 State
@@ -49,7 +48,6 @@ export const CommunityPage: React.FC = () => {
   const [isWriteFeedbackModalOpen, setIsWriteFeedbackModalOpen] = useState(false);
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState<'학사/수업' | '행사/스터디' | '학생회운영' | '기타'>('학사/수업');
-  const [feedbackAuthor, setFeedbackAuthor] = useState('');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
@@ -57,7 +55,9 @@ export const CommunityPage: React.FC = () => {
   const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
   const [replyAuthorMap, setReplyAuthorMap] = useState<Record<string, string>>({});
 
-  const isAdmin = auth.isAdmin();
+  const { member, isAdmin } = useAuth();
+  const requireLogin = useRequireLogin();
+  const canDelete = (authorId?: string | null) => isAdmin || (!!member && !!authorId && authorId === member.id);
 
   useEffect(() => {
     loadData();
@@ -84,19 +84,17 @@ export const CommunityPage: React.FC = () => {
       await api.createFreePost({
         title: freeTitle.trim(),
         content: freeContent.trim(),
-        category: freeCategory,
-        author: freeAuthor.trim() || '익명 학우'
+        category: freeCategory
       });
       const data = await api.getFreePosts();
       setFreePosts(data);
       setIsWriteFreeModalOpen(false);
       setFreeTitle('');
       setFreeContent('');
-      setFreeAuthor('');
       alert('자유게시판에 글이 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert('게시글 등록에 실패했습니다.');
+      alert(err instanceof Error ? err.message : '게시글 등록에 실패했습니다.');
     } finally {
       setIsSubmittingFree(false);
     }
@@ -108,24 +106,26 @@ export const CommunityPage: React.FC = () => {
       alert('댓글 내용을 입력해 주세요.');
       return;
     }
-    const author = freeReplyAuthorMap[postId]?.trim() || '학우';
+    if (!requireLogin()) return;
     try {
-      await api.addFreePostReply(postId, {
-        author,
-        content: text
-      });
+      await api.addFreePostReply(postId, { content: text });
       setFreeReplyInputMap((prev) => ({ ...prev, [postId]: '' }));
       const data = await api.getFreePosts();
       setFreePosts(data);
     } catch (err) {
       console.error(err);
-      alert('댓글 등록 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '댓글 등록 중 오류가 발생했습니다.');
     }
   };
 
   const handleDeleteFreePost = async (id: string) => {
     if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
-    await api.deleteFreePost(id);
+    try {
+      await api.deleteFreePost(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      return;
+    }
     const data = await api.getFreePosts();
     setFreePosts(data);
   };
@@ -142,19 +142,17 @@ export const CommunityPage: React.FC = () => {
       await api.createFeedback({
         title: feedbackTitle.trim(),
         content: feedbackContent.trim(),
-        category: feedbackCategory,
-        author: feedbackAuthor.trim() || '익명 학우'
+        category: feedbackCategory
       });
       const data = await api.getFeedbacks();
       setFeedbacks(data);
       setIsWriteFeedbackModalOpen(false);
       setFeedbackTitle('');
       setFeedbackContent('');
-      setFeedbackAuthor('');
       alert('건의사항이 등록되었습니다. 학생회가 확인 후 댓글로 정성껏 답변드리겠습니다!');
     } catch (err) {
       console.error(err);
-      alert('건의 등록 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '건의 등록 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -166,6 +164,7 @@ export const CommunityPage: React.FC = () => {
       alert('답변 내용을 입력해 주세요.');
       return;
     }
+    if (!isAdmin && !requireLogin()) return;
     const replyAuthor = replyAuthorMap[feedbackId]?.trim() || '학생회';
     try {
       await api.addFeedbackReply(feedbackId, {
@@ -178,13 +177,18 @@ export const CommunityPage: React.FC = () => {
       alert('답변 댓글이 성공적으로 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert('댓글 등록에 실패했습니다.');
+      alert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
     }
   };
 
   const handleDeleteFeedback = async (id: string) => {
     if (!window.confirm('이 건의글을 삭제하시겠습니까?')) return;
-    await api.deleteFeedback(id);
+    try {
+      await api.deleteFeedback(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      return;
+    }
     const data = await api.getFeedbacks();
     setFeedbacks(data);
   };
@@ -239,7 +243,7 @@ export const CommunityPage: React.FC = () => {
 
         {activeTab === 'free' && (
           <button
-            onClick={() => setIsWriteFreeModalOpen(true)}
+            onClick={() => requireLogin() && setIsWriteFreeModalOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
@@ -249,7 +253,7 @@ export const CommunityPage: React.FC = () => {
 
         {activeTab === 'feedback' && (
           <button
-            onClick={() => setIsWriteFeedbackModalOpen(true)}
+            onClick={() => requireLogin() && setIsWriteFeedbackModalOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
@@ -311,7 +315,7 @@ export const CommunityPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => setIsWriteFreeModalOpen(true)}
+              onClick={() => requireLogin() && setIsWriteFreeModalOpen(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -388,7 +392,7 @@ export const CommunityPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                        {isAdmin && (
+                        {canDelete(post.author_id) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -439,15 +443,6 @@ export const CommunityPage: React.FC = () => {
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2">
                             <input
                               type="text"
-                              placeholder="닉네임 (익명 가능)"
-                              value={freeReplyAuthorMap[post.id] || ''}
-                              onChange={(e) =>
-                                setFreeReplyAuthorMap((prev) => ({ ...prev, [post.id]: e.target.value }))
-                              }
-                              className="sm:col-span-1 px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
-                            />
-                            <input
-                              type="text"
                               placeholder="댓글을 남겨보세요..."
                               value={freeReplyInputMap[post.id] || ''}
                               onChange={(e) =>
@@ -456,7 +451,7 @@ export const CommunityPage: React.FC = () => {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleAddFreeReply(post.id);
                               }}
-                              className="sm:col-span-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
+                              className="sm:col-span-3 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
                             />
                             <button
                               onClick={() => handleAddFreeReply(post.id)}
@@ -492,7 +487,7 @@ export const CommunityPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => setIsWriteFeedbackModalOpen(true)}
+              onClick={() => requireLogin() && setIsWriteFeedbackModalOpen(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -587,7 +582,7 @@ export const CommunityPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                        {isAdmin && (
+                        {canDelete(fb.author_id) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -638,7 +633,7 @@ export const CommunityPage: React.FC = () => {
                                 <div className="flex items-center justify-between pb-2 border-b border-indigo-200/50">
                                   <div className="flex items-center gap-2">
                                     <span className="px-2.5 py-0.5 rounded-md bg-indigo-600 text-white font-bold text-xs">
-                                      학생회 공식 답변
+                                      {reply.author_id ? '학우 댓글' : '학생회 공식 답변'}
                                     </span>
                                     <span className="font-bold text-sm text-indigo-950">
                                       {reply.author}
@@ -661,7 +656,7 @@ export const CommunityPage: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                               <MessageCircle className="w-4 h-4 text-indigo-600" />
-                              {isAdmin ? '관리자 공식 답변 댓글 달기' : '학생회 답변 작성 (임원 전용)'}
+                              {isAdmin ? '관리자 공식 답변 댓글 달기' : '댓글 작성 (학생회 공식 답변은 관리자 전용)'}
                             </span>
                             {!isAdmin && (
                               <Link
@@ -674,6 +669,7 @@ export const CommunityPage: React.FC = () => {
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            {isAdmin && (
                             <input
                               type="text"
                               placeholder="작성자 (예: 학생회장, 학술부장)"
@@ -683,6 +679,7 @@ export const CommunityPage: React.FC = () => {
                               }
                               className="sm:col-span-1 px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500"
                             />
+                            )}
                             <input
                               type="text"
                               placeholder="답변 내용을 입력해 주세요..."
@@ -693,7 +690,7 @@ export const CommunityPage: React.FC = () => {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleAddFeedbackReply(fb.id);
                               }}
-                              className="sm:col-span-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                              className={` px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500`}
                             />
                             <button
                               onClick={() => handleAddFeedbackReply(fb.id)}
@@ -799,14 +796,8 @@ export const CommunityPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">작성자 (익명 가능)</label>
-                  <input
-                    type="text"
-                    value={freeAuthor}
-                    onChange={(e) => setFreeAuthor(e.target.value)}
-                    placeholder="예: 3학년 학우"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block font-bold text-slate-800 mb-1">작성자</label>
+                  <div className="w-full px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold">{member?.nickname}</div>
                 </div>
               </div>
 
@@ -894,14 +885,8 @@ export const CommunityPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">작성자 (익명 가능)</label>
-                  <input
-                    type="text"
-                    value={feedbackAuthor}
-                    onChange={(e) => setFeedbackAuthor(e.target.value)}
-                    placeholder="예: 2학년 재학생 (익명)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <label className="block font-bold text-slate-800 mb-1">작성자</label>
+                  <div className="w-full px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold">{member?.nickname}</div>
                 </div>
               </div>
 

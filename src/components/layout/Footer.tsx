@@ -159,6 +159,12 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
+        <div className="pb-4 text-xs sm:text-sm">
+          <Link to="/privacy" className="font-bold text-white hover:underline">
+            개인정보 처리방침 및 이용약관
+          </Link>
+        </div>
+
         {/* Bottom Copyright */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-slate-400 gap-3">
           <p>© 2026 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회. All rights reserved.</p>

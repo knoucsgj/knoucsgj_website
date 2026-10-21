@@ -1,0 +1,124 @@
+// Idempotent schema bootstrap. Runs once per Worker isolate before the first API call, so no manual
+// D1 console work is required. Safe to run repeatedly (CREATE IF NOT EXISTS + guarded ALTERs).
+import { initialNotices } from '../src/data/mockNotices';
+import { initialEvents } from '../src/data/mockEvents';
+
+type D1 = any;
+
+const CREATE_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS notices (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('필독', '학생회', '학사', '행사', '결산', '회의록')),
+    author TEXT NOT NULL DEFAULT '학생회', created_at TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 1,
+    is_pinned INTEGER NOT NULL DEFAULT 0, file_name TEXT, file_url TEXT)`,
+  `CREATE TABLE IF NOT EXISTS academic_events (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('출석수업', '시험', '과제', '등록/수강', '행사')),
+    description TEXT, target_grades TEXT NOT NULL DEFAULT '전학년', is_important INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS academic_materials (
+    id TEXT PRIMARY KEY, grade INTEGER NOT NULL CHECK (grade IN (1, 2, 3, 4)),
+    semester INTEGER NOT NULL CHECK (semester IN (1, 2)), course_name TEXT NOT NULL, title TEXT NOT NULL,
+    description TEXT,
+    category TEXT NOT NULL CHECK (category IN ('기출문제/해설', '출석수업요약', '과제물참고자료', '강의노트', '기타자료')),
+    author TEXT NOT NULL DEFAULT '학우', created_at TEXT NOT NULL, downloads INTEGER NOT NULL DEFAULT 0,
+    file_name TEXT, file_size TEXT, file_url TEXT)`,
+  `CREATE TABLE IF NOT EXISTS free_posts (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('자유', '질문', '취업·이직', '정보공유')),
+    author TEXT NOT NULL, created_at TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 1)`,
+  `CREATE TABLE IF NOT EXISTS free_post_replies (
+    id TEXT PRIMARY KEY, post_id TEXT NOT NULL, author TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS feedbacks (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('학사/수업', '행사/스터디', '학생회운영', '기타')),
+    author TEXT NOT NULL, created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT '접수완료' CHECK (status IN ('접수완료', '답변완료')))`,
+  `CREATE TABLE IF NOT EXISTS feedback_replies (
+    id TEXT PRIMARY KEY, feedback_id TEXT NOT NULL, author TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS studies (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, subject TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('모집중', '진행중', '마감', '종료')),
+    members_count INTEGER NOT NULL DEFAULT 1, max_members INTEGER NOT NULL DEFAULT 8,
+    target_grade TEXT NOT NULL DEFAULT '전학년', meeting_type TEXT NOT NULL, leader TEXT NOT NULL,
+    leader_contact TEXT, description TEXT, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS council_members (
+    id TEXT PRIMARY KEY, role TEXT NOT NULL, name TEXT NOT NULL, grade_info TEXT, message TEXT, email TEXT)`,
+  `CREATE TABLE IF NOT EXISTS members (
+    id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL,
+    nickname TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, student_no TEXT NOT NULL,
+    regional_college TEXT NOT NULL, department TEXT NOT NULL, consent_version TEXT NOT NULL,
+    consented_at TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_members_nickname ON members (nickname COLLATE NOCASE)`,
+  `CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('member', 'admin')),
+    member_id TEXT, expires_at INTEGER NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_sessions_member ON sessions (member_id)`,
+  `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS login_attempts (k TEXT PRIMARY KEY, count INTEGER NOT NULL, first_at INTEGER NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_notices_pinned ON notices (is_pinned, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_freeposts_created ON free_posts (created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks (created_at)`,
+];
+
+// Columns added after the first release (ownership + study approval)
+const ADD_COLUMNS: [string, string, string][] = [
+  ['free_posts', 'author_id', 'TEXT'],
+  ['free_post_replies', 'author_id', 'TEXT'],
+  ['feedbacks', 'author_id', 'TEXT'],
+  ['feedback_replies', 'author_id', 'TEXT'],
+  ['academic_materials', 'author_id', 'TEXT'],
+  ['studies', 'author_id', 'TEXT'],
+  ['studies', 'approval', "TEXT NOT NULL DEFAULT 'approved'"],
+];
+
+let ready: Promise<void> | null = null;
+
+export function ensureSchema(db: D1): Promise<void> {
+  if (!ready) {
+    ready = run(db).catch((e) => {
+      ready = null; // retry on next request
+      throw e;
+    });
+  }
+  return ready;
+}
+
+async function run(db: D1) {
+  await db.batch(CREATE_STATEMENTS.map((s) => db.prepare(s)));
+
+  for (const [table, column, type] of ADD_COLUMNS) {
+    const { results } = await db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!results.some((r: any) => r.name === column)) {
+      await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+    }
+  }
+
+  // One-time: copy the bundled default notices/events so existing content stays visible.
+  const seeded = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v1'").first();
+  if (!seeded) {
+    const stmts: any[] = [];
+    for (const n of initialNotices) {
+      const att = n.attachments && n.attachments[0];
+      stmts.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO notices (id, title, content, category, author, created_at, views, is_pinned, file_name, file_url) VALUES (?,?,?,?,?,?,?,?,?,?)'
+          )
+          .bind(n.id, n.title, n.content, n.category, n.author, n.created_at, Number(n.views) || 1,
+            n.is_pinned ? 1 : 0, att ? att.name : null, att ? att.url : null)
+      );
+    }
+    for (const e of initialEvents) {
+      stmts.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO academic_events (id, title, start_date, end_date, category, description, target_grades, is_important) VALUES (?,?,?,?,?,?,?,?)'
+          )
+          .bind(e.id, e.title, e.start_date, e.end_date, e.category, e.description, e.target_grades, e.is_important ? 1 : 0)
+      );
+    }
+    stmts.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v1', '1')"));
+    await db.batch(stmts);
+  }
+}

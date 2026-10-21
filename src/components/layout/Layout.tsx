@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { auth } from '../../services/auth';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 
@@ -7,6 +8,10 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  useEffect(() => {
+    auth.refresh();
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       <Navbar />

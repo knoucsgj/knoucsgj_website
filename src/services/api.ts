@@ -12,7 +12,8 @@ import type {
   FeedbackReply,
   FreePost,
   FreePostReply,
-  AcademicMaterial
+  AcademicMaterial,
+  AdminMember
 } from '../lib/types';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
@@ -74,13 +75,37 @@ async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<
   }
 }
 
+// Strict request: throws an Error carrying the server's message (used for writes that need auth).
+async function fetchStrict<T>(query: string, options: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api?resource=${query}`, {
+      credentials: 'same-origin',
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+    });
+  } catch {
+    throw new Error('서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주세요.');
+  }
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* ignore */
+  }
+  if (!res.ok || data === null) {
+    throw new Error((data && data.error) || '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  return data as T;
+}
+
 export const api = {
   // ==========================================
   // 1. 공지사항 (Notices) CRUD
   // ==========================================
   async getNotices(): Promise<Notice[]> {
     const cloudData = await fetchD1<Notice[]>('notices');
-    if (cloudData && cloudData.length > 0) {
+    if (Array.isArray(cloudData)) {
       return cloudData;
     }
     return getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
@@ -99,36 +124,27 @@ export const api = {
       views: 1,
     };
 
-    const cloudSaved = await fetchD1<Notice>('notices', {
+    const cloudSaved = await fetchStrict<Notice>('notices', {
       method: 'POST',
       body: JSON.stringify(newNotice),
     });
-
-    const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
-    const updated = [cloudSaved || newNotice, ...current];
-    setLocalItem(NOTICES_STORAGE_KEY, updated);
-    return cloudSaved || newNotice;
+    return { ...newNotice, ...cloudSaved, is_pinned: !!cloudSaved.is_pinned, attachments: newNotice.attachments };
   },
 
   async updateNotice(id: string, updatedFields: Partial<Notice>): Promise<Notice | null> {
-    const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
-    let updatedNotice: Notice | null = null;
-    const next = current.map((n) => {
-      if (n.id === id) {
-        updatedNotice = { ...n, ...updatedFields };
-        return updatedNotice;
-      }
-      return n;
+    const current = await this.getNotices();
+    const existing = current.find((n) => n.id === id);
+    if (!existing) return null;
+    const merged: Notice = { ...existing, ...updatedFields };
+    await fetchStrict<any>(`notices&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(merged),
     });
-    setLocalItem(NOTICES_STORAGE_KEY, next);
-    return updatedNotice;
+    return merged;
   },
 
   async deleteNotice(id: string): Promise<boolean> {
-    await fetchD1<any>(`notices&id=${id}`, { method: 'DELETE' });
-    const current = getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
-    const next = current.filter((n) => n.id !== id);
-    setLocalItem(NOTICES_STORAGE_KEY, next);
+    await fetchStrict<any>(`notices&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
@@ -137,7 +153,7 @@ export const api = {
   // ==========================================
   async getEvents(): Promise<AcademicEvent[]> {
     const cloudEvents = await fetchD1<AcademicEvent[]>('events');
-    if (cloudEvents && cloudEvents.length > 0) {
+    if (Array.isArray(cloudEvents)) {
       return cloudEvents;
     }
     return getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
@@ -148,34 +164,27 @@ export const api = {
       ...event,
       id: `event-${Date.now()}`,
     };
-    await fetchD1<AcademicEvent>('events', {
+    await fetchStrict<AcademicEvent>('events', {
       method: 'POST',
       body: JSON.stringify(newEvent),
     });
-    const current = getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
-    const updated = [...current, newEvent];
-    setLocalItem(EVENTS_STORAGE_KEY, updated);
     return newEvent;
   },
 
   async updateEvent(id: string, updatedFields: Partial<AcademicEvent>): Promise<AcademicEvent | null> {
-    const current = getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
-    let updatedEvent: AcademicEvent | null = null;
-    const next = current.map((ev) => {
-      if (ev.id === id) {
-        updatedEvent = { ...ev, ...updatedFields };
-        return updatedEvent;
-      }
-      return ev;
+    const current = await this.getEvents();
+    const existing = current.find((ev) => ev.id === id);
+    if (!existing) return null;
+    const merged: AcademicEvent = { ...existing, ...updatedFields };
+    await fetchStrict<any>(`events&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(merged),
     });
-    setLocalItem(EVENTS_STORAGE_KEY, next);
-    return updatedEvent;
+    return merged;
   },
 
   async deleteEvent(id: string): Promise<boolean> {
-    const current = getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
-    const next = current.filter((ev) => ev.id !== id);
-    setLocalItem(EVENTS_STORAGE_KEY, next);
+    await fetchStrict<any>(`events&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
@@ -232,46 +241,31 @@ export const api = {
   // ==========================================
   async getStudies(): Promise<StudyGroup[]> {
     const cloudStudies = await fetchD1<StudyGroup[]>('studies');
-    if (cloudStudies && cloudStudies.length > 0) {
+    if (Array.isArray(cloudStudies)) {
       return cloudStudies;
     }
     return getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
   },
 
-  async createStudy(study: Omit<StudyGroup, 'id' | 'created_at'>): Promise<StudyGroup> {
-    const newStudy: StudyGroup = {
-      ...study,
-      id: `study-${Date.now()}`,
-      created_at: new Date().toISOString().split('T')[0],
-    };
-    await fetchD1<StudyGroup>('studies', {
+  // 회원: 승인 대기 상태로 신청 / 관리자: 즉시 등록. 개설자(leader)는 서버가 로그인 정보로 결정합니다.
+  async createStudy(study: Omit<StudyGroup, 'id' | 'created_at' | 'approval' | 'author_id'>): Promise<StudyGroup> {
+    return fetchStrict<StudyGroup>('studies', {
       method: 'POST',
-      body: JSON.stringify(newStudy),
+      body: JSON.stringify(study),
     });
-    const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
-    const updated = [newStudy, ...current];
-    setLocalItem(STUDIES_STORAGE_KEY, updated);
-    return newStudy;
   },
 
   async updateStudy(id: string, updatedFields: Partial<StudyGroup>): Promise<StudyGroup | null> {
-    const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
-    let updatedStudy: StudyGroup | null = null;
-    const next = current.map((s) => {
-      if (s.id === id) {
-        updatedStudy = { ...s, ...updatedFields };
-        return updatedStudy;
-      }
-      return s;
+    await fetchStrict<any>(`studies&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
     });
-    setLocalItem(STUDIES_STORAGE_KEY, next);
-    return updatedStudy;
+    const all = await this.getStudies();
+    return all.find((s) => s.id === id) || null;
   },
 
   async deleteStudy(id: string): Promise<boolean> {
-    const current = getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
-    const next = current.filter((s) => s.id !== id);
-    setLocalItem(STUDIES_STORAGE_KEY, next);
+    await fetchStrict<any>(`studies&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
@@ -346,61 +340,29 @@ export const api = {
   // ==========================================
   async getFeedbacks(): Promise<FeedbackItem[]> {
     const cloudFeedbacks = await fetchD1<FeedbackItem[]>('feedbacks');
-    if (cloudFeedbacks && cloudFeedbacks.length > 0) {
+    if (Array.isArray(cloudFeedbacks)) {
       return cloudFeedbacks;
     }
     return getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
   },
 
-  async createFeedback(feedback: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies'>): Promise<FeedbackItem> {
-    const newItem: FeedbackItem = {
-      ...feedback,
-      id: `fb-${Date.now()}`,
-      created_at: new Date().toISOString().split('T')[0],
-      status: '접수완료',
-      replies: []
-    };
-    await fetchD1<FeedbackItem>('feedbacks', {
+  // 작성자는 서버가 로그인한 회원의 닉네임으로 기록합니다.
+  async createFeedback(feedback: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies' | 'author' | 'author_id'>): Promise<FeedbackItem> {
+    return fetchStrict<FeedbackItem>('feedbacks', {
       method: 'POST',
-      body: JSON.stringify(newItem),
+      body: JSON.stringify(feedback),
     });
-    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
-    const updated = [newItem, ...current];
-    setLocalItem(FEEDBACKS_STORAGE_KEY, updated);
-    return newItem;
   },
 
-  async addFeedbackReply(feedbackId: string, reply: Omit<FeedbackReply, 'id' | 'created_at'>): Promise<FeedbackItem | null> {
-    const newReply: FeedbackReply = {
-      ...reply,
-      id: `fb-rep-${Date.now()}`,
-      created_at: new Date().toISOString().split('T')[0]
-    };
-    await fetchD1<any>('feedbacks', {
+  async addFeedbackReply(feedbackId: string, reply: Omit<FeedbackReply, 'id' | 'created_at' | 'author_id'>): Promise<void> {
+    await fetchStrict<any>('feedbacks', {
       method: 'POST',
       body: JSON.stringify({ type: 'reply', feedback_id: feedbackId, ...reply }),
     });
-    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
-    let updatedItem: FeedbackItem | null = null;
-    const next = current.map((item) => {
-      if (item.id === feedbackId) {
-        updatedItem = {
-          ...item,
-          status: '답변완료',
-          replies: [...item.replies, newReply]
-        };
-        return updatedItem;
-      }
-      return item;
-    });
-    setLocalItem(FEEDBACKS_STORAGE_KEY, next);
-    return updatedItem;
   },
 
   async deleteFeedback(id: string): Promise<boolean> {
-    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
-    const next = current.filter((item) => item.id !== id);
-    setLocalItem(FEEDBACKS_STORAGE_KEY, next);
+    await fetchStrict<any>(`feedbacks&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
@@ -409,61 +371,28 @@ export const api = {
   // ==========================================
   async getFreePosts(): Promise<FreePost[]> {
     const cloudPosts = await fetchD1<FreePost[]>('freeposts');
-    if (cloudPosts && cloudPosts.length > 0) {
+    if (Array.isArray(cloudPosts)) {
       return cloudPosts;
     }
     return getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
   },
 
-  async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies'>): Promise<FreePost> {
-    const newPost: FreePost = {
-      ...post,
-      id: `free-${Date.now()}`,
-      created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      views: 1,
-      replies: []
-    };
-    await fetchD1<FreePost>('freeposts', {
+  async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies' | 'author' | 'author_id'>): Promise<FreePost> {
+    return fetchStrict<FreePost>('freeposts', {
       method: 'POST',
-      body: JSON.stringify(newPost),
+      body: JSON.stringify(post),
     });
-    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
-    const updated = [newPost, ...current];
-    setLocalItem(FREEPOSTS_STORAGE_KEY, updated);
-    return newPost;
   },
 
-  async addFreePostReply(postId: string, reply: Omit<FreePostReply, 'id' | 'created_at'>): Promise<FreePost | null> {
-    const newReply: FreePostReply = {
-      ...reply,
-      id: `freerep-${Date.now()}`,
-      created_at: new Date().toISOString().replace('T', ' ').substring(0, 16)
-    };
-    await fetchD1<any>('freeposts', {
+  async addFreePostReply(postId: string, reply: Pick<FreePostReply, 'content'>): Promise<void> {
+    await fetchStrict<any>('freeposts', {
       method: 'POST',
       body: JSON.stringify({ type: 'reply', post_id: postId, ...reply }),
     });
-    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
-    let updatedItem: FreePost | null = null;
-    const next = current.map((p) => {
-      if (p.id === postId) {
-        updatedItem = {
-          ...p,
-          replies: [...p.replies, newReply]
-        };
-        return updatedItem;
-      }
-      return p;
-    });
-    setLocalItem(FREEPOSTS_STORAGE_KEY, next);
-    return updatedItem;
   },
 
   async deleteFreePost(id: string): Promise<boolean> {
-    await fetchD1<any>(`freeposts&id=${id}`, { method: 'DELETE' });
-    const current = getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
-    const next = current.filter((p) => p.id !== id);
-    setLocalItem(FREEPOSTS_STORAGE_KEY, next);
+    await fetchStrict<any>(`freeposts&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
@@ -472,67 +401,53 @@ export const api = {
   // ==========================================
   async getMaterials(): Promise<AcademicMaterial[]> {
     const cloudMaterials = await fetchD1<AcademicMaterial[]>('materials');
-    if (cloudMaterials && cloudMaterials.length > 0) {
+    if (Array.isArray(cloudMaterials)) {
       return cloudMaterials;
     }
     return getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
   },
 
-  async createMaterial(material: Omit<AcademicMaterial, 'id' | 'created_at' | 'downloads'>): Promise<AcademicMaterial> {
-    const newMat: AcademicMaterial = {
-      ...material,
-      id: `mat-${Date.now()}`,
-      created_at: new Date().toISOString().split('T')[0],
-      downloads: 0
-    };
-    await fetchD1<AcademicMaterial>('materials', {
+  // 목록에는 첨부 파일 데이터가 포함되지 않으므로 다운로드 시 개별 조회합니다.
+  async getMaterialFile(id: string): Promise<string | null> {
+    const item = await fetchD1<{ file_url?: string }>(`materials&id=${encodeURIComponent(id)}`);
+    return item?.file_url || null;
+  },
+
+  async createMaterial(material: Omit<AcademicMaterial, 'id' | 'created_at' | 'downloads' | 'author' | 'author_id' | 'has_file'>): Promise<AcademicMaterial> {
+    return fetchStrict<AcademicMaterial>('materials', {
       method: 'POST',
-      body: JSON.stringify(newMat),
+      body: JSON.stringify(material),
     });
-    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
-    const updated = [newMat, ...current];
-    setLocalItem(MATERIALS_STORAGE_KEY, updated);
-    return newMat;
   },
 
   async incrementMaterialDownload(id: string): Promise<void> {
-    await fetchD1<any>(`materials&id=${id}`, {
+    await fetchD1<any>(`materials&id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify({ increment_download: true }),
     });
-    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
-    const next = current.map((m) => {
-      if (m.id === id) {
-        return { ...m, downloads: m.downloads + 1 };
-      }
-      return m;
-    });
-    setLocalItem(MATERIALS_STORAGE_KEY, next);
   },
 
-  async updateMaterial(id: string, updatedFields: Partial<AcademicMaterial>): Promise<AcademicMaterial | null> {
-    await fetchD1<any>(`materials&id=${id}`, {
+  async updateMaterial(id: string, updatedFields: Partial<AcademicMaterial>): Promise<void> {
+    await fetchStrict<any>(`materials&id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updatedFields),
     });
-    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
-    let updatedMat: AcademicMaterial | null = null;
-    const next = current.map((m) => {
-      if (m.id === id) {
-        updatedMat = { ...m, ...updatedFields };
-        return updatedMat;
-      }
-      return m;
-    });
-    setLocalItem(MATERIALS_STORAGE_KEY, next);
-    return updatedMat;
   },
 
   async deleteMaterial(id: string): Promise<boolean> {
-    await fetchD1<any>(`materials&id=${id}`, { method: 'DELETE' });
-    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
-    const next = current.filter((m) => m.id !== id);
-    setLocalItem(MATERIALS_STORAGE_KEY, next);
+    await fetchStrict<any>(`materials&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  // ==========================================
+  // 11-1. 회원 관리 (관리자 전용)
+  // ==========================================
+  async getMembers(): Promise<AdminMember[]> {
+    return fetchStrict<AdminMember[]>('members');
+  },
+
+  async deleteMember(id: string): Promise<boolean> {
+    await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 

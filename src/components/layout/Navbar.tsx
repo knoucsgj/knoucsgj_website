@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ExternalLink, ChevronRight, Shield, ZoomIn } from 'lucide-react';
-import { auth } from '../../services/auth';
+import { auth, useAuth } from '../../services/auth';
 import { ASSETS } from '../../lib/assets';
 
 export const Navbar: React.FC = () => {
@@ -10,7 +10,7 @@ export const Navbar: React.FC = () => {
     return localStorage.getItem('knou_large_text') === 'true';
   });
   const location = useLocation();
-  const isAdmin = auth.isAdmin();
+  const { member, isAdmin } = useAuth();
 
   useEffect(() => {
     if (isLargeText) {
@@ -92,6 +92,26 @@ export const Navbar: React.FC = () => {
             >
               컴퓨터과학과
             </a>
+            <span className="text-slate-700">|</span>
+            {member ? (
+              <>
+                <Link to="/account" className="text-blue-300 hover:text-white font-semibold transition-colors">
+                  {member.nickname} 님
+                </Link>
+                <button onClick={() => auth.logout()} className="text-slate-300 hover:text-white transition-colors">
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-slate-300 hover:text-white transition-colors font-semibold">
+                  로그인
+                </Link>
+                <Link to="/register" className="text-emerald-300 hover:text-white transition-colors font-semibold">
+                  회원가입
+                </Link>
+              </>
+            )}
             <span className="text-slate-700">|</span>
             <Link
               to="/admin"
@@ -225,6 +245,40 @@ export const Navbar: React.FC = () => {
             })}
 
             <div className="pt-4 border-t border-slate-100 mt-2 space-y-2">
+              {member ? (
+                <div className="flex gap-2">
+                  <Link
+                    to="/account"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1 text-center py-3 px-4 rounded-xl bg-blue-50 text-blue-800 font-bold text-sm"
+                  >
+                    {member.nickname} 님 · 내 정보
+                  </Link>
+                  <button
+                    onClick={() => { auth.logout(); setIsOpen(false); }}
+                    className="py-3 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1 text-center py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-sm"
+                  >
+                    로그인
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsOpen(false)}
+                    className="flex-1 text-center py-3 px-4 rounded-xl bg-emerald-600 text-white font-bold text-sm"
+                  >
+                    회원가입
+                  </Link>
+                </div>
+              )}
               <a
                 href="https://m.knou.ac.kr/"
                 target="_blank"
