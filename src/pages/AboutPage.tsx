@@ -338,11 +338,8 @@ export const AboutPage: React.FC = () => {
                   className="h-9 sm:h-11 w-auto object-contain shrink-0"
                 />
                 <div>
-                  <span className="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                    본관
-                  </span>
-                  <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900 mt-1">
-                    {regionalInfo.center_name}
+                  <h2 className="font-knou text-xl sm:text-2xl font-bold text-slate-900">
+                    오시는 길
                   </h2>
                 </div>
               </div>
@@ -394,7 +391,7 @@ export const AboutPage: React.FC = () => {
                 <div className="leading-relaxed">
                   <span className="font-semibold text-slate-900">• 시내버스 :</span> 봉선27, 첨단40, 첨단92, 첨단192 (방송통신대 정류장 하차)
                   <p className="text-xs sm:text-sm text-amber-800 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1.5 mt-1 font-medium">
-                    ※ 2026년 10월 31일 광주시 시내버스 노선 개편으로 경유 노선이 변경될 예정입니다.
+                    ※ 2026년 10월 31일 전남광주통합특별시 광주권(동구, 서구, 남구, 북구, 광산구) 시내버스 노선 개편으로 경유 노선이 변경될 예정입니다.
                   </p>
                 </div>
                 <p className="leading-relaxed">
@@ -407,9 +404,9 @@ export const AboutPage: React.FC = () => {
           {/* Sub-center 학습관 List */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">
             <div className="pb-4 border-b border-slate-100 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">전남 관할 시·군 학습관 (2개소)</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-1">시·군 학습관 (2개소)</h3>
               <p className="text-sm sm:text-base text-slate-600">
-                광주 본관 외에도 각 지역 학습관에서 시험(출석대체시험, 기말시험) 응시 및 사전 신청을 통한 스터디 진행이 가능합니다.
+                각 지역 학습관에서 시험(출석대체시험, 기말시험) 응시 및 사전 신청을 통한 스터디 진행이 가능합니다.
               </p>
             </div>
 
