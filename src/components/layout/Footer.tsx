@@ -1,7 +1,6 @@
 import React from 'react';
-import { ExternalLink, Mail, MapPin, Phone, Scale } from 'lucide-react';
+import { ExternalLink, Mail, MapPin, Scale } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { regionalInfo } from '../../data/mockCouncil';
 import { ASSETS } from '../../lib/assets';
 
 export const Footer: React.FC = () => {
@@ -35,15 +34,11 @@ export const Footer: React.FC = () => {
             <div className="pt-2 text-sm text-slate-300 space-y-2">
               <div className="flex items-center gap-2.5">
                 <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>{regionalInfo.address} (학생회실: 본관 405호)</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>지역대학 대표: {regionalInfo.tel} / 팩스: {regionalInfo.fax}</span>
+                <span>학생회 주소: 전남광주통합특별시 광산구 첨단내촌로 6, 103호</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>학생회 공식 이메일: contact@knou-cs-gj.org</span>
+                <span>학생회 공식 이메일: knoucsgj@gmail.com</span>
               </div>
             </div>
           </div>
@@ -168,7 +163,7 @@ export const Footer: React.FC = () => {
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-slate-400 gap-3">
           <p>© 2026 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회. All rights reserved.</p>
           <div className="text-slate-400 text-xs sm:text-sm">
-            광주광역시 광산구 첨단과기로 208번길 43 (오룡동) 한국방송통신대학교 본관 405호
+            전남광주통합특별시 광산구 첨단내촌로 6, 103호 | 공식 이메일: knoucsgj@gmail.com
           </div>
         </div>
       </div>
