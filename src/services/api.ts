@@ -500,6 +500,20 @@ export const api = {
     setLocalItem(MATERIALS_STORAGE_KEY, next);
   },
 
+  async updateMaterial(id: string, updatedFields: Partial<AcademicMaterial>): Promise<AcademicMaterial | null> {
+    const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+    let updatedMat: AcademicMaterial | null = null;
+    const next = current.map((m) => {
+      if (m.id === id) {
+        updatedMat = { ...m, ...updatedFields };
+        return updatedMat;
+      }
+      return m;
+    });
+    setLocalItem(MATERIALS_STORAGE_KEY, next);
+    return updatedMat;
+  },
+
   async deleteMaterial(id: string): Promise<boolean> {
     const current = getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
     const next = current.filter((m) => m.id !== id);

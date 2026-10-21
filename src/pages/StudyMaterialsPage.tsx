@@ -21,7 +21,9 @@ import {
   ArrowRight,
   GraduationCap,
   FileCode,
-  Upload
+  Upload,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 
 export const StudyMaterialsPage: React.FC = () => {
@@ -54,8 +56,9 @@ export const StudyMaterialsPage: React.FC = () => {
   // Other Materials Category Filter
   const [otherCategoryFilter, setOtherCategoryFilter] = useState<string>('전체');
 
-  // New Material Modal State
+  // New / Edit Material Modal State
   const [isCreateMaterialModalOpen, setIsCreateMaterialModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<AcademicMaterial | null>(null);
   const [newMatGrade, setNewMatGrade] = useState<1 | 2 | 3 | 4>(1);
   const [newMatSemester, setNewMatSemester] = useState<1 | 2>(2);
   const [newMatCourse, setNewMatCourse] = useState('');
@@ -176,7 +179,51 @@ export const StudyMaterialsPage: React.FC = () => {
     }
   };
 
-  const handleCreateMaterial = async (e: React.FormEvent) => {
+  const openCreateModal = (defaultCategory: '출석수업요약' | '기타자료' = '출석수업요약') => {
+    setEditingMaterial(null);
+    setNewMatGrade(selectedGrade);
+    setNewMatSemester(selectedSemester);
+    setNewMatCourse(selectedCourse === '전체' ? '' : selectedCourse);
+    setNewMatTitle('');
+    setNewMatDescription('');
+    setNewMatCategory(defaultCategory);
+    setNewMatAuthor('');
+    setNewMatFileName('');
+    setNewMatFileSize('');
+    setNewMatFileDataUrl('');
+    setIsCreateMaterialModalOpen(true);
+  };
+
+  const openEditModal = (mat: AcademicMaterial) => {
+    setEditingMaterial(mat);
+    setNewMatGrade(mat.grade);
+    setNewMatSemester(mat.semester);
+    setNewMatCourse(mat.course_name);
+    setNewMatTitle(mat.title);
+    setNewMatDescription(mat.description);
+    setNewMatCategory(mat.category);
+    setNewMatAuthor(mat.author);
+    setNewMatFileName(mat.file_name || '');
+    setNewMatFileSize(mat.file_size || '');
+    setNewMatFileDataUrl(mat.file_url || '');
+    setIsCreateMaterialModalOpen(true);
+  };
+
+  const handleDeleteMaterial = async (mat: AcademicMaterial) => {
+    if (!window.confirm(`[${mat.title}] 자료를 정말 삭제하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await api.deleteMaterial(mat.id);
+      await loadData();
+      alert('자료가 삭제되었습니다.');
+    } catch (err) {
+      console.error(err);
+      alert('자료 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSaveMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMatTitle.trim() || !newMatCourse.trim()) {
       alert('자료 제목과 전공 과목명을 입력해주세요.');
@@ -184,29 +231,41 @@ export const StudyMaterialsPage: React.FC = () => {
     }
     try {
       setIsSubmittingMaterial(true);
-      await api.createMaterial({
-        grade: newMatGrade,
-        semester: newMatSemester,
-        course_name: newMatCourse.trim(),
-        title: newMatTitle.trim(),
-        description: newMatDescription.trim(),
-        category: newMatCategory,
-        author: newMatAuthor.trim() || '학우',
-        file_name: newMatFileName.trim() || `${newMatCourse}_참고자료.pdf`,
-        file_size: newMatFileSize.trim() || '2.5MB',
-        file_url: newMatFileDataUrl || undefined
-      });
+      if (editingMaterial) {
+        await api.updateMaterial(editingMaterial.id, {
+          grade: newMatGrade,
+          semester: newMatSemester,
+          course_name: newMatCourse.trim(),
+          title: newMatTitle.trim(),
+          description: newMatDescription.trim(),
+          category: newMatCategory,
+          author: newMatAuthor.trim() || '학우',
+          file_name: newMatFileName.trim() || editingMaterial.file_name || `${newMatCourse}_참고자료.pdf`,
+          file_size: newMatFileSize.trim() || editingMaterial.file_size || '2.5MB',
+          ...(newMatFileDataUrl ? { file_url: newMatFileDataUrl } : {})
+        });
+        alert('자료가 성공적으로 수정되었습니다!');
+      } else {
+        await api.createMaterial({
+          grade: newMatGrade,
+          semester: newMatSemester,
+          course_name: newMatCourse.trim(),
+          title: newMatTitle.trim(),
+          description: newMatDescription.trim(),
+          category: newMatCategory,
+          author: newMatAuthor.trim() || '학우',
+          file_name: newMatFileName.trim() || `${newMatCourse}_참고자료.pdf`,
+          file_size: newMatFileSize.trim() || '2.5MB',
+          file_url: newMatFileDataUrl || undefined
+        });
+        alert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
+      }
       await loadData();
       setIsCreateMaterialModalOpen(false);
-      setNewMatTitle('');
-      setNewMatDescription('');
-      setNewMatFileName('');
-      setNewMatFileSize('');
-      setNewMatFileDataUrl('');
-      alert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
+      setEditingMaterial(null);
     } catch (err) {
       console.error(err);
-      alert('자료 등록 중 오류가 발생했습니다.');
+      alert('자료 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingMaterial(false);
     }
@@ -268,7 +327,7 @@ export const StudyMaterialsPage: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
           {activeTab === 'materials' && (
             <button
-              onClick={() => setIsCreateMaterialModalOpen(true)}
+              onClick={() => openCreateModal('출석수업요약')}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors shadow-xs"
             >
               <PlusCircle className="w-4 h-4" />
@@ -494,20 +553,38 @@ export const StudyMaterialsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <div className="text-xs text-slate-500 font-medium">
                       <span>작성: {mat.author}</span>
                       <span className="mx-2">•</span>
                       <span>다운로드 {mat.downloads}회</span>
                     </div>
 
-                    <button
-                      onClick={() => handleDownload(mat)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      자료 받기
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => openEditModal(mat)}
+                        title="자료 수정"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium text-xs transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMaterial(mat)}
+                        title="자료 삭제"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-600 font-medium text-xs transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        삭제
+                      </button>
+                      <button
+                        onClick={() => handleDownload(mat)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        자료 받기
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -532,10 +609,7 @@ export const StudyMaterialsPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => {
-                setNewMatCategory('기타자료');
-                setIsCreateMaterialModalOpen(true);
-              }}
+              onClick={() => openCreateModal('기타자료')}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -594,17 +668,35 @@ export const StudyMaterialsPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-xs text-slate-500 font-medium">
                     작성자: {mat.author} | 다운로드 {mat.downloads}회
                   </span>
-                  <button
-                    onClick={() => handleDownload(mat)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs sm:text-sm transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    다운로드
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => openEditModal(mat)}
+                      title="자료 수정"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium text-xs transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMaterial(mat)}
+                      title="자료 삭제"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-600 font-medium text-xs transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      삭제
+                    </button>
+                    <button
+                      onClick={() => handleDownload(mat)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs sm:text-sm transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      다운로드
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -896,21 +988,26 @@ export const StudyMaterialsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create Material Modal */}
+      {/* Create / Edit Material Modal */}
       {isCreateMaterialModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-7 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
-              <h3 className="font-bold text-lg text-slate-900">학습자료 및 기타자료 등록</h3>
+              <h3 className="font-bold text-lg text-slate-900">
+                {editingMaterial ? '학습자료 수정' : '학습자료 및 기타자료 등록'}
+              </h3>
               <button
-                onClick={() => setIsCreateMaterialModalOpen(false)}
+                onClick={() => {
+                  setIsCreateMaterialModalOpen(false);
+                  setEditingMaterial(null);
+                }}
                 className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateMaterial} className="space-y-4 text-xs sm:text-sm">
+            <form onSubmit={handleSaveMaterial} className="space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">대상 학년</label>
@@ -1055,7 +1152,11 @@ export const StudyMaterialsPage: React.FC = () => {
                   disabled={isSubmittingMaterial}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {isSubmittingMaterial ? '등록 중...' : '자료 등록하기'}
+                  {isSubmittingMaterial
+                    ? '저장 중...'
+                    : editingMaterial
+                    ? '수정 완료하기'
+                    : '자료 등록하기'}
                 </button>
               </div>
             </form>
