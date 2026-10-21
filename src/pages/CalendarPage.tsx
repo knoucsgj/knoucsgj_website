@@ -111,7 +111,7 @@ export const CalendarPage: React.FC = () => {
               <span>Academic Schedule & D-Day</span>
             </div>
             <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950 tracking-tight mb-2">
-              학사일정 캘린더
+              주요일정
             </h1>
             <p className="text-slate-700 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
               광주전남지역대학 컴퓨터과학과의 출석수업, 온라인평가, 과제물 마감일 등 중요 일정을 한눈에 확인하세요.

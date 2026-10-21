@@ -115,28 +115,28 @@ export const Footer: React.FC = () => {
           {/* Column 4: Student Council Links */}
           <div>
             <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5">
-              학생 자치 & 복지
+              학생 자치 & 소통
             </h4>
             <ul className="space-y-2.5 text-sm text-slate-300">
               <li>
-                <Link to="/governance" className="hover:text-white transition-colors flex items-center gap-2">
+                <Link to="/notices?category=결산" className="hover:text-white transition-colors flex items-center gap-2">
                   <Scale className="w-3.5 h-3.5 text-blue-400" />
-                  투명 학생회비 결산 보고
+                  학생회비 결산보고
                 </Link>
               </li>
               <li>
-                <Link to="/governance" className="hover:text-white transition-colors">
-                  학과 학생회칙 및 운영세칙
+                <Link to="/notices?category=회의록" className="hover:text-white transition-colors">
+                  임원회·총회 회의록
                 </Link>
               </li>
               <li>
-                <Link to="/welfare" className="hover:text-white transition-colors">
-                  학우 소통 및 열린 건의함
+                <Link to="/about" className="hover:text-white transition-colors">
+                  학과 학생회칙 및 세칙
                 </Link>
               </li>
               <li>
                 <Link to="/community" className="hover:text-white transition-colors">
-                  학술 스터디 & 신·편입생 FAQ
+                  학술 스터디 & 학우 건의함
                 </Link>
               </li>
               <li className="pt-2">

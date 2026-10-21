@@ -28,12 +28,10 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: '홈', path: '/' },
-    { name: '학과·학생회', path: '/about' },
+    { name: '학생회 소개', path: '/about' },
     { name: '공지사항', path: '/notices' },
-    { name: '학사일정', path: '/calendar' },
-    { name: '투명재정·자치', path: '/governance' },
-    { name: '소통·건의함', path: '/welfare' },
-    { name: '학술·스터디', path: '/community' },
+    { name: '주요일정', path: '/calendar' },
+    { name: '커뮤니티', path: '/community' },
   ];
 
   const isActive = (path: string) => {

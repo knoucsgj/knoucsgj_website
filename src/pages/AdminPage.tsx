@@ -54,7 +54,7 @@ export const AdminPage: React.FC = () => {
   const [noticeForm, setNoticeForm] = useState({
     title: '',
     content: '',
-    category: '학생회' as '필독' | '학생회' | '학사' | '행사',
+    category: '학생회' as '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록',
     author: '학생회',
     is_pinned: false
   });
@@ -1153,6 +1153,8 @@ export const AdminPage: React.FC = () => {
                   <option value="필독">필독</option>
                   <option value="학사">학사</option>
                   <option value="행사">행사</option>
+                  <option value="결산">결산보고</option>
+                  <option value="회의록">회의록</option>
                 </select>
               </div>
 

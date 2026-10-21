@@ -19,7 +19,11 @@ export const RecentNoticesSection: React.FC<RecentNoticesSectionProps> = ({ noti
       case '학사':
         return 'bg-amber-100 text-amber-700 border-amber-200';
       case '행사':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case '결산':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case '회의록':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       default:
         return 'bg-slate-100 text-slate-700 border-slate-200';
     }

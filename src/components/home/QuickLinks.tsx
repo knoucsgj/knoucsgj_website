@@ -5,25 +5,39 @@ import { ExternalLink, BookCheck, Users, CalendarDays, DollarSign, FileText, Che
 export const QuickLinks: React.FC = () => {
   const cards = [
     {
-      title: '투명 재정 보고',
-      desc: '분기별 학생회비 결산표 및 영수증 장부',
+      title: '공지사항 & 결산보고',
+      desc: '학사 공지, 학생회비 결산, 정기 회의록',
       icon: DollarSign,
-      to: '/governance',
-      badge: '재정 공개'
+      to: '/notices',
+      badge: '공지·결산'
+    },
+    {
+      title: '주요일정 캘린더',
+      desc: '출석수업, 과제 마감, 기말시험 D-Day',
+      icon: CalendarDays,
+      to: '/calendar',
+      badge: '학사 지원'
+    },
+    {
+      title: '학술 & 스터디',
+      desc: '전공 과목 및 자격증 준비 소그룹 모임',
+      icon: Users,
+      to: '/community',
+      badge: '소그룹 모임'
     },
     {
       title: '학우 소통 & 건의함',
       desc: '학업 문의, 스터디 참여, 학생회 건의사항',
       icon: FileText,
-      to: '/welfare',
+      to: '/community',
       badge: '열린 소통'
     },
     {
-      title: '학사일정 캘린더',
-      desc: '출석수업, 과제 마감, 기말시험 D-Day',
-      icon: CalendarDays,
-      to: '/calendar',
-      badge: '학사 지원'
+      title: '학생회 소개 & 회칙',
+      desc: '임원진 소개, 학생회칙 및 지역대학 시설',
+      icon: FileText,
+      to: '/about',
+      badge: '학생회'
     },
     {
       title: 'U-KNOU 수강포털',
@@ -32,20 +46,6 @@ export const QuickLinks: React.FC = () => {
       href: 'https://ucampus.knou.ac.kr',
       isExternal: true,
       badge: '원격 강의'
-    },
-    {
-      title: '학술 & 스터디',
-      desc: '전공 과목 및 자격증 준비 소그룹',
-      icon: Users,
-      to: '/community',
-      badge: '소그룹 모임'
-    },
-    {
-      title: '학생 자치 회의록',
-      desc: '정기 임원회의 및 총회 의결문 아카이브',
-      icon: FileText,
-      to: '/governance',
-      badge: '의결 기구'
     }
   ];
 

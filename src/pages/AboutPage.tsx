@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { regionalInfo, councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
-import type { CouncilMember } from '../lib/types';
+import type { CouncilMember, CouncilRuleChapter } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
   Users,
@@ -15,22 +15,29 @@ import {
   Laptop,
   BookOpen,
   Sparkles,
-  Navigation
+  Navigation,
+  Scale,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
   const [members, setMembers] = useState<CouncilMember[]>([]);
   const [councilIntro, setCouncilIntro] = useState(defaultCouncilIntro);
-  const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'campus' | 'directions'>('greeting');
+  const [rules, setRules] = useState<CouncilRuleChapter[]>([]);
+  const [openRuleChapter, setOpenRuleChapter] = useState<number | null>(1);
+  const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'rules' | 'campus' | 'directions'>('greeting');
 
   useEffect(() => {
     async function loadData() {
-      const [membersData, introData] = await Promise.all([
+      const [membersData, introData, rulesData] = await Promise.all([
         api.getCouncilMembers(),
-        api.getCouncilIntro()
+        api.getCouncilIntro(),
+        api.getCouncilRules()
       ]);
       setMembers(membersData);
       setCouncilIntro(introData);
+      setRules(rulesData);
     }
     loadData();
   }, []);
@@ -40,10 +47,10 @@ export const AboutPage: React.FC = () => {
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8">
         <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase mb-1.5">
-          <span>Department & Student Council</span>
+          <span>Student Council Introduction</span>
         </div>
         <h1 className="font-knou text-2xl sm:text-3xl md:text-4xl font-bold text-slate-950 tracking-tight mb-2.5">
-          학과 및 학생회 소개
+          학생회 소개
         </h1>
         <p className="text-slate-700 text-sm sm:text-base leading-relaxed max-w-3xl font-normal">
           한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회는 학우 여러분의 보람찬 대학 생활과 성공적인 학위 취득을 위한 가장 가까운 길잡이가 되겠습니다.
@@ -73,6 +80,17 @@ export const AboutPage: React.FC = () => {
         >
           <Users className="w-4 h-4 text-blue-600" />
           학생회 임원진 소개
+        </button>
+        <button
+          onClick={() => setActiveTab('rules')}
+          className={`px-5 py-3.5 text-sm sm:text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'rules'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Scale className="w-4 h-4 text-amber-600" />
+          학과 학생회칙 및 세칙
         </button>
         <button
           onClick={() => setActiveTab('campus')}
@@ -213,7 +231,66 @@ export const AboutPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Campus & Facilities */}
+      {/* Tab: Council Rules (학생회칙 및 세칙) */}
+      {activeTab === 'rules' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+            <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                  한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회칙
+                </h2>
+                <p className="text-sm sm:text-base text-slate-600 mt-1">
+                  본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 기본 규범입니다.
+                </p>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100 hidden sm:block">
+                <Scale className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {rules.map((chapter) => {
+                const isOpen = openRuleChapter === chapter.chapter;
+                return (
+                  <div key={chapter.chapter} className="border border-slate-200 rounded-2xl overflow-hidden transition-all">
+                    <button
+                      onClick={() => setOpenRuleChapter(isOpen ? null : chapter.chapter)}
+                      className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50 transition-colors"
+                    >
+                      <h3 className="font-bold text-base sm:text-lg text-slate-900">
+                        제{chapter.chapter}장 {chapter.title}
+                      </h3>
+                      {isOpen ? (
+                        <ChevronUp className="w-5 h-5 text-amber-600 shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
+                      )}
+                    </button>
+
+                    {isOpen && (
+                      <div className="p-5 sm:p-6 bg-white border-t border-slate-100 space-y-4 divide-y divide-slate-100">
+                        {chapter.articles.map((art) => (
+                          <div key={art.number} className="pt-3.5 first:pt-0">
+                            <span className="font-bold text-base text-blue-950 block mb-1.5">
+                              제{art.number}조 ({art.title})
+                            </span>
+                            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                              {art.content}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Campus & Facilities */}
       {activeTab === 'campus' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs">

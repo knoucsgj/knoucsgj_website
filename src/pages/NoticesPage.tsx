@@ -29,7 +29,7 @@ export const NoticesPage: React.FC = () => {
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newCategory, setNewCategory] = useState<'필독' | '학생회' | '학사' | '행사'>('학생회');
+  const [newCategory, setNewCategory] = useState<'필독' | '학생회' | '학사' | '행사' | '결산' | '회의록'>('학생회');
   const [newAuthor, setNewAuthor] = useState('학생회');
   const [newIsPinned, setNewIsPinned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +112,7 @@ export const NoticesPage: React.FC = () => {
     return matchesCategory && matchesQuery;
   });
 
-  const categories: NoticeCategory[] = ['전체', '필독', '학생회', '학사', '행사'];
+  const categories: NoticeCategory[] = ['전체', '필독', '학생회', '학사', '행사', '결산', '회의록'];
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
@@ -123,7 +123,11 @@ export const NoticesPage: React.FC = () => {
       case '학사':
         return 'bg-amber-100 text-amber-700 border-amber-200';
       case '행사':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case '결산':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case '회의록':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       default:
         return 'bg-slate-100 text-slate-700 border-slate-200';
     }
@@ -388,6 +392,8 @@ export const NoticesPage: React.FC = () => {
                   <option value="필독">필독</option>
                   <option value="학사">학사</option>
                   <option value="행사">행사</option>
+                  <option value="결산">결산보고</option>
+                  <option value="회의록">회의록</option>
                 </select>
               </div>
 

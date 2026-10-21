@@ -51,14 +51,14 @@ export const HeroSection: React.FC = () => {
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-sm sm:text-base transition-all border border-slate-700 active:scale-95"
               >
                 <Calendar className="w-4 h-4 text-blue-400" />
-                학사일정 캘린더
+                주요일정 확인
               </Link>
               <Link
-                to="/governance"
+                to="/about"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-sm sm:text-base transition-all border border-slate-700"
               >
-                <Scale className="w-4 h-4 text-emerald-400" />
-                투명 재정 보고
+                <Users className="w-4 h-4 text-emerald-400" />
+                학생회 소개
               </Link>
             </div>
           </div>
@@ -154,8 +154,8 @@ export const HeroSection: React.FC = () => {
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-white">100% 공개 회계</div>
-              <div className="text-[11px] text-slate-400">분기별 결산 및 장부</div>
+              <div className="text-xs font-bold text-white">공개 회계 & 결산</div>
+              <div className="text-[11px] text-slate-400">분기별 결산 공지</div>
             </div>
           </div>
 
@@ -174,8 +174,8 @@ export const HeroSection: React.FC = () => {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-white">학술 스터디 지원</div>
-              <div className="text-[11px] text-slate-400">온·오프라인 학습 소그룹</div>
+              <div className="text-xs font-bold text-white">학술 스터디 & 소통</div>
+              <div className="text-[11px] text-slate-400">온·오프라인 소그룹 모임</div>
             </div>
           </div>
 
@@ -184,7 +184,7 @@ export const HeroSection: React.FC = () => {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-white">학사일정 D-Day</div>
+              <div className="text-xs font-bold text-white">주요일정 D-Day</div>
               <div className="text-[11px] text-slate-400">출석수업·과제·기말시험</div>
             </div>
           </div>

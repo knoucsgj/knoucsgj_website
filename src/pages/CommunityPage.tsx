@@ -16,15 +16,27 @@ import {
   X,
   Filter,
   Shield,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  Send,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 export const CommunityPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'study' | 'feedback' | 'faq'>('study');
   const [studies, setStudies] = useState<StudyGroup[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('전체');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [selectedStudy, setSelectedStudy] = useState<StudyGroup | null>(null);
+
+  // 건의함 State
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackCategory, setFeedbackCategory] = useState<'학사/수업' | '행사/스터디' | '학생회운영' | '기타'>('학사/수업');
+  const [feedbackAuthor, setFeedbackAuthor] = useState('');
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   // Study registration modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -46,6 +58,18 @@ export const CommunityPage: React.FC = () => {
   const loadStudies = async () => {
     const data = await api.getStudies();
     setStudies(data);
+  };
+
+  const handleFeedbackSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackTitle.trim() || !feedbackContent.trim()) {
+      alert('제목과 내용을 입력해 주세요.');
+      return;
+    }
+    setFeedbackSubmitted(true);
+    setFeedbackTitle('');
+    setFeedbackContent('');
+    setFeedbackAuthor('');
   };
 
   const faqs = [
@@ -124,201 +148,344 @@ export const CommunityPage: React.FC = () => {
   const statusOptions = ['전체', '모집중', '진행중', '마감·종료'];
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* Clean Editorial Page Header */}
       <div className="border-b border-slate-200 pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4 sm:gap-5">
           <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-blue-50/70 border border-blue-100 p-1.5 shrink-0 flex items-center justify-center shadow-xs">
             <img
               src={ASSETS.characters.study}
-              alt="스터디 마스코트"
+              alt="커뮤니티 마스코트"
               className="w-full h-full object-contain drop-shadow-xs"
             />
           </div>
           <div>
             <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
-              <span>Academic Community & Study Groups</span>
+              <span>Student Community & Academic Groups</span>
             </div>
-            <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
-              학술 스터디 & 커뮤니티
+            <h1 className="font-knou text-2xl sm:text-3xl md:text-4xl font-bold text-slate-950 tracking-tight mb-2">
+              커뮤니티
             </h1>
-            <p className="text-slate-600 text-xs sm:text-sm max-w-xl leading-relaxed font-normal">
-              혼자 공부하면 어렵지만 함께하면 끝까지 해낼 수 있습니다.
-              온·오프라인 스터디 그룹에 참여하거나 직접 모집해 보세요.
+            <p className="text-slate-700 text-sm sm:text-base max-w-xl leading-relaxed font-normal">
+              학우 간의 온·오프라인 스터디 소그룹 활동과 학생회를 향한 열린 건의 및 소통, 학업 FAQ를 한곳에서 지원합니다.
             </p>
           </div>
         </div>
 
+        {activeTab === 'study' && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+          >
+            <PlusCircle className="w-4 h-4" />
+            스터디 개설 신청
+          </button>
+        )}
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
         <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+          onClick={() => setActiveTab('study')}
+          className={`px-5 py-3.5 text-sm sm:text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'study'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
         >
-          <PlusCircle className="w-4 h-4" />
-          스터디 개설 신청
+          <Users className="w-4.5 h-4.5 text-blue-600" />
+          학술 & 스터디 ({studies.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('feedback')}
+          className={`px-5 py-3.5 text-sm sm:text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'feedback'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <MessageSquare className="w-4.5 h-4.5 text-indigo-600" />
+          학우 소통 & 열린 건의함
+        </button>
+        <button
+          onClick={() => setActiveTab('faq')}
+          className={`px-5 py-3.5 text-sm sm:text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'faq'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <HelpCircle className="w-4.5 h-4.5 text-emerald-600" />
+          자주 묻는 질문 (FAQ)
         </button>
       </div>
 
-      {/* Admin Notice Pill (if logged in) */}
-      {isAdmin && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-amber-950 font-medium">
-          <div className="flex items-center gap-2.5">
-            <Shield className="w-5 h-5 text-amber-600 shrink-0" />
-            <span className="font-bold">관리자 접속 중:</span>
-            <span>스터디 상태 변경(모집중/진행중/마감) 및 삭제(해체)는 관리자 센터에서 바로 가능합니다.</span>
+      {/* TAB 1: Study Groups Section */}
+      {activeTab === 'study' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Admin Notice Pill (if logged in) */}
+          {isAdmin && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-amber-950 font-medium">
+              <div className="flex items-center gap-2.5">
+                <Shield className="w-5 h-5 text-amber-600 shrink-0" />
+                <span className="font-bold">관리자 접속 중:</span>
+                <span>스터디 상태 변경(모집중/진행중/마감) 및 삭제(해체)는 관리자 센터에서 바로 가능합니다.</span>
+              </div>
+              <Link
+                to="/admin"
+                className="font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1.5 shrink-0"
+              >
+                관리자 센터
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">스터디 그룹 목록</h2>
+              <p className="text-sm sm:text-base text-slate-600 mt-0.5">
+                학기별로 개설되고 활동하는 스터디 소그룹입니다.
+              </p>
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+              <Filter className="w-4 h-4 text-slate-400 ml-1.5 hidden sm:inline" />
+              {statusOptions.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setSelectedStatus(opt)}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                    selectedStatus === opt
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
           </div>
-          <Link
-            to="/admin"
-            className="font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1.5 shrink-0"
-          >
-            관리자 센터
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+
+          {filteredStudies.length === 0 ? (
+            <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-500 text-base font-medium">
+              해당 조건의 스터디 그룹이 없습니다.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredStudies.map((study) => (
+                <div
+                  key={study.id}
+                  className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3.5">
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          study.status === '모집중'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : study.status === '진행중'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                            : 'bg-slate-100 text-slate-700 border border-slate-300'
+                        }`}
+                      >
+                        {study.status}
+                      </span>
+                      <span className="text-sm text-slate-600 font-bold">
+                        인원: {study.members_count} / {study.max_members}명
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1.5 leading-snug">
+                      {study.title}
+                    </h3>
+
+                    <p className="text-sm font-bold text-blue-700 mb-3.5">
+                      주제: {study.subject}
+                    </p>
+
+                    <div className="space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-5">
+                      <div className="flex items-center gap-2.5">
+                        <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>진행 방식: <strong className="text-slate-900">{study.meeting_type}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Users className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>대상 학년: <strong className="text-slate-900">{study.target_grade}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <Sparkles className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>개설자: <strong className="text-slate-900">{study.leader}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleApplyClick(study)}
+                    disabled={study.status === '종료' || study.status === '마감'}
+                    className={`w-full py-3 px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                      study.status === '종료' || study.status === '마감'
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                    }`}
+                  >
+                    <MessageCircle className="w-4.5 h-4.5" />
+                    {study.status === '종료' || study.status === '마감' ? '모집 마감된 스터디' : '스터디 참여 문의'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Study Groups Section */}
-      <section className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">스터디 그룹 목록</h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-0.5">
-              학기별로 개설되고 활동하는 스터디 소그룹입니다.
+      {/* TAB 2: Feedback & Suggestion Box */}
+      {activeTab === 'feedback' && (
+        <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 sm:p-6 text-indigo-950">
+            <h3 className="font-bold text-lg mb-1.5 flex items-center gap-2 text-indigo-900">
+              <MessageSquare className="w-5 h-5 text-indigo-600" />
+              학우 여러분의 소중한 의견을 들려주세요
+            </h3>
+            <p className="text-sm text-indigo-900 leading-relaxed mt-1">
+              출석수업 및 학사 문의, 학술 스터디 참여 지원 요청, 학생회 운영 제안 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
             </p>
           </div>
 
-          {/* Status Filter Pills */}
-          <div className="flex items-center gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
-            <Filter className="w-4 h-4 text-slate-400 ml-1.5 hidden sm:inline" />
-            {statusOptions.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setSelectedStatus(opt)}
-                className={`px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-                  selectedStatus === opt
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
+          {feedbackSubmitted && (
+            <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5 sm:p-6 text-emerald-900 flex items-start gap-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-base">건의사항이 학생회에 안전하게 접수되었습니다!</p>
+                <p className="text-sm text-emerald-800 mt-1">
+                  소중한 의견 감사드립니다. 다음 정기 임원회의에서 안건으로 다룬 후 공지사항의 회의록을 통해 결과를 공지하겠습니다.
+                </p>
+                <button
+                  onClick={() => setFeedbackSubmitted(false)}
+                  className="mt-3 text-sm font-bold text-emerald-800 underline hover:text-emerald-950"
+                >
+                  새로운 의견 남기기
+                </button>
+              </div>
+            </div>
+          )}
 
-        {filteredStudies.length === 0 ? (
-          <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-500 text-base font-medium">
-            해당 조건의 스터디 그룹이 없습니다.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredStudies.map((study) => (
-              <div
-                key={study.id}
-                className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
-              >
+          {!feedbackSubmitted && (
+            <form onSubmit={handleFeedbackSubmit} className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between mb-3.5">
-                    <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        study.status === '모집중'
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : study.status === '진행중'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                          : 'bg-slate-100 text-slate-700 border border-slate-300'
-                      }`}
-                    >
-                      {study.status}
-                    </span>
-                    <span className="text-sm text-slate-600 font-bold">
-                      인원: {study.members_count} / {study.max_members}명
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1.5 leading-snug">
-                    {study.title}
-                  </h3>
-
-                  <p className="text-sm font-bold text-blue-700 mb-3.5">
-                    주제: {study.subject}
-                  </p>
-
-                  <div className="space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-5">
-                    <div className="flex items-center gap-2.5">
-                      <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>진행 방식: <strong className="text-slate-900">{study.meeting_type}</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <Users className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>대상 학년: <strong className="text-slate-900">{study.target_grade}</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <Sparkles className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span>개설자: <strong className="text-slate-900">{study.leader}</strong></span>
-                    </div>
-                  </div>
+                  <label className="block text-sm font-bold text-slate-800 mb-1.5">분류</label>
+                  <select
+                    value={feedbackCategory}
+                    onChange={(e) => setFeedbackCategory(e.target.value as any)}
+                    className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                  >
+                    <option value="학사/수업">학사 일정 & 출석수업 문의</option>
+                    <option value="행사/스터디">학과 스터디 지원 & 행사 문의</option>
+                    <option value="학생회운영">학생회 운영 건의</option>
+                    <option value="기타">기타 자유 제안</option>
+                  </select>
                 </div>
 
-                <button
-                  onClick={() => handleApplyClick(study)}
-                  disabled={study.status === '종료' || study.status === '마감'}
-                  className={`w-full py-3 px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                    study.status === '종료' || study.status === '마감'
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                  }`}
-                >
-                  <MessageCircle className="w-4.5 h-4.5" />
-                  {study.status === '종료' || study.status === '마감' ? '모집 마감된 스터디' : '스터디 참여 문의'}
-                </button>
+                <div>
+                  <label className="block text-sm font-bold text-slate-800 mb-1.5">작성자 (익명 가능)</label>
+                  <input
+                    type="text"
+                    value={feedbackAuthor}
+                    onChange={(e) => setFeedbackAuthor(e.target.value)}
+                    placeholder="익명 또는 학번/이름"
+                    className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
 
-      {/* FAQ Section */}
-      <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-            <HelpCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">자주 묻는 질문 (FAQ)</h2>
-            <p className="text-sm text-slate-600 mt-0.5">신·편입생 및 재학생 학우들이 가장 많이 문의하시는 내용입니다.</p>
-          </div>
-        </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-800 mb-1.5">제목 *</label>
+                <input
+                  type="text"
+                  required
+                  value={feedbackTitle}
+                  onChange={(e) => setFeedbackTitle(e.target.value)}
+                  placeholder="건의사항 제목을 간략히 적어주세요"
+                  className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
-        <div className="space-y-3.5">
-          {faqs.map((faq, idx) => {
-            const isOpen = openFaqIndex === idx;
-            return (
-              <div
-                key={idx}
-                className="border border-slate-200 rounded-2xl overflow-hidden transition-colors"
+              <div>
+                <label className="block text-sm font-bold text-slate-800 mb-1.5">상세 내용 *</label>
+                <textarea
+                  required
+                  rows={5}
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  placeholder="학생회에 건의하고 싶은 내용을 상세히 적어주세요. 학우 여러분의 피드백은 학생회 운영에 큰 힘이 됩니다."
+                  className="w-full text-sm border border-slate-300 rounded-xl p-3.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3.5 text-xs sm:text-sm text-slate-600 flex items-center gap-2.5 border border-slate-200">
+                <AlertCircle className="w-4.5 h-4.5 text-slate-400 shrink-0" />
+                <span>접수된 건의는 매월 개최되는 학생회 임원회의에서 검토되며 비방·욕설 등은 반려될 수 있습니다.</span>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm sm:text-base font-bold transition-colors flex items-center justify-center gap-2 shadow-xs"
               >
-                <button
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
-                >
-                  <span className="font-bold text-base sm:text-lg text-slate-900 leading-snug">
-                    Q. {faq.q}
-                  </span>
-                  {isOpen ? (
-                    <ChevronUp className="w-5 h-5 text-blue-600 shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
-                  )}
-                </button>
-                {isOpen && (
-                  <div className="p-5 sm:p-6 bg-white text-sm sm:text-base text-slate-700 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-in fade-in duration-150">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                <Send className="w-4 h-4" />
+                건의사항 제출하기
+              </button>
+            </form>
+          )}
         </div>
-      </section>
+      )}
+
+      {/* TAB 3: FAQ Section */}
+      {activeTab === 'faq' && (
+        <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+              <HelpCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">자주 묻는 질문 (FAQ)</h2>
+              <p className="text-sm text-slate-600 mt-0.5">신·편입생 및 재학생 학우들이 가장 많이 문의하시는 내용입니다.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3.5">
+            {faqs.map((faq, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className="border border-slate-200 rounded-2xl overflow-hidden transition-colors"
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="font-bold text-base sm:text-lg text-slate-900 leading-snug">
+                      Q. {faq.q}
+                    </span>
+                    {isOpen ? (
+                      <ChevronUp className="w-5 h-5 text-blue-600 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="p-5 sm:p-6 bg-white text-sm sm:text-base text-slate-700 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-in fade-in duration-150">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Apply Info Modal */}
       {isApplyModalOpen && selectedStudy && (

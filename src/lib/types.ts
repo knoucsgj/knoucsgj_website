@@ -1,4 +1,4 @@
-export type NoticeCategory = '전체' | '필독' | '학생회' | '학사' | '행사';
+export type NoticeCategory = '전체' | '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록';
 
 export interface Attachment {
   name: string;
@@ -10,7 +10,7 @@ export interface Notice {
   id: string;
   title: string;
   content: string;
-  category: '필독' | '학생회' | '학사' | '행사';
+  category: '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록';
   author: string;
   created_at: string;
   views: number;
