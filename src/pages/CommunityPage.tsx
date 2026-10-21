@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth } from '../services/auth';
-import type { StudyGroup } from '../lib/types';
+import type { StudyGroup, FeedbackItem, FeedbackReply } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
   Users,
@@ -19,7 +19,6 @@ import {
   ArrowRight,
   MessageSquare,
   Send,
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 
@@ -32,11 +31,19 @@ export const CommunityPage: React.FC = () => {
   const [selectedStudy, setSelectedStudy] = useState<StudyGroup | null>(null);
 
   // 건의함 State
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [feedbackCategoryFilter, setFeedbackCategoryFilter] = useState<string>('전체');
+  const [openFeedbackId, setOpenFeedbackId] = useState<string | null>('fb-1');
+  const [isWriteFeedbackModalOpen, setIsWriteFeedbackModalOpen] = useState(false);
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState<'학사/수업' | '행사/스터디' | '학생회운영' | '기타'>('학사/수업');
   const [feedbackAuthor, setFeedbackAuthor] = useState('');
   const [feedbackContent, setFeedbackContent] = useState('');
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // 관리자 댓글 작성 State
+  const [replyInputMap, setReplyInputMap] = useState<Record<string, string>>({});
+  const [replyAuthorMap, setReplyAuthorMap] = useState<Record<string, string>>({});
 
   // Study registration modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -53,6 +60,7 @@ export const CommunityPage: React.FC = () => {
 
   useEffect(() => {
     loadStudies();
+    loadFeedbacks();
   }, []);
 
   const loadStudies = async () => {
@@ -60,16 +68,64 @@ export const CommunityPage: React.FC = () => {
     setStudies(data);
   };
 
-  const handleFeedbackSubmit = (e: React.FormEvent) => {
+  const loadFeedbacks = async () => {
+    const data = await api.getFeedbacks();
+    setFeedbacks(data);
+  };
+
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackTitle.trim() || !feedbackContent.trim()) {
       alert('제목과 내용을 입력해 주세요.');
       return;
     }
-    setFeedbackSubmitted(true);
-    setFeedbackTitle('');
-    setFeedbackContent('');
-    setFeedbackAuthor('');
+    try {
+      setIsSubmittingFeedback(true);
+      await api.createFeedback({
+        title: feedbackTitle.trim(),
+        content: feedbackContent.trim(),
+        category: feedbackCategory,
+        author: feedbackAuthor.trim() || '익명 학우'
+      });
+      await loadFeedbacks();
+      setIsWriteFeedbackModalOpen(false);
+      setFeedbackTitle('');
+      setFeedbackContent('');
+      setFeedbackAuthor('');
+      alert('건의사항이 등록되었습니다. 학생회가 확인 후 댓글로 정성껏 답변드리겠습니다!');
+    } catch (err) {
+      console.error(err);
+      alert('건의 등록 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleAddReply = async (feedbackId: string) => {
+    const replyText = replyInputMap[feedbackId]?.trim();
+    if (!replyText) {
+      alert('답변 내용을 입력해 주세요.');
+      return;
+    }
+    const replyAuthor = replyAuthorMap[feedbackId]?.trim() || '학생회';
+    try {
+      await api.addFeedbackReply(feedbackId, {
+        author: replyAuthor,
+        content: replyText
+      });
+      setReplyInputMap((prev) => ({ ...prev, [feedbackId]: '' }));
+      await loadFeedbacks();
+      alert('답변 댓글이 성공적으로 등록되었습니다!');
+    } catch (err) {
+      console.error(err);
+      alert('댓글 등록에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!window.confirm('이 건의글을 삭제하시겠습니까?')) return;
+    await api.deleteFeedback(id);
+    await loadFeedbacks();
   };
 
   const faqs = [
@@ -179,6 +235,16 @@ export const CommunityPage: React.FC = () => {
           >
             <PlusCircle className="w-4 h-4" />
             스터디 개설 신청
+          </button>
+        )}
+
+        {activeTab === 'feedback' && (
+          <button
+            onClick={() => setIsWriteFeedbackModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+          >
+            <PlusCircle className="w-4 h-4" />
+            새 건의사항 작성
           </button>
         )}
       </div>
@@ -340,104 +406,350 @@ export const CommunityPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: Feedback & Suggestion Box */}
+      {/* TAB 2: Feedback & Suggestion Board (게시판 방식 + 관리자 댓글) */}
       {activeTab === 'feedback' && (
-        <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200">
-          <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 sm:p-6 text-indigo-950">
-            <h3 className="font-bold text-lg mb-1.5 flex items-center gap-2 text-indigo-900">
-              <MessageSquare className="w-5 h-5 text-indigo-600" />
-              학우 여러분의 소중한 의견을 들려주세요
-            </h3>
-            <p className="text-sm text-indigo-900 leading-relaxed mt-1">
-              출석수업 및 학사 문의, 학술 스터디 참여 지원 요청, 학생회 운영 제안 등 다양한 의견을 자유롭게 남겨주시면 정기 임원회의 안건으로 적극 상정하여 답변드리겠습니다.
-            </p>
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Banner */}
+          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <MessageSquare className="w-6 h-6 text-indigo-700" />
+                <h3 className="font-bold text-indigo-950 text-lg">열린 건의함 & 소통 게시판</h3>
+              </div>
+              <p className="text-sm sm:text-base text-indigo-900 leading-relaxed">
+                출석수업, 학사 일정, 스터디 지원 등 학생회에 전하고 싶은 의견을 자유롭게 남겨주세요. 임원진이 직접 댓글로 성실히 답변드립니다.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsWriteFeedbackModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
+            >
+              <PlusCircle className="w-4 h-4" />
+              건의사항 작성하기
+            </button>
           </div>
 
-          {feedbackSubmitted && (
-            <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5 sm:p-6 text-emerald-900 flex items-start gap-3">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-base">건의사항이 학생회에 안전하게 접수되었습니다!</p>
-                <p className="text-sm text-emerald-800 mt-1">
-                  소중한 의견 감사드립니다. 다음 정기 임원회의에서 안건으로 다룬 후 공지사항의 회의록을 통해 결과를 공지하겠습니다.
-                </p>
-                <button
-                  onClick={() => setFeedbackSubmitted(false)}
-                  className="mt-3 text-sm font-bold text-emerald-800 underline hover:text-emerald-950"
-                >
-                  새로운 의견 남기기
-                </button>
+          {/* Admin Notice Pill (if logged in) */}
+          {isAdmin && (
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 text-sm text-blue-950 font-medium">
+              <div className="flex items-center gap-2.5">
+                <Shield className="w-5 h-5 text-blue-600 shrink-0" />
+                <span>
+                  <strong className="text-blue-900">학생회 관리자 모드:</strong> 각 건의글을 클릭하여 하단 댓글창에서 공식 답변 댓글을 작성하거나 글을 삭제할 수 있습니다.
+                </span>
               </div>
             </div>
           )}
 
-          {!feedbackSubmitted && (
-            <form onSubmit={handleFeedbackSubmit} className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category Filter Pills */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <Filter className="w-4 h-4 text-slate-400 mr-1 hidden sm:inline" />
+              {['전체', '학사/수업', '행사/스터디', '학생회운영', '기타'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFeedbackCategoryFilter(cat)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                    feedbackCategoryFilter === cat
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-xs sm:text-sm text-slate-500 font-medium">
+              총 <strong className="text-slate-900 font-bold">{feedbacks.length}</strong>건의 소통
+            </span>
+          </div>
+
+          {/* Feedback Board List */}
+          {feedbacks.length === 0 ? (
+            <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 text-slate-500 text-base font-medium">
+              등록된 건의사항이 없습니다. 첫 번째 건의를 남겨보세요!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {feedbacks
+                .filter((fb) => feedbackCategoryFilter === '전체' || fb.category === feedbackCategoryFilter)
+                .map((fb) => {
+                  const isOpen = openFeedbackId === fb.id;
+                  const hasReplies = fb.replies && fb.replies.length > 0;
+                  return (
+                    <div
+                      key={fb.id}
+                      className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden transition-all"
+                    >
+                      {/* Header Item */}
+                      <div
+                        onClick={() => setOpenFeedbackId(isOpen ? null : fb.id)}
+                        className="p-5 sm:p-6 cursor-pointer hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-2 flex-1 pr-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                                hasReplies
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              {hasReplies ? '✓ 답변완료' : '⏳ 접수완료'}
+                            </span>
+                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                              {fb.category}
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium sm:hidden ml-auto">
+                              {fb.created_at}
+                            </span>
+                          </div>
+
+                          <h3 className="text-base sm:text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors leading-snug">
+                            {fb.title}
+                          </h3>
+
+                          <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-500 font-medium">
+                            <span>작성자: {fb.author}</span>
+                            <span>•</span>
+                            <span className="hidden sm:inline">등록일: {fb.created_at}</span>
+                            <span>•</span>
+                            <span className="text-indigo-600 font-bold">
+                              답변 {fb.replies ? fb.replies.length : 0}개
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFeedback(fb.id);
+                              }}
+                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors text-xs font-semibold"
+                              title="건의글 삭제"
+                            >
+                              삭제
+                            </button>
+                          )}
+                          <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+                            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Collapsible Content & Reply Section */}
+                      {isOpen && (
+                        <div className="border-t border-slate-100 p-6 sm:p-8 bg-slate-50/40 space-y-6">
+                          {/* Main Question Content */}
+                          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-2">
+                            <span className="text-xs font-bold text-slate-500 tracking-wider uppercase">
+                              건의 상세 내용
+                            </span>
+                            <p className="text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line font-normal">
+                              {fb.content}
+                            </p>
+                          </div>
+
+                          {/* Replies List */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="w-4 h-4 text-indigo-600" />
+                              <h4 className="text-sm font-bold text-slate-900">
+                                학생회 공식 답변 ({fb.replies ? fb.replies.length : 0})
+                              </h4>
+                            </div>
+
+                            {(!fb.replies || fb.replies.length === 0) ? (
+                              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-amber-900 text-xs sm:text-sm">
+                                💬 학생회 임원진이 건의사항을 확인 중입니다. 곧 성실한 답변 댓글이 등록될 예정입니다.
+                              </div>
+                            ) : (
+                              fb.replies.map((reply: FeedbackReply) => (
+                                <div
+                                  key={reply.id}
+                                  className="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl p-5 sm:p-6 space-y-2.5 text-indigo-950"
+                                >
+                                  <div className="flex items-center justify-between pb-2 border-b border-indigo-200/50">
+                                    <div className="flex items-center gap-2">
+                                      <span className="px-2.5 py-0.5 rounded-md bg-indigo-600 text-white font-bold text-xs">
+                                        학생회 공식 답변
+                                      </span>
+                                      <span className="font-bold text-sm text-indigo-950">
+                                        {reply.author}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-indigo-700 font-medium">
+                                      {reply.created_at}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm sm:text-base leading-relaxed text-indigo-950 whitespace-pre-line font-normal">
+                                    {reply.content}
+                                  </p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          {/* Reply Form for Admin */}
+                          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <MessageCircle className="w-4 h-4 text-indigo-600" />
+                                {isAdmin ? '관리자 공식 답변 댓글 달기' : '학생회 답변 작성 (임원 전용)'}
+                              </span>
+                              {!isAdmin && (
+                                <Link
+                                  to="/admin"
+                                  className="text-xs text-indigo-600 hover:underline font-semibold"
+                                >
+                                  임원 관리자 로그인 →
+                                </Link>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <input
+                                type="text"
+                                placeholder="작성자 (예: 학생회장, 학술부장)"
+                                value={replyAuthorMap[fb.id] || ''}
+                                onChange={(e) =>
+                                  setReplyAuthorMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
+                                }
+                                className="sm:col-span-1 px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <input
+                                type="text"
+                                placeholder="답변 내용을 입력해 주세요..."
+                                value={replyInputMap[fb.id] || ''}
+                                onChange={(e) =>
+                                  setReplyInputMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleAddReply(fb.id);
+                                  }
+                                }}
+                                className="sm:col-span-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <button
+                                onClick={() => handleAddReply(fb.id)}
+                                className="sm:col-span-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                답변 등록
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Write Feedback Modal */}
+      {isWriteFeedbackModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-1.5">분류</label>
+                  <h3 className="font-bold text-base sm:text-lg text-slate-900">새 건의사항 작성</h3>
+                  <p className="text-xs text-slate-500">학생회에 건의할 내용을 작성해 주세요.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsWriteFeedbackModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleFeedbackSubmit} className="space-y-4 text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">분류</label>
                   <select
                     value={feedbackCategory}
                     onChange={(e) => setFeedbackCategory(e.target.value as any)}
-                    className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="학사/수업">학사 일정 & 출석수업 문의</option>
-                    <option value="행사/스터디">학과 스터디 지원 & 행사 문의</option>
+                    <option value="행사/스터디">학과 행사 & 스터디 지원</option>
                     <option value="학생회운영">학생회 운영 건의</option>
                     <option value="기타">기타 자유 제안</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-1.5">작성자 (익명 가능)</label>
+                  <label className="block font-bold text-slate-800 mb-1">작성자 (익명 가능)</label>
                   <input
                     type="text"
                     value={feedbackAuthor}
                     onChange={(e) => setFeedbackAuthor(e.target.value)}
-                    placeholder="익명 또는 학번/이름"
-                    className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 2학년 재학생 (익명)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-1.5">제목 *</label>
+                <label className="block font-bold text-slate-800 mb-1">제목 *</label>
                 <input
                   type="text"
                   required
                   value={feedbackTitle}
                   onChange={(e) => setFeedbackTitle(e.target.value)}
-                  placeholder="건의사항 제목을 간략히 적어주세요"
-                  className="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  placeholder="건의사항 제목을 간결히 입력해 주세요"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-1.5">상세 내용 *</label>
+                <label className="block font-bold text-slate-800 mb-1">상세 내용 *</label>
                 <textarea
                   required
                   rows={5}
                   value={feedbackContent}
                   onChange={(e) => setFeedbackContent(e.target.value)}
-                  placeholder="학생회에 건의하고 싶은 내용을 상세히 적어주세요. 학우 여러분의 피드백은 학생회 운영에 큰 힘이 됩니다."
-                  className="w-full text-sm border border-slate-300 rounded-xl p-3.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                  placeholder="건의하고 싶으신 상세 내용을 적어주세요. 학생회 임원진이 확인 후 답변 댓글을 달아드립니다."
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 leading-relaxed"
                 />
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-3.5 text-xs sm:text-sm text-slate-600 flex items-center gap-2.5 border border-slate-200">
-                <AlertCircle className="w-4.5 h-4.5 text-slate-400 shrink-0" />
-                <span>접수된 건의는 매월 개최되는 학생회 임원회의에서 검토되며 비방·욕설 등은 반려될 수 있습니다.</span>
+              <div className="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 flex items-center gap-2 border border-slate-200">
+                <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                <span>등록된 글은 게시판에 공개되며, 학생회 임원진이 검토 후 댓글로 답변합니다.</span>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm sm:text-base font-bold transition-colors flex items-center justify-center gap-2 shadow-xs"
-              >
-                <Send className="w-4 h-4" />
-                건의사항 제출하기
-              </button>
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsWriteFeedbackModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingFeedback}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors shadow-xs disabled:opacity-50"
+                >
+                  {isSubmittingFeedback ? '등록 중...' : '건의사항 등록'}
+                </button>
+              </div>
             </form>
-          )}
+          </div>
         </div>
       )}
 

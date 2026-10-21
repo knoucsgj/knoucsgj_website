@@ -8,7 +8,9 @@ import type {
   MeetingMinute,
   RentalItem,
   PartnershipItem,
-  CouncilRuleChapter
+  CouncilRuleChapter,
+  FeedbackItem,
+  FeedbackReply
 } from '../lib/types';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
@@ -20,6 +22,7 @@ import {
 import { initialBudgetReports } from '../data/mockFinance';
 import { initialMeetingMinutes, councilRules as mockCouncilRules } from '../data/mockGovernance';
 import { initialRentalItems, initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
+import { initialFeedbacks } from '../data/mockFeedback';
 
 const NOTICES_STORAGE_KEY = 'knoucs_local_notices';
 const EVENTS_STORAGE_KEY = 'knoucs_local_events';
@@ -29,6 +32,7 @@ const STUDIES_STORAGE_KEY = 'knoucs_local_studies';
 const BUDGET_REPORTS_KEY = 'knoucs_local_budgets';
 const MINUTES_STORAGE_KEY = 'knoucs_local_minutes';
 const RENTALS_STORAGE_KEY = 'knoucs_local_rentals';
+const FEEDBACKS_STORAGE_KEY = 'knoucs_local_feedbacks';
 
 function getLocalItem<T>(key: string, fallback: T): T {
   try {
@@ -355,6 +359,57 @@ export const api = {
 
   async getGalleryPhotos(): Promise<typeof initialGalleryPhotos> {
     return initialGalleryPhotos;
+  },
+
+  // ==========================================
+  // 9. 학우 소통 & 건의함 (Feedbacks) CRUD
+  // ==========================================
+  async getFeedbacks(): Promise<FeedbackItem[]> {
+    return getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
+  },
+
+  async createFeedback(item: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies'>): Promise<FeedbackItem> {
+    const newItem: FeedbackItem = {
+      ...item,
+      id: `fb-${Date.now()}`,
+      created_at: new Date().toISOString().split('T')[0],
+      status: '접수완료',
+      replies: []
+    };
+    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
+    const updated = [newItem, ...current];
+    setLocalItem(FEEDBACKS_STORAGE_KEY, updated);
+    return newItem;
+  },
+
+  async addFeedbackReply(feedbackId: string, reply: Omit<FeedbackReply, 'id' | 'created_at'>): Promise<FeedbackItem | null> {
+    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
+    let updatedItem: FeedbackItem | null = null;
+    const next = current.map((fb) => {
+      if (fb.id === feedbackId) {
+        const newReply: FeedbackReply = {
+          ...reply,
+          id: `reply-${Date.now()}`,
+          created_at: new Date().toISOString().split('T')[0]
+        };
+        updatedItem = {
+          ...fb,
+          status: '답변완료',
+          replies: [...fb.replies, newReply]
+        };
+        return updatedItem;
+      }
+      return fb;
+    });
+    setLocalItem(FEEDBACKS_STORAGE_KEY, next);
+    return updatedItem;
+  },
+
+  async deleteFeedback(id: string): Promise<boolean> {
+    const current = getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
+    const next = current.filter((fb) => fb.id !== id);
+    setLocalItem(FEEDBACKS_STORAGE_KEY, next);
+    return true;
   },
 
   // ==========================================

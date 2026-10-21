@@ -123,3 +123,23 @@ export interface CouncilRuleChapter {
   title: string;
   articles: CouncilRuleArticle[];
 }
+
+// 학우 소통 및 건의사항 게시판 모델
+export interface FeedbackReply {
+  id: string;
+  author: string; // 예: 학생회장, 총무부 등
+  content: string;
+  created_at: string;
+}
+
+export interface FeedbackItem {
+  id: string;
+  title: string;
+  content: string;
+  category: '학사/수업' | '행사/스터디' | '학생회운영' | '기타';
+  author: string;
+  created_at: string;
+  status: '접수완료' | '답변완료';
+  replies: FeedbackReply[];
+}
+
