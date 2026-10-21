@@ -7,5 +7,12 @@
   },
   "assets": {
     "not_found_handling": "single-page-application"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "knoucs-db",
+      "database_id": "62c137a5-14cb-4110-83b5-5a7245b54ad2"
+    }
+  ]
 }
