@@ -60,9 +60,10 @@ export const CommunityPage: React.FC = () => {
   const isPresident = member?.role === 'president';
   const isOfficer = member?.role === 'officer';
   const isAssociate = member?.role === 'associate';
-  const canAnswerFeedback = isAdmin || isPresident || isOfficer;
+  const isRegular = member?.role === 'regular';
+  const canAnswerFeedback = !isAssociate && !isRegular && (isAdmin || isPresident || isOfficer);
   const canDelete = (authorId?: string | null) =>
-    isAdmin || isPresident || (!!member && !!authorId && authorId === member.id);
+    (!isAssociate && !isRegular && (isAdmin || isPresident)) || (!!member && !!authorId && authorId === member.id);
 
   useEffect(() => {
     loadData();
@@ -564,8 +565,8 @@ export const CommunityPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Admin Notice Pill (if logged in) */}
-          {isAdmin && (
+          {/* Admin Notice Pill (if logged in as admin without member or as officer/president) */}
+          {canAnswerFeedback && (
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 text-sm text-blue-950 font-medium">
               <div className="flex items-center gap-2.5">
                 <Shield className="w-5 h-5 text-blue-600 shrink-0" />

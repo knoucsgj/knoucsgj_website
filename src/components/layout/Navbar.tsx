@@ -95,8 +95,19 @@ export const Navbar: React.FC = () => {
             <span className="text-slate-700">|</span>
             {member ? (
               <>
-                <Link to="/account" className="text-blue-300 hover:text-white font-semibold transition-colors">
-                  {member.nickname} 님
+                <Link to="/account" className="flex items-center gap-1.5 text-blue-300 hover:text-white font-semibold transition-colors">
+                  <span>{member.nickname} 님</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    member.role === 'president'
+                      ? 'bg-purple-900 text-purple-200 border border-purple-700'
+                      : member.role === 'officer'
+                      ? 'bg-blue-900 text-blue-200 border border-blue-700'
+                      : member.role === 'regular'
+                      ? 'bg-emerald-900 text-emerald-200 border border-emerald-700'
+                      : 'bg-amber-900 text-amber-200 border border-amber-700'
+                  }`}>
+                    {member.role === 'president' ? '학생회장' : member.role === 'officer' ? '임원진' : member.role === 'regular' ? '정회원' : '준회원'}
+                  </span>
                 </Link>
                 <button onClick={() => auth.logout()} className="text-slate-300 hover:text-white transition-colors">
                   로그아웃
@@ -115,12 +126,15 @@ export const Navbar: React.FC = () => {
             <span className="text-slate-700">|</span>
             <Link
               to="/admin"
-              className={`flex items-center gap-1 transition-colors ${
-                isAdmin ? 'text-amber-400 font-bold' : 'text-slate-300 hover:text-white'
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-1 transition-colors px-2 py-0.5 rounded-md ${
+                isAdmin ? 'text-amber-300 bg-amber-950/60 font-bold border border-amber-800' : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
+              title="관리자 센터를 별도의 새 창/탭에서 엽니다 (홈페이지와 나란히 실시간 확인 가능)"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>{isAdmin ? '관리자 모드' : '학생회 관리'}</span>
+              <span>{isAdmin ? '관리자 콘솔 ↗' : '학생회 관리 ↗'}</span>
             </Link>
           </div>
         </div>
@@ -299,11 +313,13 @@ export const Navbar: React.FC = () => {
               </a>
               <Link
                 to="/admin"
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={() => setIsOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm shadow-xs border border-slate-700"
               >
-                <Shield className="w-4 h-4 text-slate-500" />
-                학생회 관리자 센터
+                <Shield className="w-4 h-4 text-amber-400" />
+                관리자 센터 별도 창 열기 ↗
               </Link>
             </div>
           </div>

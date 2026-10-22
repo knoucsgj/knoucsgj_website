@@ -10,10 +10,19 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
 
   useEffect(() => {
     auth.refresh();
   }, [location.pathname]);
+
+  if (isAdminPath) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
 import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember } from '../lib/types';
@@ -672,7 +671,8 @@ export const AdminPage: React.FC = () => {
   // ==========================================
   if (!canAccess) {
     return (
-      <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 shadow-xl text-center space-y-6">
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full my-8 p-8 bg-white rounded-3xl border border-slate-200 shadow-2xl text-center space-y-6">
         <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center">
           <Shield className="w-8 h-8" />
         </div>
@@ -740,7 +740,7 @@ export const AdminPage: React.FC = () => {
             type="submit"
             className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md active:scale-95"
           >
-            관리자 로그인
+            관리자 로그인 콘솔 접속
           </button>
         </form>
 
@@ -749,7 +749,20 @@ export const AdminPage: React.FC = () => {
           <p>• 최고 관리자: <span className="font-mono text-blue-600">admin</span> 또는 최고관리자 이메일(<span className="font-mono text-slate-700">knoucsgj@gmail.com</span>, <span className="font-mono text-slate-700">daum.net</span>, <span className="font-mono text-slate-700">hanmail.net</span>, <span className="font-mono text-slate-700">kakao.com</span>)</p>
           <p>• 학생회 임원: 임원 승격된 본인 이메일 계정 및 비밀번호로 로그인</p>
         </div>
+
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-center">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1.5 font-semibold transition-colors"
+          >
+            <span>← 일반 학과 홈페이지 열기 (새 창 ↗)</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
+    </div>
     );
   }
 
@@ -757,55 +770,96 @@ export const AdminPage: React.FC = () => {
   // Logged-in Dashboard
   // ==========================================
   return (
-    <div className="space-y-8">
-      {/* Top Header */}
-      <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && (
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-400/30">
-                최고 관리자 (Master Admin)
-              </span>
-            )}
-            {isPresident && (
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-400/30">
-                학생회장: {member?.name} ({member?.nickname})
-              </span>
-            )}
-            {isOfficer && (
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                학생회 임원: {member?.name} ({member?.nickname})
-              </span>
-            )}
-            <span className="text-xs text-slate-400">
-              • 관리자 센터
-            </span>
+    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-900">
+      {/* Dedicated Admin Console Top Bar */}
+      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold">
+            <Shield className="w-5 h-5 text-blue-400" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            학생회 웹사이트 관리자 센터
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-            코딩이나 배포 과정 없이, 마우스 클릭과 입력만으로 공지사항, 학사일정, 스터디 그룹, 임원진 정보를 실시간으로 관리합니다.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-white">
+                KNOU CS 광주전남 관리자 센터
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 font-semibold hidden sm:inline">
+                Admin Console
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 hidden sm:block">
+              홈페이지 콘텐츠 및 회원 등급을 실시간으로 관리하는 독립 관리자 콘솔입니다.
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-center">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md active:scale-95"
+            title="새 창/탭으로 학과 홈페이지를 열어 관리자 반영 결과를 실시간으로 나란히 확인합니다"
           >
-            홈페이지 보기
             <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+            <span>학과 홈페이지 열기 (새 창 ↗)</span>
+          </a>
+
+          <div className="h-6 w-px bg-slate-800 hidden sm:block" />
+
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-rose-950 text-rose-300 hover:bg-rose-900 transition-colors border border-rose-800"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 transition-colors border border-slate-700"
           >
             <LogOut className="w-3.5 h-3.5" />
-            로그아웃
+            <span>로그아웃</span>
           </button>
         </div>
-      </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6 flex-1">
+        {/* Top Header Card */}
+        <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isAdmin && (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                  최고 관리자 (Master Admin)
+                </span>
+              )}
+              {isPresident && (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                  학생회장: {member?.name} ({member?.nickname})
+                </span>
+              )}
+              {isOfficer && (
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                  학생회 임원: {member?.name} ({member?.nickname})
+                </span>
+              )}
+              <span className="text-xs text-slate-400">
+                • 독립 관리자 콘솔 대시보드
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              학생회 웹사이트 운영·회원 관리
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
+              회원 등급 변경, 공지사항 및 일정 관리 결과를 즉시 확인하려면 우측 상단의 <strong className="text-blue-400">[학과 홈페이지 열기 (새 창 ↗)]</strong>을 눌러 나란히 두고 실시간 동기화를 검증하세요.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-center">
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 shadow-xs"
+            >
+              홈페이지 새 창 열기
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
 
       {/* Tab Navigation */}
       <div className="flex border-b border-slate-200 overflow-x-auto pb-px gap-2">
@@ -2393,6 +2447,7 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 };

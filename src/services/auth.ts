@@ -103,12 +103,15 @@ export const auth = {
     return state.member?.role === 'officer';
   },
   isCouncil(): boolean {
+    if (state.member && (state.member.role === 'associate' || state.member.role === 'regular')) {
+      return false; // 일반 회원/준회원 계정으로 접속 중일 때는 일반 사용자 시각 유지
+    }
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
   },
   isRegularOrAbove(): boolean {
     // 준회원(associate)은 어떠한 경우에도 글쓰기/다운로드 권한 불가
     if (state.member && state.member.role === 'associate') return false;
-    if (state.isAdmin) return true;
+    if (!state.member && state.isAdmin) return true;
     return !!state.member && state.member.role !== 'associate';
   },
   canAccessAdmin(): boolean {
@@ -118,10 +121,16 @@ export const auth = {
     return state.isAdmin || state.member?.role === 'president';
   },
   canDeleteNotice(category?: string): boolean {
+    if (state.member && (state.member.role === 'associate' || state.member.role === 'regular')) {
+      return false;
+    }
     if (category === '결산' || category === '회의록') return state.isAdmin;
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
   },
   canAnswerFeedback(): boolean {
+    if (state.member && (state.member.role === 'associate' || state.member.role === 'regular')) {
+      return false; // 준회원 또는 일반 정회원은 건의함 답변 댓글 작성 불가
+    }
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
   },
   canDownloadMaterials(): boolean {
