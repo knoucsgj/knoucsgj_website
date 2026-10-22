@@ -14,7 +14,8 @@ import type {
   FreePost,
   FreePostReply,
   AcademicMaterial,
-  AdminMember
+  AdminMember,
+  ConstitutionVersion
 } from '../lib/types';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
@@ -383,6 +384,48 @@ export const api = {
 
   async getConstitutionDocuments(): Promise<ConstitutionDocument[]> {
     return officialConstitutionDocuments;
+  },
+
+  // ==========================================
+  // 7-1. 학과 학생회칙 및 세칙 버전 관리 (Constitution Versions)
+  // 브라우저 저장방식을 사용하지 않고 서버 D1 데이터베이스에서 실시간 조회/수정합니다.
+  // ==========================================
+  async getConstitutionVersions(): Promise<ConstitutionVersion[]> {
+    const cloud = await fetchD1<ConstitutionVersion[]>('constitution-versions');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    return [
+      {
+        id: 'ver-20180402-11',
+        title: '제11차 개정 학생회칙 (2018. 04. 02)',
+        revision_date: '2018. 04. 02',
+        is_current: true,
+        description: '2018년 4월 2일 제11차 개정 학생회칙, 간부선거세칙 및 시행세칙 전문',
+        documents: officialConstitutionDocuments,
+        created_at: '2018-04-02T00:00:00.000Z',
+        updated_at: '2018-04-02T00:00:00.000Z'
+      }
+    ];
+  },
+
+  async createConstitutionVersion(version: Omit<ConstitutionVersion, 'id' | 'created_at' | 'updated_at'>): Promise<ConstitutionVersion> {
+    return await fetchStrict<ConstitutionVersion>('constitution-versions', {
+      method: 'POST',
+      body: JSON.stringify(version)
+    });
+  },
+
+  async updateConstitutionVersion(id: string, updatedFields: Partial<ConstitutionVersion>): Promise<ConstitutionVersion> {
+    return await fetchStrict<ConstitutionVersion>(`constitution-versions&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields)
+    });
+  },
+
+  async deleteConstitutionVersion(id: string): Promise<boolean> {
+    await fetchStrict<any>(`constitution-versions&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
   },
 
   // ==========================================

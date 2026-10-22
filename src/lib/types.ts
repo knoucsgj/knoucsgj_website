@@ -137,6 +137,39 @@ export interface CouncilRuleChapter {
   articles: CouncilRuleArticle[];
 }
 
+export interface ConstitutionArticle {
+  number: number | string;
+  title: string;
+  section?: string | null;
+  content: string;
+}
+
+export interface ConstitutionChapter {
+  chapter: number | string;
+  title: string;
+  articles: ConstitutionArticle[];
+}
+
+export interface ConstitutionDocument {
+  id: 'constitution' | 'election' | 'bylaws';
+  title: string;
+  short_title: string;
+  revision_date: string;
+  preamble?: string;
+  chapters: ConstitutionChapter[];
+}
+
+export interface ConstitutionVersion {
+  id: string;
+  title: string;
+  revision_date: string;
+  is_current: boolean;
+  description: string;
+  documents: ConstitutionDocument[];
+  created_at: string;
+  updated_at: string;
+}
+
 // 학우 소통 및 건의사항 게시판 모델
 export interface FeedbackReply {
   id: string;

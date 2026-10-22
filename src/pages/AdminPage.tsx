@@ -1,3 +1,4 @@
+import { AdminConstitutionManager } from '../components/AdminConstitutionManager';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
@@ -5,6 +6,7 @@ import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGrou
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
+  Scale,
   Lock,
   LogOut,
   Bell,
@@ -47,16 +49,17 @@ export const AdminPage: React.FC = () => {
   const [newMemberRole, setNewMemberRole] = useState<AdminMember['role']>('regular');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
-  // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'minutes' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
     if (activeTab === 'members' && !canManageMembers) setActiveTab('notices');
     if (activeTab === 'council' && !canManageCouncil) setActiveTab('notices');
     if (activeTab === 'alumni' && !canManageCouncil) setActiveTab('notices');
+    if (activeTab === 'rules' && !isAdmin) setActiveTab('notices');
     if (activeTab === 'backup' && !canManageBackup) setActiveTab('notices');
-  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup]);
+  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup, isAdmin]);
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -1041,6 +1044,19 @@ export const AdminPage: React.FC = () => {
             역대 임원 관리 ({pastMembers.length})
           </button>
         )}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('rules')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'rules'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-amber-600" />
+            학생회칙 & 세칙 관리
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('minutes')}
           className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -2015,6 +2031,12 @@ export const AdminPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* TAB: Constitution Management (학생회칙 & 세칙 관리) */}
+      {/* ================================================= */}
+      {isAdmin && activeTab === 'rules' && (
+        <AdminConstitutionManager />
       )}
 
       {/* TAB 5: Minutes Management (회의록 관리)     */}

@@ -4,6 +4,7 @@ import { initialNotices } from '../src/data/mockNotices';
 import { initialEvents } from '../src/data/mockEvents';
 import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro, initialPastCouncilMembers } from '../src/data/mockCouncil';
 import { initialMeetingMinutes } from '../src/data/mockGovernance';
+import { officialConstitutionDocuments } from '../src/data/officialConstitution';
 
 type D1 = any;
 
@@ -70,6 +71,11 @@ const CREATE_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name)`,
   `CREATE INDEX IF NOT EXISTS idx_freeposts_created ON free_posts (created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks (created_at)`,
+  `CREATE TABLE IF NOT EXISTS constitution_versions (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, revision_date TEXT NOT NULL,
+    is_current INTEGER NOT NULL DEFAULT 0, description TEXT,
+    content_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_constitution_current ON constitution_versions (is_current, revision_date)`,
 ];
 
 // Columns added after the first release (ownership + study approval)
@@ -166,6 +172,30 @@ async function run(db: D1) {
     } catch {
       /* ignore */
     }
+  }
+
+  // Seed constitution versions (v4)
+  const seededV4 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v4'").first();
+  if (!seededV4) {
+    const { results } = await db.prepare('SELECT id FROM constitution_versions LIMIT 1').all();
+    if (!results || results.length === 0) {
+      await db
+        .prepare(
+          'INSERT INTO constitution_versions (id, title, revision_date, is_current, description, content_json, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)'
+        )
+        .bind(
+          'ver-20180402-11',
+          '제11차 개정 학생회칙 (2018. 04. 02)',
+          '2018. 04. 02',
+          1,
+          '2018년 4월 2일 제11차 개정 학생회칙, 간부선거세칙 및 시행세칙 전문',
+          JSON.stringify(officialConstitutionDocuments),
+          '2018-04-02T00:00:00.000Z',
+          new Date().toISOString()
+        )
+        .run();
+    }
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v4', '1')").run();
   }
 
   // Role auto-migration for existing members

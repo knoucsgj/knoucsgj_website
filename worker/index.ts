@@ -1389,6 +1389,127 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
+  // ---- constitution versions (Read: public / Write: master admin only)
+  if (resource === 'constitution-versions') {
+    if (method === 'GET') {
+      if (id) {
+        const row: any = await db.prepare('SELECT * FROM constitution_versions WHERE id = ?').bind(id).first();
+        if (!row) throw new HttpError(404, '해당 회칙 버전을 찾을 수 없습니다.');
+        return json({
+          ...row,
+          is_current: row.is_current === 1,
+          documents: JSON.parse(row.content_json)
+        });
+      }
+      const { results } = await db.prepare('SELECT * FROM constitution_versions ORDER BY is_current DESC, revision_date DESC, created_at DESC').all();
+      const parsed = (results || []).map((row: any) => ({
+        ...row,
+        is_current: row.is_current === 1,
+        documents: JSON.parse(row.content_json)
+      }));
+      return json(parsed);
+    }
+
+    if (method === 'POST') {
+      requireAdmin(session);
+      const b: any = await readJson(req);
+      if (!b.title || !b.revision_date || !b.documents) {
+        throw new HttpError(400, '회칙 명칭, 개정일자 및 회칙 문서 내용이 필요합니다.');
+      }
+      const newId = b.id ? str(b.id, 50) : `ver-${Date.now()}-${randomHex(2)}`;
+      const isCurrent = b.is_current ? 1 : 0;
+      const now = new Date().toISOString();
+
+      if (isCurrent === 1) {
+        await db.prepare('UPDATE constitution_versions SET is_current = 0').run();
+      }
+
+      await db
+        .prepare(
+          'INSERT INTO constitution_versions (id, title, revision_date, is_current, description, content_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .bind(
+          newId,
+          str(b.title, 100),
+          str(b.revision_date, 50),
+          isCurrent,
+          b.description ? str(b.description, 500) : '',
+          JSON.stringify(b.documents),
+          now,
+          now
+        )
+        .run();
+
+      return json(
+        {
+          id: newId,
+          title: b.title,
+          revision_date: b.revision_date,
+          is_current: isCurrent === 1,
+          description: b.description || '',
+          documents: b.documents,
+          created_at: now,
+          updated_at: now
+        },
+        201
+      );
+    }
+
+    if (method === 'PUT' && id) {
+      requireAdmin(session);
+      const existing: any = await db.prepare('SELECT * FROM constitution_versions WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '수정할 회칙 버전을 찾을 수 없습니다.');
+
+      const b: any = await readJson(req);
+      const isCurrent = typeof b.is_current === 'boolean' ? (b.is_current ? 1 : 0) : existing.is_current;
+      const now = new Date().toISOString();
+
+      if (isCurrent === 1 && existing.is_current !== 1) {
+        await db.prepare('UPDATE constitution_versions SET is_current = 0').run();
+      }
+
+      const updatedTitle = b.title !== undefined ? str(b.title, 100) : existing.title;
+      const updatedDate = b.revision_date !== undefined ? str(b.revision_date, 50) : existing.revision_date;
+      const updatedDesc = b.description !== undefined ? str(b.description, 500) : existing.description;
+      const updatedJson = b.documents !== undefined ? JSON.stringify(b.documents) : existing.content_json;
+
+      await db
+        .prepare(
+          'UPDATE constitution_versions SET title = ?, revision_date = ?, is_current = ?, description = ?, content_json = ?, updated_at = ? WHERE id = ?'
+        )
+        .bind(updatedTitle, updatedDate, isCurrent, updatedDesc, updatedJson, now, id)
+        .run();
+
+      return json({
+        id,
+        title: updatedTitle,
+        revision_date: updatedDate,
+        is_current: isCurrent === 1,
+        description: updatedDesc,
+        documents: JSON.parse(updatedJson),
+        created_at: existing.created_at,
+        updated_at: now
+      });
+    }
+
+    if (method === 'DELETE' && id) {
+      requireAdmin(session);
+      const existing: any = await db.prepare('SELECT * FROM constitution_versions WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 회칙 버전을 찾을 수 없습니다.');
+
+      const countRow: any = await db.prepare('SELECT count(*) as cnt FROM constitution_versions').first();
+      if (countRow && countRow.cnt <= 1) {
+        throw new HttpError(400, '최소 1개 이상의 회칙 버전이 보존되어야 하므로 마지막 버전을 삭제할 수 없습니다.');
+      }
+      if (existing.is_current === 1) {
+        throw new HttpError(400, '현재 효력이 적용 중인 현행 회칙은 직접 삭제할 수 없습니다. 다른 버전을 현행 회칙으로 지정한 후 삭제해 주세요.');
+      }
+
+      await db.prepare('DELETE FROM constitution_versions WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
   // ---- email settings (Admin only)
   if (resource === 'email-settings') {
     requireAdmin(session);

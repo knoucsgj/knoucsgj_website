@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import {
-  officialConstitutionDocuments,
-  type ConstitutionChapter
-} from '../data/officialConstitution';
+import React, { useState, useEffect, useMemo } from 'react';
+import { api } from '../services/api';
+import type {
+  ConstitutionVersion,
+  ConstitutionChapter
+} from '../lib/types';
+import { officialConstitutionDocuments } from '../data/officialConstitution';
 import {
   Scale,
   FileText,
@@ -11,19 +13,68 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  BookOpen
+  BookOpen,
+  History,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 
 export const OfficialConstitutionView: React.FC = () => {
+  const [versions, setVersions] = useState<ConstitutionVersion[]>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
   const [selectedDocId, setSelectedDocId] = useState<'constitution' | 'election' | 'bylaws'>('constitution');
   const [searchQuery, setSearchQuery] = useState('');
   const [openChapters, setOpenChapters] = useState<Record<string, boolean>>({
     '1': true // First chapter open by default
   });
 
+  // Load versions from API
+  useEffect(() => {
+    async function loadVersions() {
+      try {
+        const data = await api.getConstitutionVersions();
+        setVersions(data);
+        const current = data.find((v) => v.is_current) || data[0];
+        if (current) {
+          setSelectedVersionId(current.id);
+        }
+      } catch (err) {
+        console.error('Failed to load constitution versions', err);
+      }
+    }
+    loadVersions();
+  }, []);
+
+  // Currently active version
+  const activeVersion = useMemo(() => {
+    if (!versions.length) {
+      return {
+        id: 'ver-default',
+        title: '제11차 개정 학생회칙 (2018. 04. 02)',
+        revision_date: '2018. 04. 02',
+        is_current: true,
+        description: '2018년 4월 2일 제11차 개정 학생회칙, 간부선거세칙 및 시행세칙 전문',
+        documents: officialConstitutionDocuments,
+        created_at: '2018-04-02',
+        updated_at: '2018-04-02'
+      };
+    }
+    return (
+      versions.find((v) => v.id === selectedVersionId) ||
+      versions.find((v) => v.is_current) ||
+      versions[0]
+    );
+  }, [versions, selectedVersionId]);
+
+  // Documents of the active version
+  const documents = activeVersion.documents && activeVersion.documents.length > 0
+    ? activeVersion.documents
+    : officialConstitutionDocuments;
+
+  // Active document (Constitution, Election bylaws, or Enforcement bylaws)
   const activeDoc = useMemo(() => {
-    return officialConstitutionDocuments.find((d) => d.id === selectedDocId) || officialConstitutionDocuments[0];
-  }, [selectedDocId]);
+    return documents.find((d) => d.id === selectedDocId) || documents[0];
+  }, [documents, selectedDocId]);
 
   // Toggle chapter open/close
   const toggleChapter = (key: string) => {
@@ -73,6 +124,14 @@ export const OfficialConstitutionView: React.FC = () => {
     return activeDoc.chapters.reduce((sum, ch) => sum + ch.articles.length, 0);
   }, [activeDoc]);
 
+  // Handler to quickly jump to the current active in-force version
+  const goToCurrentVersion = () => {
+    const current = versions.find((v) => v.is_current);
+    if (current) {
+      setSelectedVersionId(current.id);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Header Card */}
@@ -86,10 +145,19 @@ export const OfficialConstitutionView: React.FC = () => {
               <span className="text-xs text-slate-500 font-medium">
                 한국방송통신대학교 광주전남지역대학 컴퓨터과학과
               </span>
-              <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                {activeDoc.revision_date}
-              </span>
+              {activeVersion.is_current ? (
+                <span className="text-xs text-emerald-700 font-extrabold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  현행 회칙 (현재 적용 중)
+                </span>
+              ) : (
+                <span className="text-xs text-amber-800 font-extrabold bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                  <History className="w-3.5 h-3.5 text-amber-700" />
+                  과거 회칙 (구 회칙 보존 기록)
+                </span>
+              )}
             </div>
+
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight font-knou">
               {activeDoc.title}
             </h2>
@@ -98,32 +166,83 @@ export const OfficialConstitutionView: React.FC = () => {
             </p>
           </div>
 
-          {/* PDF Viewer & Download Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <a
-              href="/Constitution/컴퓨터과학과학생회칙.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all"
-            >
-              <FileText className="w-4 h-4" />
-              <span>공식 PDF 전문 보기</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-            </a>
-            <a
-              href="/Constitution/컴퓨터과학과학생회칙.pdf"
-              download="컴퓨터과학과학생회칙.pdf"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition-all"
-            >
-              <Download className="w-4 h-4 text-slate-500" />
-              <span>PDF 다운로드</span>
-            </a>
+          {/* Right Controls: Version History Selector & PDF Buttons */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 shrink-0">
+            {/* Version History Selector */}
+            {versions.length > 1 && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-xs font-bold text-slate-600 flex items-center gap-1 whitespace-nowrap">
+                  <History className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>회칙 개정 연혁:</span>
+                </label>
+                <select
+                  value={selectedVersionId}
+                  onChange={(e) => {
+                    setSelectedVersionId(e.target.value);
+                    setSearchQuery('');
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  {versions.map((ver) => (
+                    <option key={ver.id} value={ver.id}>
+                      {ver.is_current ? `[현행] ${ver.title}` : `[과거] ${ver.title}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* PDF Viewer & Download Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>공식 PDF 전문 보기</span>
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </a>
+              <a
+                href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                download="컴퓨터과학과학생회칙.pdf"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>PDF 다운로드</span>
+              </a>
+            </div>
           </div>
         </div>
 
+        {/* Historical Version Warning Banner (if viewing past version) */}
+        {!activeVersion.is_current && (
+          <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-2.5 text-xs sm:text-sm text-amber-900">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <span className="font-bold">과거 회칙 열람 중: </span>
+                <span>
+                  현재 보시는 내용은 과거 <strong>{activeVersion.title}</strong> 기록으로, 규정 보존을 위해 보관된 구(舊) 회칙입니다.
+                </span>
+                {activeVersion.description && (
+                  <p className="text-xs text-amber-800/80 mt-0.5">사유: {activeVersion.description}</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={goToCurrentVersion}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shrink-0"
+            >
+              현행(현재 적용) 회칙 보기 →
+            </button>
+          </div>
+        )}
+
         {/* 3-Way Document Selector Tabs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
-          {officialConstitutionDocuments.map((doc) => {
+          {documents.map((doc) => {
             const isSelected = doc.id === selectedDocId;
             return (
               <button
@@ -271,7 +390,11 @@ export const OfficialConstitutionView: React.FC = () => {
                                 line.startsWith('⑨') ||
                                 line.startsWith('⑩')
                                   ? 'font-medium text-slate-800 pt-0.5'
-                                  : line.startsWith('가.') || line.startsWith('나.') || line.startsWith('다.') || line.startsWith('라.') || line.startsWith('마.')
+                                  : line.startsWith('가.') ||
+                                    line.startsWith('나.') ||
+                                    line.startsWith('다.') ||
+                                    line.startsWith('라.') ||
+                                    line.startsWith('마.')
                                   ? 'pl-3 text-slate-700'
                                   : 'text-slate-700'
                               }
