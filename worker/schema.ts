@@ -157,18 +157,15 @@ async function run(db: D1) {
     await db.batch(stmtsV2);
   }
 
-  // Seed past council members (v3)
-  const seededV3 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v3'").first();
-  if (!seededV3) {
-    const stmtsV3: any[] = [];
-    for (const pcm of initialPastCouncilMembers) {
-      stmtsV3.push(
-        db.prepare('INSERT OR IGNORE INTO past_council_members (id, generation, period, role, name, photo_url, sort_order, created_at) VALUES (?,?,?,?,?,?,?,?)')
-          .bind(pcm.id, pcm.generation, pcm.period, pcm.role, pcm.name, pcm.photo_url || null, pcm.sort_order || 0, new Date().toISOString())
-      );
+  // Clean out any legacy mock past council members so only real records entered by admin exist
+  const cleanedMocks = await db.prepare("SELECT value FROM settings WHERE key = 'cleaned_past_mocks_v1'").first();
+  if (!cleanedMocks) {
+    try {
+      await db.prepare("DELETE FROM past_council_members WHERE id LIKE 'pcm-%'").run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cleaned_past_mocks_v1', '1')").run();
+    } catch {
+      /* ignore */
     }
-    stmtsV3.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v3', '1')"));
-    await db.batch(stmtsV3);
   }
 
   // Role auto-migration for existing members

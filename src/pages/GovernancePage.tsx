@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { BudgetReport, MeetingMinute, CouncilRuleChapter } from '../lib/types';
+import type { BudgetReport, MeetingMinute } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import { ASSETS } from '../lib/assets';
+import { OfficialConstitutionView } from '../components/OfficialConstitutionView';
 import {
   ShieldCheck,
   FileText,
@@ -13,29 +14,23 @@ import {
   ChevronUp,
   Receipt,
   FileCheck,
-  Download,
-  ExternalLink
 } from 'lucide-react';
 
 export const GovernancePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'finance' | 'minutes' | 'rules'>('finance');
   const [reports, setReports] = useState<BudgetReport[]>([]);
   const [minutes, setMeetingMinutes] = useState<MeetingMinute[]>([]);
-  const [rules, setRules] = useState<CouncilRuleChapter[]>([]);
   const [selectedReport, setSelectedReport] = useState<BudgetReport | null>(null);
   const [openMinuteId, setOpenMinuteId] = useState<string | null>(null);
-  const [openRuleChapter, setOpenRuleChapter] = useState<number | null>(1);
 
   useEffect(() => {
     async function loadData() {
-      const [rData, mData, ruData] = await Promise.all([
+      const [rData, mData] = await Promise.all([
         api.getBudgetReports(),
         api.getMeetingMinutes(),
-        api.getCouncilRules()
       ]);
       setReports(rData);
       setMeetingMinutes(mData);
-      setRules(ruData);
       if (rData.length > 0) setSelectedReport(rData[0]);
     }
     loadData();
@@ -317,97 +312,7 @@ export const GovernancePage: React.FC = () => {
       {/* TAB 3: Council Rules (학생회칙)            */}
       {/* ========================================== */}
       {activeTab === 'rules' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div className="pb-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 rounded bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
-                    공식 규범
-                  </span>
-                  <span className="text-xs text-slate-500">한국방송통신대학교 광주전남지역대학</span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-knou">
-                  컴퓨터과학과 학생회칙 및 운영세칙
-                </h2>
-                <p className="text-sm sm:text-base text-slate-600 mt-1">
-                  본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 공식 기본 규범입니다.
-                </p>
-              </div>
-
-              {/* PDF Viewer & Download Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <a
-                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>학생회칙 PDF 바로보기</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                </a>
-                <a
-                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
-                  download="컴퓨터과학과학생회칙.pdf"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition-all"
-                >
-                  <Download className="w-4 h-4 text-slate-500" />
-                  <span>PDF 다운로드</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Official PDF Document Notice Banner */}
-            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
-              <Scale className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <div className="text-xs sm:text-sm text-amber-900 leading-relaxed">
-                <p className="font-bold mb-0.5">학생회칙 전문 PDF 원본 안내</p>
-                <p>
-                  학과 학생회 공식 인준을 거친 학생회칙 원본 문서(PDF)가 상단 바로보기 및 다운로드 버튼을 통해 제공되고 있습니다. 아래 각 조항을 펼쳐 웹에서도 즉시 열람하실 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {rules.map((chapter) => {
-                const isOpen = openRuleChapter === chapter.chapter;
-                return (
-                  <div key={chapter.chapter} className="border border-slate-200 rounded-2xl overflow-hidden">
-                    <button
-                      onClick={() => setOpenRuleChapter(isOpen ? null : chapter.chapter)}
-                      className="w-full p-4.5 sm:p-5.5 text-left flex items-center justify-between gap-4 bg-slate-50/60 hover:bg-slate-50"
-                    >
-                      <h3 className="font-bold text-base sm:text-lg text-slate-900">
-                        제{chapter.chapter}장 {chapter.title}
-                      </h3>
-                      {isOpen ? (
-                        <ChevronUp className="w-5 h-5 text-amber-600 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
-                      )}
-                    </button>
-
-                    {isOpen && (
-                      <div className="p-5 sm:p-6 bg-white border-t border-slate-100 space-y-4 divide-y divide-slate-100">
-                        {chapter.articles.map((art) => (
-                          <div key={art.number} className="pt-3.5 first:pt-0">
-                            <span className="font-bold text-base text-blue-950 block mb-1.5">
-                              제{art.number}조 ({art.title})
-                            </span>
-                            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                              {art.content}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <OfficialConstitutionView />
       )}
     </div>
   );

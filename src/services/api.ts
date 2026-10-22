@@ -21,11 +21,14 @@ import { initialEvents } from '../data/mockEvents';
 import {
   councilMembers as mockCouncilMembers,
   councilIntro as mockCouncilIntro,
-  initialPastCouncilMembers,
   mockStudies as mockInitialStudies
 } from '../data/mockCouncil';
 import { initialBudgetReports } from '../data/mockFinance';
 import { initialMeetingMinutes, councilRules as mockCouncilRules } from '../data/mockGovernance';
+import {
+  officialConstitutionDocuments,
+  type ConstitutionDocument
+} from '../data/officialConstitution';
 import { initialRentalItems, initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
 import { initialFeedbacks } from '../data/mockFeedback';
 import { initialFreePosts } from '../data/mockFreePosts';
@@ -34,7 +37,6 @@ import { initialMaterials } from '../data/mockMaterials';
 const NOTICES_STORAGE_KEY = 'knoucs_local_notices';
 const EVENTS_STORAGE_KEY = 'knoucs_local_events';
 const COUNCIL_MEMBERS_KEY = 'knoucs_local_council_members';
-const PAST_COUNCIL_MEMBERS_KEY = 'knoucs_local_past_council_members';
 const COUNCIL_INTRO_KEY = 'knoucs_local_council_intro';
 const STUDIES_STORAGE_KEY = 'knoucs_local_studies';
 const BUDGET_REPORTS_KEY = 'knoucs_local_budgets';
@@ -259,24 +261,21 @@ export const api = {
 
   // ==========================================
   // 3-1. 역대 학생회 임원진 (Past Council Members)
+  // 브라우저 저장방식(localStorage)을 일절 사용하지 않고 오직 서버 DB에서만 조회/반영합니다.
   // ==========================================
   async getPastCouncilMembers(): Promise<PastCouncilMember[]> {
     const cloud = await fetchD1<PastCouncilMember[]>('past-council-members');
-    if (Array.isArray(cloud) && cloud.length > 0) {
-      setLocalItem(PAST_COUNCIL_MEMBERS_KEY, cloud);
+    if (Array.isArray(cloud)) {
       return cloud;
     }
-    return getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
+    return [];
   },
 
   async createPastCouncilMember(member: Omit<PastCouncilMember, 'id'>): Promise<PastCouncilMember> {
-    const saved = await fetchStrict<PastCouncilMember>('past-council-members', {
+    return await fetchStrict<PastCouncilMember>('past-council-members', {
       method: 'POST',
       body: JSON.stringify(member),
     });
-    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
-    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, [saved, ...current]);
-    return saved;
   },
 
   async updatePastCouncilMember(id: string, updatedFields: Partial<PastCouncilMember>): Promise<PastCouncilMember | null> {
@@ -284,24 +283,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(updatedFields),
     });
-    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
-    let updated: PastCouncilMember | null = null;
-    const next = current.map((m) => {
-      if (m.id === id) {
-        updated = { ...m, ...updatedFields };
-        return updated;
-      }
-      return m;
-    });
-    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, next);
-    return updated;
+    return { id, ...updatedFields } as PastCouncilMember;
   },
 
   async deletePastCouncilMember(id: string): Promise<boolean> {
     await fetchStrict<any>(`past-council-members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
-    const next = current.filter((m) => m.id !== id);
-    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, next);
     return true;
   },
 
@@ -393,6 +379,10 @@ export const api = {
   // ==========================================
   async getCouncilRules(): Promise<CouncilRuleChapter[]> {
     return mockCouncilRules;
+  },
+
+  async getConstitutionDocuments(): Promise<ConstitutionDocument[]> {
+    return officialConstitutionDocuments;
   },
 
   // ==========================================

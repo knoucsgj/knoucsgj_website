@@ -1,4 +1,5 @@
 import type { MeetingMinute, CouncilRuleChapter } from '../lib/types';
+import { officialCouncilRules } from './officialConstitution';
 
 export const initialMeetingMinutes: MeetingMinute[] = [
   {
@@ -26,40 +27,4 @@ export const initialMeetingMinutes: MeetingMinute[] = [
   }
 ];
 
-export const councilRules: CouncilRuleChapter[] = [
-  {
-    chapter: 1,
-    title: '총칙',
-    articles: [
-      { number: 1, title: '명칭', content: '본 회는 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회(이하 "본 회")라 칭한다.' },
-      { number: 2, title: '목적', content: '본 회는 학우들의 자주적인 학술 연구와 친목 도모, 권익 신장을 도모하고 방송대 컴퓨터과학과의 발전에 기여함을 목적으로 한다.' },
-      { number: 3, title: '구성', content: '본 회는 한국방송통신대학교 광주전남지역대학 컴퓨터과학과에 재학 및 휴학 중인 모든 학생으로 구성한다.' }
-    ]
-  },
-  {
-    chapter: 2,
-    title: '회원의 권리와 의무',
-    articles: [
-      { number: 4, title: '권리', content: '본 회의 회원은 학생회의 모든 자치 활동에 참여할 권리, 선거권 및 피선거권, 회계 및 회의록 열람권을 갖는다.' },
-      { number: 5, title: '의무', content: '본 회의 회원은 본 회의 회칙 및 결의사항을 준수하고, 소정의 학생회비를 납부할 의무를 진다.' }
-    ]
-  },
-  {
-    chapter: 3,
-    title: '조직 및 임원회',
-    articles: [
-      { number: 6, title: '임원의 구성', content: '본 회는 학생회장 1인, 부학생회장 1인, 총무부, 학술부, 기획부, 홍보부 등 각 부서장을 둔다.' },
-      { number: 7, title: '임기', content: '임원의 임기는 당해 연도 1월 1일부터 12월 31일까지 1년으로 한다.' },
-      { number: 8, title: '임원회의 직무', content: '임원회는 사업계획의 수립 및 집행, 예산 편성 및 결산 보고, 학우 복지 및 학술 행사 주관을 담당한다.' }
-    ]
-  },
-  {
-    chapter: 4,
-    title: '재정 및 회계 투명성',
-    articles: [
-      { number: 9, title: '재정', content: '본 회의 재정은 학생회비, 학교 지원금 및 기타 찬조금으로 충당한다.' },
-      { number: 10, title: '회계연도', content: '본 회의 회계연도는 매년 1월 1일부터 12월 31일까지로 한다.' },
-      { number: 11, title: '공개의 의무', content: '총무부는 매 분기 및 학기 말 학생회비 집행 내역과 증빙 영수증을 학생회 홈페이지에 공개하여야 한다.' }
-    ]
-  }
-];
+export const councilRules: CouncilRuleChapter[] = officialCouncilRules;
