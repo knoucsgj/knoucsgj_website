@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
-import type { CouncilMember, CouncilRuleChapter } from '../lib/types';
+import type { CouncilMember, CouncilRuleChapter, PastCouncilMember } from '../lib/types';
 import { ASSETS } from '../lib/assets';
 import {
   Users,
@@ -13,26 +13,33 @@ import {
   Sparkles,
   Scale,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Award,
+  Search
 } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
   const [members, setMembers] = useState<CouncilMember[]>([]);
   const [councilIntro, setCouncilIntro] = useState(defaultCouncilIntro);
   const [rules, setRules] = useState<CouncilRuleChapter[]>([]);
+  const [pastMembers, setPastMembers] = useState<PastCouncilMember[]>([]);
+  const [selectedGen, setSelectedGen] = useState<string>('전체');
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [openRuleChapter, setOpenRuleChapter] = useState<number | null>(1);
-  const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'rules'>('greeting');
+  const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'alumni' | 'rules'>('greeting');
 
   useEffect(() => {
     async function loadData() {
-      const [membersData, introData, rulesData] = await Promise.all([
+      const [membersData, introData, rulesData, pastData] = await Promise.all([
         api.getCouncilMembers(),
         api.getCouncilIntro(),
-        api.getCouncilRules()
+        api.getCouncilRules(),
+        api.getPastCouncilMembers()
       ]);
       setMembers(membersData);
       setCouncilIntro(introData);
       setRules(rulesData);
+      setPastMembers(pastData);
     }
     loadData();
   }, []);
@@ -75,6 +82,17 @@ export const AboutPage: React.FC = () => {
         >
           <Users className="w-4 h-4 text-blue-600" />
           학생회 임원진 소개
+        </button>
+        <button
+          onClick={() => setActiveTab('alumni')}
+          className={`px-5 py-3.5 text-sm sm:text-base font-bold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'alumni'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Award className="w-4 h-4 text-indigo-600" />
+          역대 임원 소개
         </button>
         <button
           onClick={() => setActiveTab('rules')}
@@ -201,6 +219,151 @@ export const AboutPage: React.FC = () => {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+            {/* Tab 3: Past Council Members (역대 임원 소개 게시판) */}
+      {activeTab === 'alumni' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Banner */}
+          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <Award className="w-6 h-6 text-indigo-700" />
+                <h3 className="font-bold text-indigo-950 text-lg">컴퓨터과학과 역대 학생회 임원진</h3>
+              </div>
+              <p className="text-sm sm:text-base text-indigo-900 leading-relaxed">
+                광주전남지역대학 컴퓨터과학과의 발전과 학우 여러분의 권익을 위해 헌신해 온 역대 학생회 임원 명단입니다.
+              </p>
+            </div>
+            <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0 self-start sm:self-center">
+              총 {pastMembers.length}명의 임원
+            </span>
+          </div>
+
+          {/* Filters & Search */}
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Generation Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+              {['전체', ...Array.from(new Set(pastMembers.map((m) => m.generation))).filter(Boolean)].map((gen) => (
+                <button
+                  key={gen}
+                  onClick={() => setSelectedGen(gen)}
+                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
+                    selectedGen === gen
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+                  }`}
+                >
+                  {gen}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative min-w-[220px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="성명, 직책, 기수 검색..."
+                className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Past Council Members Board (게시판 형태) */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                    <th className="py-3.5 px-4 sm:px-6 w-20 text-center">사진</th>
+                    <th className="py-3.5 px-4 sm:px-6 w-28 text-center">기수</th>
+                    <th className="py-3.5 px-4 sm:px-6 w-32 text-center">임기</th>
+                    <th className="py-3.5 px-4 sm:px-6 w-36">직책명</th>
+                    <th className="py-3.5 px-4 sm:px-6">성명</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pastMembers
+                    .filter((m) => {
+                      const matchesGen = selectedGen === '전체' || m.generation === selectedGen;
+                      const q = searchKeyword.trim().toLowerCase();
+                      const matchesQ =
+                        !q ||
+                        m.name.toLowerCase().includes(q) ||
+                        m.role.toLowerCase().includes(q) ||
+                        m.generation.toLowerCase().includes(q) ||
+                        m.period.toLowerCase().includes(q);
+                      return matchesGen && matchesQ;
+                    })
+                    .map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                        {/* 1. 사진 (없으면 공란) */}
+                        <td className="py-3.5 px-4 sm:px-6 text-center">
+                          {m.photo_url ? (
+                            <img
+                              src={m.photo_url}
+                              alt={m.name}
+                              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 mx-auto shadow-xs"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-100 border border-slate-200 mx-auto flex items-center justify-center text-slate-300">
+                              <span className="text-[10px] text-slate-400 font-medium">공란</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 2. 기수 */}
+                        <td className="py-3.5 px-4 sm:px-6 text-center">
+                          <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200 whitespace-nowrap">
+                            {m.generation}
+                          </span>
+                        </td>
+
+                        {/* 3. 임기 */}
+                        <td className="py-3.5 px-4 sm:px-6 text-center text-slate-600 font-medium whitespace-nowrap">
+                          {m.period}
+                        </td>
+
+                        {/* 4. 직책명 */}
+                        <td className="py-3.5 px-4 sm:px-6 font-semibold">
+                          <span
+                            className={`px-2.5 py-1 rounded-md text-xs font-bold inline-block ${
+                              m.role === '학생회장'
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : m.role.includes('부회장') || m.role.includes('부학생회장')
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}
+                          >
+                            {m.role}
+                          </span>
+                        </td>
+
+                        {/* 5. 성명 */}
+                        <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-900 text-sm sm:text-base">
+                          {m.name}
+                        </td>
+                      </tr>
+                    ))}
+                  {pastMembers.filter((m) => {
+                    const matchesGen = selectedGen === '전체' || m.generation === selectedGen;
+                    const q = searchKeyword.trim().toLowerCase();
+                    return matchesGen && (!q || m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q));
+                  }).length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-500 font-medium">
+                        조건에 해당하는 역대 임원 정보가 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

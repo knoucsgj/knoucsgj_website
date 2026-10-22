@@ -2,7 +2,7 @@
 // D1 console work is required. Safe to run repeatedly (CREATE IF NOT EXISTS + guarded ALTERs).
 import { initialNotices } from '../src/data/mockNotices';
 import { initialEvents } from '../src/data/mockEvents';
-import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro } from '../src/data/mockCouncil';
+import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro, initialPastCouncilMembers } from '../src/data/mockCouncil';
 import { initialMeetingMinutes } from '../src/data/mockGovernance';
 
 type D1 = any;
@@ -48,6 +48,9 @@ const CREATE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS meeting_minutes (
     id TEXT PRIMARY KEY, title TEXT NOT NULL, meeting_type TEXT NOT NULL, meeting_date TEXT NOT NULL,
     attendees TEXT, agenda TEXT, content TEXT, decisions TEXT)`,
+  `CREATE TABLE IF NOT EXISTS past_council_members (
+    id TEXT PRIMARY KEY, generation TEXT NOT NULL, period TEXT NOT NULL,
+    role TEXT NOT NULL, name TEXT NOT NULL, photo_url TEXT, sort_order INTEGER DEFAULT 0, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS email_verifications (
     email TEXT PRIMARY KEY, code TEXT NOT NULL, expires_at INTEGER NOT NULL,
     verified INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)`,
@@ -152,6 +155,20 @@ async function run(db: D1) {
     }
     stmtsV2.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v2', '1')"));
     await db.batch(stmtsV2);
+  }
+
+  // Seed past council members (v3)
+  const seededV3 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v3'").first();
+  if (!seededV3) {
+    const stmtsV3: any[] = [];
+    for (const pcm of initialPastCouncilMembers) {
+      stmtsV3.push(
+        db.prepare('INSERT OR IGNORE INTO past_council_members (id, generation, period, role, name, photo_url, sort_order, created_at) VALUES (?,?,?,?,?,?,?,?)')
+          .bind(pcm.id, pcm.generation, pcm.period, pcm.role, pcm.name, pcm.photo_url || null, pcm.sort_order || 0, new Date().toISOString())
+      );
+    }
+    stmtsV3.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v3', '1')"));
+    await db.batch(stmtsV3);
   }
 
   // Role auto-migration for existing members

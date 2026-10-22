@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
-import type { Notice, AcademicEvent, CouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -25,7 +25,8 @@ import {
   BookOpen,
   FileText,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  Award
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -46,13 +47,14 @@ export const AdminPage: React.FC = () => {
   const [newMemberRole, setNewMemberRole] = useState<AdminMember['role']>('regular');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
-  // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'>('notices');
+  // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'minutes' | 'backup'
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'minutes' | 'backup'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
     if (activeTab === 'members' && !canManageMembers) setActiveTab('notices');
     if (activeTab === 'council' && !canManageCouncil) setActiveTab('notices');
+    if (activeTab === 'alumni' && !canManageCouncil) setActiveTab('notices');
     if (activeTab === 'backup' && !canManageBackup) setActiveTab('notices');
   }, [activeTab, canManageMembers, canManageCouncil, canManageBackup]);
 
@@ -68,6 +70,20 @@ export const AdminPage: React.FC = () => {
     president_role: ''
   });
   const [councilMembers, setCouncilMembers] = useState<CouncilMember[]>([]);
+  const [pastMembers, setPastMembers] = useState<PastCouncilMember[]>([]);
+  const [adminSelectedGen, setAdminSelectedGen] = useState<string>('전체');
+
+  // Past Council Member Modal
+  const [isPastModalOpen, setIsPastModalOpen] = useState(false);
+  const [editingPastId, setEditingPastId] = useState<string | null>(null);
+  const [pastForm, setPastForm] = useState({
+    generation: '제42대',
+    period: '2025년',
+    role: '학생회장',
+    name: '',
+    photo_url: '',
+    sort_order: 1
+  });
 
   // Notice Modals
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
@@ -181,12 +197,13 @@ export const AdminPage: React.FC = () => {
   }, [canManageMembers, activeTab]);
 
   const loadAllData = async () => {
-    const [nData, eData, sData, iData, mData, minData, memberData] = await Promise.all([
+    const [nData, eData, sData, iData, mData, pastData, minData, memberData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
       api.getStudies(),
       api.getCouncilIntro(),
       api.getCouncilMembers(),
+      api.getPastCouncilMembers(),
       api.getMeetingMinutes(),
       api.getMembers().catch(() => [] as AdminMember[])
     ]);
@@ -196,6 +213,7 @@ export const AdminPage: React.FC = () => {
     setStudies(sData);
     setCouncilIntro(iData);
     setCouncilMembers(mData);
+    setPastMembers(pastData);
     setMeetingMinutes(minData);
     api.getEmailSettings().then((cfg) => {
       setEmailConfig((prev) => ({
@@ -545,6 +563,85 @@ export const AdminPage: React.FC = () => {
     if (confirm(`"${name}" 임원 정보를 정말 삭제하시겠습니까?`)) {
       await api.deleteCouncilMember(id);
       loadAllData();
+    }
+  };
+
+  // ==========================================
+  // Past Council CRUD (최고관리자 & 학생회장 전용)
+  // ==========================================
+  const openNewPastModal = () => {
+    setEditingPastId(null);
+    setPastForm({
+      generation: '제42대',
+      period: '2025년',
+      role: '학생회장',
+      name: '',
+      photo_url: '',
+      sort_order: 1
+    });
+    setIsPastModalOpen(true);
+  };
+
+  const openEditPastModal = (m: PastCouncilMember) => {
+    setEditingPastId(m.id);
+    setPastForm({
+      generation: m.generation,
+      period: m.period,
+      role: m.role,
+      name: m.name,
+      photo_url: m.photo_url || '',
+      sort_order: m.sort_order || 1
+    });
+    setIsPastModalOpen(true);
+  };
+
+  const handlePastPhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert('사진 파일은 1MB 이하여야 합니다.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPastForm((prev) => ({ ...prev, photo_url: event.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePastMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canManageCouncil) {
+      alert('역대 임원 관리는 학생회장 또는 최고 관리자만 가능합니다.');
+      return;
+    }
+    if (!pastForm.generation.trim() || !pastForm.name.trim() || !pastForm.role.trim()) {
+      alert('기수, 직책명, 성명을 모두 입력해 주세요.');
+      return;
+    }
+    try {
+      if (editingPastId) {
+        await api.updatePastCouncilMember(editingPastId, pastForm);
+      } else {
+        await api.createPastCouncilMember(pastForm);
+      }
+      setIsPastModalOpen(false);
+      await loadAllData();
+      alert('역대 임원 정보가 성공적으로 저장되었습니다!');
+    } catch (err: any) {
+      alert(err.message || '저장에 실패했습니다.');
+    }
+  };
+
+  const handleDeletePastMember = async (id: string, name: string) => {
+    if (!canManageCouncil) {
+      alert('역대 임원 관리는 학생회장 또는 최고 관리자만 가능합니다.');
+      return;
+    }
+    if (confirm(`"${name}" 역대 임원 정보를 삭제하시겠습니까?`)) {
+      await api.deletePastCouncilMember(id);
+      await loadAllData();
     }
   };
 
@@ -928,7 +1025,20 @@ export const AdminPage: React.FC = () => {
             }`}
           >
             <Users className="w-4 h-4 text-emerald-600" />
-            인사말 & 임원진 관리
+            인사말 & 현임원 관리
+          </button>
+        )}
+        {canManageCouncil && (
+          <button
+            onClick={() => setActiveTab('alumni')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'alumni'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Award className="w-4 h-4 text-indigo-600" />
+            역대 임원 관리 ({pastMembers.length})
           </button>
         )}
         <button
@@ -1659,6 +1769,254 @@ export const AdminPage: React.FC = () => {
       )}
 
       {/* ========================================== */}
+            {/* ========================================== */}
+      {/* TAB: Past Council Members (역대 임원 관리)  */}
+      {/* ========================================== */}
+      {canManageCouncil && activeTab === 'alumni' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-lg font-bold text-slate-900">역대 학생회 임원 명단 관리</h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                학생회 소개 페이지의 [역대 임원 소개] 게시판에 표시되는 임원 목록을 관리합니다. (학생회장·최고관리자 전용)
+              </p>
+            </div>
+            <button
+              onClick={openNewPastModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-xs shrink-0 self-start sm:self-auto"
+            >
+              <PlusCircle className="w-4 h-4" />
+              새 역대 임원 등록
+            </button>
+          </div>
+
+          {/* Generation Filter */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {['전체', ...Array.from(new Set(pastMembers.map((m) => m.generation))).filter(Boolean)].map((gen) => (
+              <button
+                key={gen}
+                onClick={() => setAdminSelectedGen(gen)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  adminSelectedGen === gen
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+                }`}
+              >
+                {gen}
+              </button>
+            ))}
+          </div>
+
+          {/* Members Table */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                  <th className="py-3 px-4 w-16 text-center">사진</th>
+                  <th className="py-3 px-4 w-24 text-center">기수</th>
+                  <th className="py-3 px-4 w-28 text-center">임기</th>
+                  <th className="py-3 px-4 w-32">직책명</th>
+                  <th className="py-3 px-4">성명</th>
+                  <th className="py-3 px-4 w-28 text-center">관리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pastMembers
+                  .filter((m) => adminSelectedGen === '전체' || m.generation === adminSelectedGen)
+                  .map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-4 text-center">
+                        {m.photo_url ? (
+                          <img
+                            src={m.photo_url}
+                            alt={m.name}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200 mx-auto"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 mx-auto flex items-center justify-center text-[10px] text-slate-400 font-semibold">
+                            공란
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-indigo-700">
+                        {m.generation}
+                      </td>
+                      <td className="py-3 px-4 text-center text-slate-600">
+                        {m.period}
+                      </td>
+                      <td className="py-3 px-4 font-semibold">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-bold">
+                          {m.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-900 text-sm">
+                        {m.name}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => openEditPastModal(m)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="수정"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePastMember(m.id, m.name)}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                {pastMembers.filter((m) => adminSelectedGen === '전체' || m.generation === adminSelectedGen).length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                      등록된 역대 임원이 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Past Member Modal */}
+      {isPastModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-slate-900">
+                    {editingPastId ? '역대 임원 정보 수정' : '새 역대 임원 등록'}
+                  </h3>
+                  <p className="text-xs text-slate-400">기수, 임기, 직책명, 성명과 사진을 설정합니다.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPastModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePastMember} className="space-y-3.5 text-xs sm:text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">기수 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={pastForm.generation}
+                    onChange={(e) => setPastForm({ ...pastForm, generation: e.target.value })}
+                    placeholder="예: 제42대"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">임기 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={pastForm.period}
+                    onChange={(e) => setPastForm({ ...pastForm, period: e.target.value })}
+                    placeholder="예: 2025년"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">직책명 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={pastForm.role}
+                    onChange={(e) => setPastForm({ ...pastForm, role: e.target.value })}
+                    placeholder="예: 학생회장, 총무부장"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">성명 *</label>
+                  <input
+                    type="text"
+                    required
+                    value={pastForm.name}
+                    onChange={(e) => setPastForm({ ...pastForm, name: e.target.value })}
+                    placeholder="예: 홍길동"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">사진 (선택사항)</label>
+                <div className="flex items-center gap-3">
+                  {pastForm.photo_url ? (
+                    <img
+                      src={pastForm.photo_url}
+                      alt="미리보기"
+                      className="w-14 h-14 rounded-full object-cover border border-slate-200 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[11px] text-slate-400 font-medium shrink-0">
+                      공란
+                    </div>
+                  )}
+                  <div className="space-y-1.5 flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePastPhotoFileChange}
+                      className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    />
+                    {pastForm.photo_url && (
+                      <button
+                        type="button"
+                        onClick={() => setPastForm({ ...pastForm, photo_url: '' })}
+                        className="text-[11px] text-rose-500 hover:underline font-semibold"
+                      >
+                        사진 삭제 (공란으로 설정)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPastModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-xs"
+                >
+                  {editingPastId ? '수정 저장' : '등록 완료'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* TAB 5: Minutes Management (회의록 관리)     */}
       {/* ========================================== */}
       {activeTab === 'minutes' && (

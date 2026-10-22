@@ -1,4 +1,4 @@
-import type { CouncilMember, StudyGroup } from '../lib/types';
+import type { CouncilMember, PastCouncilMember, StudyGroup } from '../lib/types';
 
 export const councilIntro = {
   title: '배움에는 나이와 한계가 없습니다. 함께이기에 완주할 수 있습니다!',
@@ -150,5 +150,80 @@ export const mockStudies: StudyGroup[] = [
     meeting_type: '온라인 (Zoom/Discord)',
     leader: '이지은 (3학년)',
     created_at: '2026-10-11'
+  }
+];
+
+export const initialPastCouncilMembers: PastCouncilMember[] = [
+  {
+    id: 'pcm-42-1',
+    generation: '제42대',
+    period: '2025년',
+    role: '학생회장',
+    name: '김성우',
+    photo_url: null,
+    sort_order: 1
+  },
+  {
+    id: 'pcm-42-2',
+    generation: '제42대',
+    period: '2025년',
+    role: '부학생회장',
+    name: '박다영',
+    photo_url: null,
+    sort_order: 2
+  },
+  {
+    id: 'pcm-42-3',
+    generation: '제42대',
+    period: '2025년',
+    role: '총무부장',
+    name: '이준호',
+    photo_url: null,
+    sort_order: 3
+  },
+  {
+    id: 'pcm-41-1',
+    generation: '제41대',
+    period: '2024년',
+    role: '학생회장',
+    name: '정동현',
+    photo_url: null,
+    sort_order: 1
+  },
+  {
+    id: 'pcm-41-2',
+    generation: '제41대',
+    period: '2024년',
+    role: '부학생회장',
+    name: '송지수',
+    photo_url: null,
+    sort_order: 2
+  },
+  {
+    id: 'pcm-41-3',
+    generation: '제41대',
+    period: '2024년',
+    role: '학술부장',
+    name: '최태민',
+    photo_url: null,
+    sort_order: 3
+  },
+  {
+    id: 'pcm-40-1',
+    generation: '제40대',
+    period: '2023년',
+    role: '학생회장',
+    name: '한상훈',
+    photo_url: null,
+    sort_order: 1
+  },
+  {
+    id: 'pcm-40-2',
+    generation: '제40대',
+    period: '2023년',
+    role: '부학생회장',
+    name: '윤하은',
+    photo_url: null,
+    sort_order: 2
   }
 ];

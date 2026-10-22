@@ -2,6 +2,7 @@ import type {
   Notice,
   AcademicEvent,
   CouncilMember,
+  PastCouncilMember,
   StudyGroup,
   BudgetReport,
   MeetingMinute,
@@ -20,6 +21,7 @@ import { initialEvents } from '../data/mockEvents';
 import {
   councilMembers as mockCouncilMembers,
   councilIntro as mockCouncilIntro,
+  initialPastCouncilMembers,
   mockStudies as mockInitialStudies
 } from '../data/mockCouncil';
 import { initialBudgetReports } from '../data/mockFinance';
@@ -32,6 +34,7 @@ import { initialMaterials } from '../data/mockMaterials';
 const NOTICES_STORAGE_KEY = 'knoucs_local_notices';
 const EVENTS_STORAGE_KEY = 'knoucs_local_events';
 const COUNCIL_MEMBERS_KEY = 'knoucs_local_council_members';
+const PAST_COUNCIL_MEMBERS_KEY = 'knoucs_local_past_council_members';
 const COUNCIL_INTRO_KEY = 'knoucs_local_council_intro';
 const STUDIES_STORAGE_KEY = 'knoucs_local_studies';
 const BUDGET_REPORTS_KEY = 'knoucs_local_budgets';
@@ -251,6 +254,54 @@ export const api = {
     const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
     const next = current.filter((m) => m.id !== id);
     setLocalItem(COUNCIL_MEMBERS_KEY, next);
+    return true;
+  },
+
+  // ==========================================
+  // 3-1. 역대 학생회 임원진 (Past Council Members)
+  // ==========================================
+  async getPastCouncilMembers(): Promise<PastCouncilMember[]> {
+    const cloud = await fetchD1<PastCouncilMember[]>('past-council-members');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      setLocalItem(PAST_COUNCIL_MEMBERS_KEY, cloud);
+      return cloud;
+    }
+    return getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
+  },
+
+  async createPastCouncilMember(member: Omit<PastCouncilMember, 'id'>): Promise<PastCouncilMember> {
+    const saved = await fetchStrict<PastCouncilMember>('past-council-members', {
+      method: 'POST',
+      body: JSON.stringify(member),
+    });
+    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
+    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, [saved, ...current]);
+    return saved;
+  },
+
+  async updatePastCouncilMember(id: string, updatedFields: Partial<PastCouncilMember>): Promise<PastCouncilMember | null> {
+    await fetchStrict<any>(`past-council-members&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
+    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
+    let updated: PastCouncilMember | null = null;
+    const next = current.map((m) => {
+      if (m.id === id) {
+        updated = { ...m, ...updatedFields };
+        return updated;
+      }
+      return m;
+    });
+    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, next);
+    return updated;
+  },
+
+  async deletePastCouncilMember(id: string): Promise<boolean> {
+    await fetchStrict<any>(`past-council-members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const current = getLocalItem<PastCouncilMember[]>(PAST_COUNCIL_MEMBERS_KEY, initialPastCouncilMembers);
+    const next = current.filter((m) => m.id !== id);
+    setLocalItem(PAST_COUNCIL_MEMBERS_KEY, next);
     return true;
   },
 

@@ -40,6 +40,17 @@ export interface CouncilMember {
   email?: string;
 }
 
+export interface PastCouncilMember {
+  id: string;
+  generation: string; // 기수 (예: '제42대')
+  period: string;     // 임기 (예: '2025년')
+  role: string;       // 직책명 (예: '학생회장', '부학생회장', '총무부장')
+  name: string;       // 성명
+  photo_url?: string | null; // 사진 URL or Data URL
+  sort_order?: number;
+  created_at?: string;
+}
+
 export type StudyStatus = '모집중' | '진행중' | '마감' | '종료';
 
 export interface StudyGroup {

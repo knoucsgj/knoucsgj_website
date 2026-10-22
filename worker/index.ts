@@ -1339,6 +1339,56 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
+  // ---- past council members (Read: public / Write: president & master admin only)
+  if (resource === 'past-council-members') {
+    if (method === 'GET') {
+      const { results } = await db.prepare('SELECT * FROM past_council_members ORDER BY period DESC, generation DESC, sort_order ASC, rowid ASC').all();
+      return json(results);
+    }
+    if (method === 'POST') {
+      requireCouncilManager(session);
+      const b: any = await readJson(req);
+      const m = {
+        id: b.id ? str(b.id, 50) : `pcm-${Date.now()}-${randomHex(2)}`,
+        generation: str(b.generation, 50),
+        period: str(b.period, 50),
+        role: str(b.role, 50),
+        name: str(b.name, 50),
+        photo_url: typeof b.photo_url === 'string' && b.photo_url.trim() ? b.photo_url.trim() : null,
+        sort_order: Number(b.sort_order) || 0,
+        created_at: new Date().toISOString()
+      };
+      if (!m.generation || !m.role || !m.name) {
+        throw new HttpError(400, '기수, 직책명, 성명은 필수 입력 항목입니다.');
+      }
+      await db
+        .prepare('INSERT INTO past_council_members (id, generation, period, role, name, photo_url, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(m.id, m.generation, m.period, m.role, m.name, m.photo_url, m.sort_order, m.created_at)
+        .run();
+      return json(m, 201);
+    }
+    if (method === 'PUT' && id) {
+      requireCouncilManager(session);
+      const b: any = await readJson(req);
+      const sets: string[] = [];
+      const vals: any[] = [];
+      for (const field of ['generation', 'period', 'role', 'name', 'photo_url', 'sort_order'] as const) {
+        if (b[field] !== undefined) {
+          sets.push(`${field} = ?`);
+          vals.push(field === 'sort_order' ? (Number(b[field]) || 0) : str(b[field], field === 'photo_url' ? 2000000 : 100));
+        }
+      }
+      if (!sets.length) throw new HttpError(400, '변경할 내용이 없습니다.');
+      await db.prepare(`UPDATE past_council_members SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+      return json({ success: true });
+    }
+    if (method === 'DELETE' && id) {
+      requireCouncilManager(session);
+      await db.prepare('DELETE FROM past_council_members WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
   // ---- email settings (Admin only)
   if (resource === 'email-settings') {
     requireAdmin(session);
