@@ -48,6 +48,9 @@ const CREATE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS meeting_minutes (
     id TEXT PRIMARY KEY, title TEXT NOT NULL, meeting_type TEXT NOT NULL, meeting_date TEXT NOT NULL,
     attendees TEXT, agenda TEXT, content TEXT, decisions TEXT)`,
+  `CREATE TABLE IF NOT EXISTS email_verifications (
+    email TEXT PRIMARY KEY, code TEXT NOT NULL, expires_at INTEGER NOT NULL,
+    verified INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS members (
     id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL,
     nickname TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, student_no TEXT NOT NULL,

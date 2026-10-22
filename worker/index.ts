@@ -210,11 +210,203 @@ function validateRegistration(b: any) {
   return { username, password, nickname, name, phone, address, student_no, regional_college, department };
 }
 
+// ---------------------------------------------------------------- email service
+async function sendVerificationEmail(
+  db: D1,
+  env: Env,
+  toEmail: string,
+  code: string,
+  subjectPrefix = '회원가입'
+): Promise<{ sent: boolean; reason?: string }> {
+  const apiKeyRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_api_key'").first();
+  const providerRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_provider'").first();
+  const senderRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_sender'").first();
+  const senderNameRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_sender_name'").first();
+  const gasUrlRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_gas_url'").first();
+
+  const apiKey = (apiKeyRow && apiKeyRow.value) || (env as any).BREVO_API_KEY || (env as any).RESEND_API_KEY || '';
+  const provider = (providerRow && providerRow.value) || (apiKey.startsWith('re_') ? 'resend' : apiKey ? 'brevo' : 'none');
+  const senderEmail = (senderRow && senderRow.value) || 'knoucsgj@gmail.com';
+  const senderName = (senderNameRow && senderNameRow.value) || '한국방송통신대학교 광주전남 컴퓨터과학과 학생회';
+  const gasUrl = (gasUrlRow && gasUrlRow.value) || (env as any).GAS_EMAIL_URL || '';
+
+  const subject = `[방송대 컴퓨터과학과 학생회] ${subjectPrefix} 이메일 인증번호: ${code}`;
+  const htmlContent = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #1e3a8a; margin: 0 0 6px 0; font-size: 20px;">한국방송통신대학교 광주전남지역대학</h2>
+        <h3 style="color: #0f172a; margin: 0; font-size: 17px;">컴퓨터과학과 학생회</h3>
+      </div>
+      <div style="padding: 24px; background-color: #f8fafc; border-radius: 12px; margin-bottom: 24px; border: 1px solid #edf2f7;">
+        <p style="margin: 0 0 12px 0; font-size: 15px; color: #334155; font-weight: bold;">안녕하세요, 학우님!</p>
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #64748b; line-height: 1.6;">
+          홈페이지 ${subjectPrefix}을(를) 위한 이메일 인증번호입니다.<br/>
+          아래의 6자리 인증번호를 홈페이지 화면에 입력해 주세요.
+        </p>
+        <div style="background-color: #ffffff; padding: 18px; border-radius: 8px; text-align: center; border: 2px dashed #3b82f6;">
+          <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1d4ed8; font-family: monospace;">${code}</span>
+        </div>
+        <p style="margin: 16px 0 0 0; font-size: 12px; color: #94a3b8; text-align: center;">
+          * 본 인증번호는 발송 후 10분간 유효합니다.
+        </p>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+        본 메일은 방송대 광주전남 컴퓨터과학과 홈페이지 요청에 의해 발송되었습니다.<br/>
+        문의사항: 학생회 공식 이메일 <a href="mailto:knoucsgj@gmail.com" style="color: #3b82f6;">knoucsgj@gmail.com</a>
+      </p>
+    </div>
+  `;
+
+  if (provider === 'brevo' && apiKey) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: toEmail }],
+          subject,
+          htmlContent,
+        }),
+      });
+      if (res.ok) return { sent: true };
+      const err = await res.text();
+      console.error('Brevo error:', err);
+      return { sent: false, reason: `Brevo 발송 실패: ${err.slice(0, 100)}` };
+    } catch (e: any) {
+      return { sent: false, reason: e.message };
+    }
+  }
+
+  if (provider === 'gas' && gasUrl) {
+    try {
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: toEmail, subject, html: htmlContent }),
+      });
+      if (res.ok) return { sent: true };
+      return { sent: false, reason: 'Google Apps Script 응답 오류' };
+    } catch (e: any) {
+      return { sent: false, reason: e.message };
+    }
+  }
+
+  if (provider === 'resend' && apiKey) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `${senderName} <${senderEmail}>`,
+          to: [toEmail],
+          subject,
+          htmlContent,
+        }),
+      });
+      if (res.ok) return { sent: true };
+      const err = await res.text();
+      return { sent: false, reason: `Resend 발송 실패: ${err.slice(0, 100)}` };
+    } catch (e: any) {
+      return { sent: false, reason: e.message };
+    }
+  }
+
+  return { sent: false, reason: '이메일 발송 서비스(API Key)가 설정되지 않았습니다.' };
+}
+
 async function handleAuth(req: Request, db: D1, env: Env, session: Session, action: string | null): Promise<Response> {
   const method = req.method;
 
   if (action === 'me' && method === 'GET') {
     return json({ member: session.member, admin: session.admin });
+  }
+
+  // ---- Send Email Verification Code
+  if (action === 'send-email-code' && method === 'POST') {
+    const b: any = await readJson(req);
+    const email = str(b.email, 80).toLowerCase();
+    const type = str(b.type, 20) || 'register';
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      throw new HttpError(400, '올바른 이메일 주소를 입력해 주세요.');
+    }
+
+    if (type === 'register') {
+      const exists = await db.prepare('SELECT 1 FROM members WHERE username = ?').bind(email).first();
+      if (exists) {
+        throw new HttpError(409, '이미 가입되어 있는 이메일 주소입니다. 로그인해 주세요.');
+      }
+    }
+
+    const key = `sendcode:${email}`;
+    await checkThrottle(db, key);
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await db
+      .prepare(
+        'INSERT OR REPLACE INTO email_verifications (email, code, expires_at, verified, updated_at) VALUES (?, ?, ?, 0, ?)'
+      )
+      .bind(email, code, expiresAt, Date.now())
+      .run();
+
+    const result = await sendVerificationEmail(db, env, email, code, type === 'register' ? '회원가입' : '비밀번호 재설정');
+
+    if (!result.sent) {
+      return json({
+        success: true,
+        sent: false,
+        devCode: code,
+        message: '인증번호가 생성되었습니다. (메일 발송 API 미설정 상태: 테스트용 인증번호 ' + code + ')',
+      });
+    }
+
+    return json({
+      success: true,
+      sent: true,
+      message: '인증번호가 ' + email + '으로 발송되었습니다. 10분 이내에 입력해 주세요.',
+    });
+  }
+
+  // ---- Verify Email Code
+  if (action === 'verify-email-code' && method === 'POST') {
+    const b: any = await readJson(req);
+    const email = str(b.email, 80).toLowerCase();
+    const inputCode = str(b.code, 10);
+
+    if (!email || !inputCode) {
+      throw new HttpError(400, '이메일과 인증번호를 모두 입력해 주세요.');
+    }
+
+    const row: any = await db.prepare('SELECT * FROM email_verifications WHERE email = ?').bind(email).first();
+    if (!row) {
+      throw new HttpError(400, '인증번호를 먼저 발송해 주세요.');
+    }
+
+    if (Date.now() > Number(row.expires_at)) {
+      throw new HttpError(400, '인증번호가 만료되었습니다. 다시 발송해 주세요.');
+    }
+
+    if (row.code !== inputCode) {
+      throw new HttpError(400, '인증번호가 일치하지 않습니다. 다시 확인해 주세요.');
+    }
+
+    await db
+      .prepare('UPDATE email_verifications SET verified = 1, updated_at = ? WHERE email = ?')
+      .bind(Date.now(), email)
+      .run();
+
+    return json({ success: true, message: '이메일 인증이 완료되었습니다.' });
   }
 
   if (action === 'register' && method === 'POST') {
@@ -223,6 +415,13 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     if (dupU) throw new HttpError(409, '이미 사용 중인 아이디입니다.');
     const dupN = await db.prepare('SELECT 1 FROM members WHERE nickname = ? COLLATE NOCASE').bind(v.nickname).first();
     if (dupN) throw new HttpError(409, '이미 사용 중인 닉네임입니다.');
+
+    // Verify email verification state (must be verified within last 30 minutes)
+    const verRow: any = await db.prepare('SELECT verified, updated_at FROM email_verifications WHERE email = ?').bind(v.username).first();
+    const isRecent = verRow && verRow.verified === 1 && Date.now() - Number(verRow.updated_at) < 30 * 60 * 1000;
+    if (!isRecent) {
+      throw new HttpError(400, '이메일 인증이 완료되지 않았습니다. [인증번호 발송] 후 인증을 완료해 주세요.');
+    }
 
     const { hash, salt } = await hashPassword(v.password);
     const id = crypto.randomUUID();
@@ -235,6 +434,7 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
       .bind(id, v.username, hash, salt, v.nickname, v.name, v.phone, v.address, v.student_no,
         v.regional_college, v.department, PRIVACY_VERSION, new Date().toISOString(), new Date().toISOString())
       .run();
+    await db.prepare('DELETE FROM email_verifications WHERE email = ?').bind(v.username).run();
     const token = await createSession(db, 'member', id, MEMBER_TTL);
     const h = new Headers();
     h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
@@ -949,6 +1149,57 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       requireAdmin(session);
       await db.prepare('DELETE FROM meeting_minutes WHERE id = ?').bind(id).run();
       return json({ success: true });
+    }
+  }
+
+  // ---- email settings (Admin only)
+  if (resource === 'email-settings') {
+    requireAdmin(session);
+    if (method === 'GET') {
+      const apiKeyRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_api_key'").first();
+      const providerRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_provider'").first();
+      const senderRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_sender'").first();
+      const senderNameRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_sender_name'").first();
+      const gasUrlRow: any = await db.prepare("SELECT value FROM settings WHERE key = 'email_gas_url'").first();
+
+      const hasApiKey = Boolean(apiKeyRow && apiKeyRow.value);
+      return json({
+        provider: (providerRow && providerRow.value) || 'brevo',
+        sender: (senderRow && senderRow.value) || 'knoucsgj@gmail.com',
+        sender_name: (senderNameRow && senderNameRow.value) || '한국방송통신대학교 광주전남 컴퓨터과학과 학생회',
+        gas_url: (gasUrlRow && gasUrlRow.value) || '',
+        has_api_key: hasApiKey,
+        api_key_masked: hasApiKey ? '••••••••••••••••' : '',
+      });
+    }
+    if (method === 'PUT') {
+      const b: any = await readJson(req);
+      if (b.api_key && typeof b.api_key === 'string' && b.api_key.trim() && !b.api_key.includes('••••')) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('email_api_key', ?)").bind(b.api_key.trim()).run();
+      }
+      if (b.provider) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('email_provider', ?)").bind(str(b.provider, 20)).run();
+      }
+      if (b.sender) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('email_sender', ?)").bind(str(b.sender, 80)).run();
+      }
+      if (b.sender_name) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('email_sender_name', ?)").bind(str(b.sender_name, 100)).run();
+      }
+      if (b.gas_url !== undefined) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('email_gas_url', ?)").bind(str(b.gas_url, 300)).run();
+      }
+      return json({ success: true, message: '이메일 발송 설정이 저장되었습니다.' });
+    }
+    if (method === 'POST') {
+      const b: any = await readJson(req);
+      const testEmail = str(b.test_email, 80);
+      if (!testEmail) throw new HttpError(400, '테스트 발송할 이메일 주소를 입력해 주세요.');
+      const res = await sendVerificationEmail(db, env, testEmail, '123456', '테스트');
+      if (!res.sent) {
+        throw new HttpError(400, res.reason || '이메일 발송에 실패했습니다.');
+      }
+      return json({ success: true, message: `${testEmail} 주소로 테스트 메일이 성공적으로 발송되었습니다!` });
     }
   }
 

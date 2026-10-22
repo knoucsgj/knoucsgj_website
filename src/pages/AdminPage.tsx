@@ -24,7 +24,9 @@ import {
   Save,
   RotateCcw,
   BookOpen,
-  FileText
+  FileText,
+  Mail,
+  CheckCircle2
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -118,6 +120,20 @@ export const AdminPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [pwChangeMessage, setPwChangeMessage] = useState<{ isError: boolean; text: string } | null>(null);
 
+  // Email Configuration state
+  const [emailConfig, setEmailConfig] = useState({
+    provider: 'brevo' as 'brevo' | 'resend' | 'gas',
+    api_key: '',
+    sender: 'knoucsgj@gmail.com',
+    sender_name: '한국방송통신대학교 광주전남 컴퓨터과학과 학생회',
+    gas_url: '',
+    has_api_key: false,
+  });
+  const [emailTestTarget, setEmailTestTarget] = useState('');
+  const [emailStatusMsg, setEmailStatusMsg] = useState<{ isError: boolean; text: string } | null>(null);
+  const [isEmailSaving, setIsEmailSaving] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
   useEffect(() => {
     const onRejection = (ev: PromiseRejectionEvent) => {
       if (ev.reason instanceof Error) {
@@ -152,6 +168,13 @@ export const AdminPage: React.FC = () => {
     setCouncilIntro(iData);
     setCouncilMembers(mData);
     setMeetingMinutes(minData);
+    api.getEmailSettings().then((cfg) => {
+      setEmailConfig((prev) => ({
+        ...prev,
+        ...cfg,
+        api_key: cfg.has_api_key ? '••••••••••••••••' : '',
+      }));
+    }).catch(() => {});
   };
 
   // Login handler
@@ -470,6 +493,49 @@ export const AdminPage: React.FC = () => {
     if (result.success) {
       setOldPassword('');
       setNewPassword('');
+    }
+  };
+
+  const handleSaveEmailConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsEmailSaving(true);
+      setEmailStatusMsg(null);
+      await api.updateEmailSettings({
+        provider: emailConfig.provider,
+        api_key: emailConfig.api_key.includes('••••') ? undefined : emailConfig.api_key,
+        sender: emailConfig.sender,
+        sender_name: emailConfig.sender_name,
+        gas_url: emailConfig.gas_url,
+      });
+      setEmailStatusMsg({ isError: false, text: '이메일 발송 설정이 성공적으로 저장되었습니다.' });
+      const refreshed = await api.getEmailSettings();
+      setEmailConfig((prev) => ({
+        ...prev,
+        ...refreshed,
+        api_key: refreshed.has_api_key ? '••••••••••••••••' : '',
+      }));
+    } catch (err: any) {
+      setEmailStatusMsg({ isError: true, text: err.message || '저장에 실패했습니다.' });
+    } finally {
+      setIsEmailSaving(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!emailTestTarget.trim()) {
+      alert('테스트 메일을 받을 이메일 주소를 입력해 주세요.');
+      return;
+    }
+    try {
+      setIsSendingTest(true);
+      setEmailStatusMsg(null);
+      const res = await api.sendTestEmail(emailTestTarget.trim());
+      setEmailStatusMsg({ isError: false, text: res.message || '테스트 메일이 발송되었습니다!' });
+    } catch (err: any) {
+      setEmailStatusMsg({ isError: true, text: err.message || '테스트 메일 발송에 실패했습니다.' });
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -1162,6 +1228,141 @@ export const AdminPage: React.FC = () => {
                 <RotateCcw className="w-3.5 h-3.5" />
                 초기 샘플 데이터로 리셋
               </button>
+            </div>
+          </div>
+
+          {/* Email Settings Card */}
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-blue-600" />
+                  회원가입 이메일 발송 설정 (외부 메일 인증)
+                </h2>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  학우들이 회원가입 시 네이버, 구글, 다음 등 외부 이메일로 6자리 인증번호를 수신할 수 있도록 연동합니다.<br/>
+                  <strong>Brevo (구 Sendinblue)</strong> 무료 서비스를 이용하면 도메인 없이도 학생회 지메일(knoucsgj@gmail.com)로 <strong>매일 300건(월 9,000건) 완전 무료</strong>로 발송됩니다.
+                </p>
+              </div>
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${emailConfig.has_api_key ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                {emailConfig.has_api_key ? '✓ 발송 API 연동됨' : '⚠ API 키 미설정 (테스트 모드)'}
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveEmailConfig} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">발송 서비스 제공자</label>
+                  <select
+                    value={emailConfig.provider}
+                    onChange={(e) => setEmailConfig((c) => ({ ...c, provider: e.target.value as any }))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="brevo">Brevo (추천: 도메인 불필요, 무료 월 9,000건)</option>
+                    <option value="gas">Google Apps Script 웹훅</option>
+                    <option value="resend">Resend (도메인 소유 시)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    {emailConfig.provider === 'gas' ? '웹훅 URL' : 'API Key (비밀 키)'}
+                  </label>
+                  {emailConfig.provider === 'gas' ? (
+                    <input
+                      type="url"
+                      value={emailConfig.gas_url}
+                      onChange={(e) => setEmailConfig((c) => ({ ...c, gas_url: e.target.value }))}
+                      placeholder="https://script.google.com/macros/s/.../exec"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <input
+                      type="password"
+                      value={emailConfig.api_key}
+                      onChange={(e) => setEmailConfig((c) => ({ ...c, api_key: e.target.value }))}
+                      placeholder={emailConfig.has_api_key ? '•••••••••••••••• (기존 키 설정됨, 변경 시 입력)' : 'xkeysib-... 또는 re_...'}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">발신자 이메일 주소</label>
+                  <input
+                    type="email"
+                    value={emailConfig.sender}
+                    onChange={(e) => setEmailConfig((c) => ({ ...c, sender: e.target.value }))}
+                    placeholder="knoucsgj@gmail.com"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-0.5">Brevo의 'Senders & IP'에 등록된 이메일과 일치해야 합니다.</p>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">발신자 표시 이름</label>
+                  <input
+                    type="text"
+                    value={emailConfig.sender_name}
+                    onChange={(e) => setEmailConfig((c) => ({ ...c, sender_name: e.target.value }))}
+                    placeholder="한국방송통신대학교 광주전남 컴퓨터과학과 학생회"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="submit"
+                  disabled={isEmailSaving}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold text-xs transition-colors shadow-xs"
+                >
+                  {isEmailSaving ? '저장 중...' : '이메일 설정 저장'}
+                </button>
+              </div>
+            </form>
+
+            {/* Test Email Section */}
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <label className="block font-semibold text-slate-700 text-xs">발송 테스트 (설정 검증)</label>
+              <div className="flex gap-2 max-w-md">
+                <input
+                  type="email"
+                  value={emailTestTarget}
+                  onChange={(e) => setEmailTestTarget(e.target.value)}
+                  placeholder="테스트 메일 받을 본인 이메일 (예: test@naver.com)"
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingTest || !emailTestTarget.trim()}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold text-xs transition-colors"
+                >
+                  {isSendingTest ? '발송 중...' : '테스트 발송'}
+                </button>
+              </div>
+            </div>
+
+            {emailStatusMsg && (
+              <div className={`p-3 rounded-xl text-xs flex items-center gap-2 ${emailStatusMsg.isError ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                {emailStatusMsg.isError ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />}
+                <span>{emailStatusMsg.text}</span>
+              </div>
+            )}
+
+            {/* Brevo Guide Accordion */}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-2">
+              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                💡 Brevo 무료 API 키 2분 만에 발급받는 방법:
+              </div>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-600 leading-relaxed pl-1">
+                <li><a href="https://www.brevo.com" target="_blank" rel="noreferrer" className="text-blue-600 font-semibold underline">brevo.com</a>에 접속하여 무료 계정을 생성합니다 (카드 등록 불필요).</li>
+                <li>우측 상단 프로필 클릭 &gt; <strong>[SMTP &amp; API]</strong> &gt; <strong>[API Keys]</strong> 탭으로 이동합니다.</li>
+                <li><strong>[Generate a new API key]</strong> 버튼을 누르고 이름을 입력한 후 생성된 키(xkeysib-...)를 복사하여 위 API Key 란에 붙여넣습니다.</li>
+                <li>좌측 메뉴 <strong>[Senders &amp; IP]</strong>에서 <strong>[Add sender]</strong>를 눌러 학생회 이메일(knoucsgj@gmail.com)을 입력하고 받은 메일함의 인증 링크를 1회 클릭하면 즉시 모든 외부 메일(네이버, 지메일 등)로 인증 메일이 발송됩니다.</li>
+              </ol>
             </div>
           </div>
 

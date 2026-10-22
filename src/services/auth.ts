@@ -104,6 +104,12 @@ export const auth = {
   },
 
   // ---- member accounts
+  async sendEmailCode(email: string, type: 'register' | 'reset-password' = 'register'): Promise<{ success: boolean; message: string; devCode?: string }> {
+    return await call<{ success: boolean; message: string; devCode?: string }>('send-email-code', 'POST', { email, type });
+  },
+  async verifyEmailCode(email: string, code: string): Promise<{ success: boolean; message: string }> {
+    return await call<{ success: boolean; message: string }>('verify-email-code', 'POST', { email, code });
+  },
   async register(payload: RegisterPayload): Promise<MemberProfile> {
     const data = await call<{ member: MemberProfile }>('register', 'POST', payload);
     setState({ member: data.member });

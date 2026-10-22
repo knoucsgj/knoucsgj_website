@@ -538,5 +538,39 @@ export const api = {
     localStorage.removeItem(BUDGET_REPORTS_KEY);
     localStorage.removeItem(MINUTES_STORAGE_KEY);
     localStorage.removeItem(RENTALS_STORAGE_KEY);
+  },
+
+  // ==========================================
+  // 12. 이메일 발송 설정 (Admin)
+  // ==========================================
+  async getEmailSettings() {
+    return await fetchStrict<{
+      provider: 'brevo' | 'resend' | 'gas';
+      sender: string;
+      sender_name: string;
+      gas_url?: string;
+      has_api_key: boolean;
+      api_key_masked?: string;
+    }>('email-settings');
+  },
+
+  async updateEmailSettings(payload: {
+    provider?: string;
+    api_key?: string;
+    sender?: string;
+    sender_name?: string;
+    gas_url?: string;
+  }) {
+    return await fetchStrict<{ success: boolean; message: string }>('email-settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async sendTestEmail(testEmail: string) {
+    return await fetchStrict<{ success: boolean; message: string }>('email-settings', {
+      method: 'POST',
+      body: JSON.stringify({ test_email: testEmail }),
+    });
   }
 };
