@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, useAuth } from '../services/auth';
-import { UserCircle, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { UserCircle, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none';
@@ -59,7 +59,17 @@ export const AccountPage: React.FC = () => {
     }
   };
 
+  const roleLabel =
+    member.role === 'president'
+      ? '학생회장'
+      : member.role === 'officer'
+      ? '임원진'
+      : member.role === 'regular'
+      ? '정회원'
+      : '준회원';
+
   const rows: [string, string][] = [
+    ['회원 등급', roleLabel],
     ['아이디', member.username],
     ['닉네임', member.nickname],
     ['성명', member.name],
@@ -73,12 +83,38 @@ export const AccountPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="border-b border-slate-200 pb-6 flex items-center gap-3">
-        <UserCircle className="w-10 h-10 text-blue-600" />
-        <div>
-          <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950">내 정보</h1>
-          <p className="text-sm text-slate-600">{member.nickname} 님</p>
+      <div className="border-b border-slate-200 pb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <UserCircle className="w-10 h-10 text-blue-600" />
+          <div>
+            <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950">내 정보</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-slate-600 font-semibold">{member.nickname} 님</span>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                  member.role === 'president'
+                    ? 'bg-purple-100 text-purple-700 border-purple-200'
+                    : member.role === 'officer'
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : member.role === 'regular'
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-100 text-amber-700 border-amber-200'
+                }`}
+              >
+                {roleLabel}
+              </span>
+            </div>
+          </div>
         </div>
+        {(member.role === 'president' || member.role === 'officer') && (
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs"
+          >
+            <Shield className="w-4 h-4 text-amber-400" />
+            관리자 센터
+          </Link>
+        )}
       </div>
 
       <section className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs">
@@ -96,6 +132,38 @@ export const AccountPage: React.FC = () => {
             </div>
           ))}
         </dl>
+        <div className="mt-5 p-4 rounded-2xl border text-xs leading-relaxed space-y-1.5 ${
+          member.role === 'president' || member.role === 'officer'
+            ? 'bg-indigo-50/60 border-indigo-100 text-indigo-900'
+            : member.role === 'regular'
+            ? 'bg-emerald-50/60 border-emerald-100 text-emerald-900'
+            : 'bg-amber-50/60 border-amber-100 text-amber-900'
+        }">
+          <div className="font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+            회원 등급 권한 안내
+          </div>
+          {member.role === 'president' && (
+            <p>
+              <strong>학생회장 등급:</strong> 관리자 센터 및 회원 관리 접근이 가능하며, 공지사항 및 학사일정을 총괄 관리합니다. (단, 학생회칙 및 세칙 수정, 결산 및 회의록 공지사항의 삭제는 최고 관리자만 가능합니다.)
+            </p>
+          )}
+          {member.role === 'officer' && (
+            <p>
+              <strong>임원진 등급:</strong> 학생회 관리자 센터에서 공지사항, 학사일정, 스터디 승인, 임원 정보를 관리할 수 있으며, 열린 건의함에 공식 답변 댓글을 작성할 수 있습니다. (회원 관리 및 타인 게시물 강제 삭제는 제한됩니다.)
+            </p>
+          )}
+          {member.role === 'regular' && (
+            <p>
+              <strong>정회원:</strong> 광주전남지역대학 컴퓨터과학과 소속 재학생으로, 커뮤니티 자유게시판 글/댓글 작성, 학습자료실 자료 열람/업로드/다운로드, 스터디 개설 신청 등 모든 서비스를 이용하실 수 있습니다.
+            </p>
+          )}
+          {member.role === 'associate' && (
+            <p>
+              <strong>준회원:</strong> 광주전남지역대학 컴퓨터과학과 소속이 아닌 회원은 준회원으로 분류됩니다. 홈페이지의 모든 글과 자료 열람은 가능하지만, 학습자료실 파일 다운로드 및 글 작성이 제한됩니다. 정보 정정은 학생회에 문의해 주세요.
+            </p>
+          )}
+        </div>
         <p className="mt-4 text-xs text-slate-500">
           정보 정정·처리정지는 학생회 이메일(knoucsgj@gmail.com)로 요청해 주세요.
         </p>

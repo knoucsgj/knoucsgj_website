@@ -104,6 +104,7 @@ interface Member {
   student_no: string;
   regional_college: string;
   department: string;
+  role: 'president' | 'officer' | 'regular' | 'associate';
   created_at: string;
 }
 interface Session {
@@ -128,7 +129,7 @@ async function loadSession(req: Request, db: D1): Promise<Session> {
     const row = await db
       .prepare(
         `SELECT m.id, m.username, m.nickname, m.name, m.phone, m.address, m.student_no,
-                m.regional_college, m.department, m.created_at
+                m.regional_college, m.department, m.role, m.created_at
            FROM sessions s JOIN members m ON m.id = s.member_id
           WHERE s.token_hash = ? AND s.kind = 'member' AND s.expires_at > ?`
       )
@@ -147,14 +148,35 @@ async function loadSession(req: Request, db: D1): Promise<Session> {
 }
 
 const requireAdmin = (s: Session) => {
-  if (!s.admin) throw new HttpError(401, '관리자 로그인이 필요합니다.');
+  if (!s.admin) throw new HttpError(401, '최고 관리자(admin) 로그인이 필요합니다.');
 };
 const requireMember = (s: Session) => {
   if (!s.member) throw new HttpError(401, '회원 로그인이 필요합니다.');
   return s.member;
 };
-const canModify = (s: Session, ownerId: string | null) =>
-  s.admin || (!!s.member && !!ownerId && s.member.id === ownerId);
+
+const isMasterAdmin = (s: Session) => s.admin;
+const isPresident = (s: Session) => s.member?.role === 'president';
+const isOfficer = (s: Session) => s.member?.role === 'officer';
+const isCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
+const isRegularOrAbove = (s: Session) => s.admin || (!!s.member && s.member.role !== 'associate');
+const canManageMembers = (s: Session) => s.admin || isPresident(s);
+
+const requireCouncil = (s: Session) => {
+  if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 관리자만 접근할 수 있습니다.');
+};
+
+const requireMemberManager = (s: Session) => {
+  if (isOfficer(s)) throw new HttpError(403, '임원진 등급은 회원 관리 권한이 없습니다.');
+  if (!canManageMembers(s)) throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
+};
+
+const canModify = (s: Session, ownerId: string | null) => {
+  if (s.admin) return true; // 최고 관리자는 모든 글 관리 가능
+  if (isPresident(s)) return true; // 학생회장은 커뮤니티 전반 관리 가능
+  if (s.member && ownerId && s.member.id === ownerId) return true; // 본인 글 수정/삭제 가능
+  return false; // 임원진은 타인 글 강제 삭제 불가
+};
 
 // Throttle login attempts: max 8 failures / 15 min per key
 async function checkThrottle(db: D1, key: string) {
@@ -428,22 +450,26 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
       throw new HttpError(400, '이메일 인증이 완료되지 않았습니다. [인증번호 발송] 후 인증을 완료해 주세요.');
     }
 
+    const isGwangju = v.regional_college === '광주전남';
+    const isCS = v.department.includes('컴퓨터과학') || v.department === '컴퓨터과학과';
+    const defaultRole = isGwangju && isCS ? 'regular' : 'associate';
+
     const { hash, salt } = await hashPassword(v.password);
     const id = crypto.randomUUID();
     await db
       .prepare(
         `INSERT INTO members (id, username, password_hash, password_salt, nickname, name, phone, address,
-                              student_no, regional_college, department, consent_version, consented_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                              student_no, regional_college, department, role, consent_version, consented_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(id, v.username, hash, salt, v.nickname, v.name, v.phone, v.address, v.student_no,
-        v.regional_college, v.department, PRIVACY_VERSION, new Date().toISOString(), new Date().toISOString())
+        v.regional_college, v.department, defaultRole, PRIVACY_VERSION, new Date().toISOString(), new Date().toISOString())
       .run();
     await db.prepare('DELETE FROM email_verifications WHERE email = ?').bind(v.username).run();
     const token = await createSession(db, 'member', id, MEMBER_TTL);
     const h = new Headers();
     h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
-    const member = await db.prepare('SELECT id, username, nickname, name, phone, address, student_no, regional_college, department, created_at FROM members WHERE id = ?').bind(id).first();
+    const member = await db.prepare('SELECT id, username, nickname, name, phone, address, student_no, regional_college, department, role, created_at FROM members WHERE id = ?').bind(id).first();
     return json({ member }, 201, h);
   }
 
@@ -551,40 +577,56 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     return json({ success: true, message: '비밀번호가 성공적으로 재설정되었습니다. 새 비밀번호로 로그인해 주세요.' });
   }
 
-  // ---- admin session
+  // ---- admin session (admin account or student council member)
   if (action === 'admin-login' && method === 'POST') {
     const b: any = await readJson(req);
     const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
     const key = `admin:${ip}`;
     await checkThrottle(db, key);
-    const id = str(b.username || b.id, 50).toLowerCase();
+    const id = str(b.username || b.id, 80).toLowerCase();
     const pw = typeof b.password === 'string' ? b.password : '';
-    const stored: any = await db.prepare("SELECT value FROM settings WHERE key = 'admin_pw'").first();
-    let valid = false;
 
-    // Support 'admin' id check (or legacy password only)
-    if (id && id !== 'admin') {
-      valid = false;
-    } else if (pw === 'admin') {
-      valid = true;
-    } else if (stored) {
-      const [hash, salt] = String(stored.value).split(':');
-      valid = await verifyPassword(pw, hash, salt);
+    let isMaster = false;
+    let councilMember: any = null;
+
+    if (id === 'admin' || !id) {
+      const stored: any = await db.prepare("SELECT value FROM settings WHERE key = 'admin_pw'").first();
+      if (pw === 'admin') {
+        isMaster = true;
+      } else if (stored) {
+        const [hash, salt] = String(stored.value).split(':');
+        isMaster = await verifyPassword(pw, hash, salt);
+      } else {
+        const expectedPw = env.ADMIN_PASSWORD || 'admin';
+        isMaster = pw === expectedPw || safeEqual(await sha256Hex(pw), await sha256Hex(expectedPw));
+      }
     } else {
-      // Default: username 'admin', password 'admin' (or env.ADMIN_PASSWORD)
-      const expectedPw = env.ADMIN_PASSWORD || 'admin';
-      valid = (id === 'admin' || !id) && (pw === expectedPw || safeEqual(await sha256Hex(pw), await sha256Hex(expectedPw)));
+      // Check if ID is a council member (president or officer)
+      const memberRow: any = await db.prepare('SELECT * FROM members WHERE username = ?').bind(id).first();
+      if (memberRow && (memberRow.role === 'president' || memberRow.role === 'officer')) {
+        const okPw = await verifyPassword(pw, memberRow.password_hash, memberRow.password_salt);
+        if (okPw) {
+          councilMember = memberRow;
+        }
+      }
     }
 
-    if (!valid) {
+    if (!isMaster && !councilMember) {
       await recordFailure(db, key);
-      throw new HttpError(401, '관리자 아이디 또는 비밀번호가 올바르지 않습니다.');
+      throw new HttpError(401, '관리자 아이디 또는 비밀번호가 올바르지 않거나 임원 권한이 없습니다.');
     }
     await clearFailures(db, key);
-    const token = await createSession(db, 'admin', null, ADMIN_TTL);
     const h = new Headers();
-    h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, token, ADMIN_TTL));
-    return json({ admin: true }, 200, h);
+    if (isMaster) {
+      const token = await createSession(db, 'admin', null, ADMIN_TTL);
+      h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, token, ADMIN_TTL));
+      return json({ success: true, role: 'admin' }, 200, h);
+    } else {
+      const token = await createSession(db, 'member', councilMember.id, MEMBER_TTL);
+      h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
+      const { password_hash, password_salt, consent_version, consented_at, ...member } = councilMember;
+      return json({ success: true, role: councilMember.role, member }, 200, h);
+    }
   }
 
   if (action === 'admin-logout' && method === 'POST') {
@@ -650,39 +692,45 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
 
   if (resource === 'auth') return handleAuth(req, db, env, session, url.searchParams.get('action'));
 
-  // ---- members (admin only)
+  // ---- members (admin & president only; officer forbidden)
   if (resource === 'members') {
-    requireAdmin(session);
+    requireMemberManager(session);
     if (method === 'GET') {
       const { results } = await db
         .prepare(
           `SELECT id, username, nickname, name, phone, address, student_no, regional_college, department,
-                  consent_version, consented_at, created_at FROM members ORDER BY created_at DESC`
+                  role, consent_version, consented_at, created_at FROM members ORDER BY created_at DESC`
         )
         .all();
       return json(results);
     }
     if (method === 'PUT' && id) {
       const b: any = await readJson(req);
-      const nickname = str(b.nickname, 20);
-      if (nickname.length < 2) throw new HttpError(400, '닉네임은 2자 이상이어야 합니다.');
-      const dup = await db
-        .prepare('SELECT id FROM members WHERE nickname = ? COLLATE NOCASE AND id != ?')
-        .bind(nickname, id)
-        .first();
-      if (dup) throw new HttpError(409, '이미 다른 회원이 사용 중인 닉네임입니다.');
-
-      await db.prepare('UPDATE members SET nickname = ? WHERE id = ?').bind(nickname, id).run();
-
-      for (const t of ['free_posts', 'feedbacks', 'academic_materials']) {
-        await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
+      if (b.role !== undefined) {
+        const validRoles = ['president', 'officer', 'regular', 'associate'];
+        if (!validRoles.includes(b.role)) throw new HttpError(400, '올바르지 않은 등급입니다.');
+        await db.prepare('UPDATE members SET role = ? WHERE id = ?').bind(b.role, id).run();
       }
-      for (const t of ['free_post_replies', 'feedback_replies']) {
-        await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
-      }
-      await db.prepare('UPDATE studies SET leader = ? WHERE author_id = ?').bind(nickname, id).run();
+      if (b.nickname !== undefined) {
+        const nickname = str(b.nickname, 20);
+        if (nickname.length < 2) throw new HttpError(400, '닉네임은 2자 이상이어야 합니다.');
+        const dup = await db
+          .prepare('SELECT id FROM members WHERE nickname = ? COLLATE NOCASE AND id != ?')
+          .bind(nickname, id)
+          .first();
+        if (dup) throw new HttpError(409, '이미 다른 회원이 사용 중인 닉네임입니다.');
 
-      return json({ success: true, nickname });
+        await db.prepare('UPDATE members SET nickname = ? WHERE id = ?').bind(nickname, id).run();
+
+        for (const t of ['free_posts', 'feedbacks', 'academic_materials']) {
+          await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
+        }
+        for (const t of ['free_post_replies', 'feedback_replies']) {
+          await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
+        }
+        await db.prepare('UPDATE studies SET leader = ? WHERE author_id = ?').bind(nickname, id).run();
+      }
+      return json({ success: true });
     }
     if (method === 'DELETE' && id) {
       for (const t of ['free_posts', 'free_post_replies', 'feedbacks', 'feedback_replies', 'academic_materials', 'studies']) {
@@ -694,7 +742,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // ---- notices (read: public / write: admin)
+  // ---- notices (read: public / write: council, delete 결산/회의록: master admin only)
   if (resource === 'notices') {
     if (method === 'GET') {
       const { results } = await db.prepare('SELECT * FROM notices ORDER BY is_pinned DESC, created_at DESC').all();
@@ -706,7 +754,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         }))
       );
     }
-    requireAdmin(session);
+    requireCouncil(session);
     if (method === 'POST') {
       const b: any = await readJson(req);
       const att = Array.isArray(b.attachments) && b.attachments[0] ? b.attachments[0] : null;
@@ -740,6 +788,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json({ success: true });
     }
     if (method === 'DELETE' && id) {
+      requireCouncil(session);
+      const existing: any = await db.prepare('SELECT category FROM notices WHERE id = ?').bind(id).first();
+      if (existing && (existing.category === '결산' || existing.category === '회의록')) {
+        if (!session.admin) {
+          throw new HttpError(403, '공지사항 중 결산 및 회의록 카테고리는 최고 관리자(admin)만 삭제할 수 있습니다.');
+        }
+      }
       await db.prepare('DELETE FROM notices WHERE id = ?').bind(id).run();
       return json({ success: true });
     }
@@ -751,7 +806,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const { results } = await db.prepare('SELECT * FROM academic_events ORDER BY start_date ASC').all();
       return json(results.map((r: any) => ({ ...r, is_important: !!r.is_important })));
     }
-    requireAdmin(session);
+    requireCouncil(session);
     if (method === 'POST') {
       const b: any = await readJson(req);
       const e = {
@@ -786,10 +841,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // ---- materials (read: public / write: member)
+  // ---- materials (read: public / download & write: regular or above)
   if (resource === 'materials') {
     if (method === 'GET' && id) {
       // single item incl. file data (used for download)
+      if (!isRegularOrAbove(session)) {
+        throw new HttpError(403, '학습자료 다운로드는 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+      }
       const row = await db.prepare('SELECT * FROM academic_materials WHERE id = ?').bind(id).first();
       return row ? json(row) : json({ error: 'Not found' }, 404);
     }
@@ -825,6 +883,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'POST') {
       const member = requireMember(session);
+      if (!isRegularOrAbove(session)) {
+        throw new HttpError(403, '학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      }
       const b: any = await readJson(req);
       if (b.file_url && String(b.file_url).length > 1500000) throw new HttpError(413, '첨부 파일은 1MB 이하만 가능합니다.');
       const m = {
@@ -874,6 +935,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'POST') {
       const member = requireMember(session);
+      if (!isRegularOrAbove(session)) {
+        throw new HttpError(403, '자유게시판 글 및 댓글 작성은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      }
       const b: any = await readJson(req);
       if (b.type === 'reply') {
         const r = {
@@ -929,11 +993,16 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     if (method === 'POST') {
       const b: any = await readJson(req);
       if (b.type === 'reply') {
-        if (!session.admin && !session.member) throw new HttpError(401, '로그인이 필요합니다.');
+        if (!isCouncil(session)) {
+          throw new HttpError(403, '건의함 답변 댓글은 학생회 임원진, 학생회장 및 관리자만 작성할 수 있습니다.');
+        }
+        const authorName = session.admin
+          ? (str(b.author, 50) || '학생회')
+          : session.member!.nickname;
         const r = {
           id: `fb-reply-${Date.now()}-${randomHex(3)}`,
           feedback_id: str(b.feedback_id, 80),
-          author: session.admin ? str(b.author, 50) || '학생회' : session.member!.nickname,
+          author: authorName,
           author_id: session.admin ? null : session.member!.id,
           content: str(b.content, 2000),
           created_at: today(),
@@ -943,9 +1012,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
           .prepare('INSERT INTO feedback_replies (id, feedback_id, author, author_id, content, created_at) VALUES (?,?,?,?,?,?)')
           .bind(r.id, r.feedback_id, r.author, r.author_id, r.content, r.created_at)
           .run();
-        if (session.admin) {
-          await db.prepare("UPDATE feedbacks SET status = '답변완료' WHERE id = ?").bind(r.feedback_id).run();
-        }
+        await db.prepare("UPDATE feedbacks SET status = '답변완료' WHERE id = ?").bind(r.feedback_id).run();
         return json(r);
       }
       const member = requireMember(session);
@@ -996,12 +1063,15 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     if (method === 'POST') {
       const b: any = await readJson(req);
       let leader: string, authorId: string | null, approval: string;
-      if (session.admin) {
-        leader = str(b.leader, 50) || '학생회';
-        authorId = null;
+      if (isCouncil(session)) {
+        leader = (session.member && session.member.nickname) || str(b.leader, 50) || '학생회';
+        authorId = session.member ? session.member.id : null;
         approval = 'approved';
       } else {
         const member = requireMember(session);
+        if (!isRegularOrAbove(session)) {
+          throw new HttpError(403, '스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+        }
         leader = member.nickname;
         authorId = member.id;
         approval = 'pending';
@@ -1035,7 +1105,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(s);
     }
     if (method === 'PUT' && id) {
-      requireAdmin(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const allowedStatus = ['모집중', '진행중', '마감', '종료'];
       const allowedApproval = ['approved', 'pending', 'rejected'];
@@ -1085,7 +1155,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(null);
     }
     if (method === 'PUT' || method === 'POST') {
-      requireAdmin(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const intro = {
         title: str(b.title, 200),
@@ -1105,7 +1175,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(results);
     }
     if (method === 'POST') {
-      requireAdmin(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const m = {
         id: b.id ? str(b.id, 50) : `cm-${Date.now()}-${randomHex(2)}`,
@@ -1123,7 +1193,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(m, 201);
     }
     if (method === 'PUT' && id) {
-      requireAdmin(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const sets: string[] = [];
       const vals: any[] = [];
@@ -1138,7 +1208,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json({ success: true });
     }
     if (method === 'DELETE' && id) {
-      requireAdmin(session);
+      requireCouncil(session);
       await db.prepare('DELETE FROM council_members WHERE id = ?').bind(id).run();
       return json({ success: true });
     }
@@ -1151,7 +1221,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(results);
     }
     if (method === 'POST') {
-      requireAdmin(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const m = {
         id: b.id ? str(b.id, 50) : `minute-${Date.now()}-${randomHex(2)}`,
@@ -1173,7 +1243,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(m, 201);
     }
     if (method === 'DELETE' && id) {
-      requireAdmin(session);
+      requireCouncil(session);
       await db.prepare('DELETE FROM meeting_minutes WHERE id = ?').bind(id).run();
       return json({ success: true });
     }

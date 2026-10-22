@@ -72,7 +72,8 @@ export const StudyMaterialsPage: React.FC = () => {
 
   const { member, isAdmin } = useAuth();
   const requireLogin = useRequireLogin();
-  const canModify = (authorId?: string | null) => isAdmin || (!!member && !!authorId && authorId === member.id);
+  const canModify = (authorId?: string | null) =>
+    isAdmin || member?.role === 'president' || (!!member && !!authorId && authorId === member.id);
 
   useEffect(() => {
     loadData();
@@ -114,6 +115,11 @@ export const StudyMaterialsPage: React.FC = () => {
   };
 
   const handleDownload = async (mat: AcademicMaterial) => {
+    if (!requireLogin()) return;
+    if (member?.role === 'associate') {
+      alert('학습자료 다운로드는 광주전남지역대학 컴퓨터과학과 재학생(정회원) 전용 혜택입니다. 준회원은 열람만 가능합니다.');
+      return;
+    }
     await api.incrementMaterialDownload(mat.id);
     setMaterials((prev) =>
       prev.map((m) => (m.id === mat.id ? { ...m, downloads: m.downloads + 1 } : m))
@@ -148,6 +154,10 @@ export const StudyMaterialsPage: React.FC = () => {
 
   const handleCreateStudy = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (member?.role === 'associate') {
+      alert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+      return;
+    }
     if (!newStudyTitle.trim() || !newSubject.trim()) {
       alert('스터디 제목과 주제를 입력해주세요.');
       return;
@@ -182,6 +192,10 @@ export const StudyMaterialsPage: React.FC = () => {
   };
 
   const openCreateModal = (defaultCategory: '출석수업요약' | '기타자료' = '출석수업요약') => {
+    if (member?.role === 'associate') {
+      alert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+      return;
+    }
     setEditingMaterial(null);
     setNewMatGrade(selectedGrade);
     setNewMatSemester(selectedSemester);
@@ -225,6 +239,10 @@ export const StudyMaterialsPage: React.FC = () => {
 
   const handleSaveMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (member?.role === 'associate') {
+      alert('자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      return;
+    }
     if (!newMatTitle.trim() || !newMatCourse.trim()) {
       alert('자료 제목과 전공 과목명을 입력해주세요.');
       return;
@@ -334,7 +352,14 @@ export const StudyMaterialsPage: React.FC = () => {
           )}
           {activeTab === 'studies' && (
             <button
-              onClick={() => requireLogin() && setIsCreateStudyModalOpen(true)}
+              onClick={() => {
+                if (!requireLogin()) return;
+                if (member?.role === 'associate') {
+                  alert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  return;
+                }
+                setIsCreateStudyModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm transition-colors shadow-xs"
             >
               <PlusCircle className="w-4 h-4" />

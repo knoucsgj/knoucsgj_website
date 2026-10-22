@@ -57,7 +57,12 @@ export const CommunityPage: React.FC = () => {
 
   const { member, isAdmin } = useAuth();
   const requireLogin = useRequireLogin();
-  const canDelete = (authorId?: string | null) => isAdmin || (!!member && !!authorId && authorId === member.id);
+  const isPresident = member?.role === 'president';
+  const isOfficer = member?.role === 'officer';
+  const isAssociate = member?.role === 'associate';
+  const canAnswerFeedback = isAdmin || isPresident || isOfficer;
+  const canDelete = (authorId?: string | null) =>
+    isAdmin || isPresident || (!!member && !!authorId && authorId === member.id);
 
   useEffect(() => {
     loadData();
@@ -77,6 +82,10 @@ export const CommunityPage: React.FC = () => {
     e.preventDefault();
     if (!freeTitle.trim() || !freeContent.trim()) {
       alert('제목과 내용을 입력해 주세요.');
+      return;
+    }
+    if (isAssociate) {
+      alert('자유게시판 글쓰기는 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
       return;
     }
     try {
@@ -107,6 +116,10 @@ export const CommunityPage: React.FC = () => {
       return;
     }
     if (!requireLogin()) return;
+    if (isAssociate) {
+      alert('자유게시판 댓글 작성은 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다.');
+      return;
+    }
     try {
       await api.addFreePostReply(postId, { content: text });
       setFreeReplyInputMap((prev) => ({ ...prev, [postId]: '' }));
@@ -159,13 +172,17 @@ export const CommunityPage: React.FC = () => {
   };
 
   const handleAddFeedbackReply = async (feedbackId: string) => {
+    if (!canAnswerFeedback) {
+      alert('건의함 답변 댓글은 학생회 임원진, 학생회장 및 관리자만 작성할 수 있습니다.');
+      return;
+    }
     const replyText = replyInputMap[feedbackId]?.trim();
     if (!replyText) {
       alert('답변 내용을 입력해 주세요.');
       return;
     }
-    if (!isAdmin && !requireLogin()) return;
-    const replyAuthor = replyAuthorMap[feedbackId]?.trim() || '학생회';
+    const defaultAuthor = isAdmin ? '학생회' : (member?.nickname || '학생회');
+    const replyAuthor = replyAuthorMap[feedbackId]?.trim() || defaultAuthor;
     try {
       await api.addFeedbackReply(feedbackId, {
         author: replyAuthor,
@@ -174,7 +191,7 @@ export const CommunityPage: React.FC = () => {
       setReplyInputMap((prev) => ({ ...prev, [feedbackId]: '' }));
       const data = await api.getFeedbacks();
       setFeedbacks(data);
-      alert('답변 댓글이 성공적으로 등록되었습니다!');
+      alert('학생회 공식 답변 댓글이 성공적으로 등록되었습니다!');
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
@@ -243,7 +260,14 @@ export const CommunityPage: React.FC = () => {
 
         {activeTab === 'free' && (
           <button
-            onClick={() => requireLogin() && setIsWriteFreeModalOpen(true)}
+            onClick={() => {
+              if (!requireLogin()) return;
+              if (isAssociate) {
+                alert('자유게시판 글쓰기는 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+                return;
+              }
+              setIsWriteFreeModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
@@ -651,56 +675,66 @@ export const CommunityPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Reply Input Form */}
-                        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                              <MessageCircle className="w-4 h-4 text-indigo-600" />
-                              {isAdmin ? '관리자 공식 답변 댓글 달기' : '댓글 작성 (학생회 공식 답변은 관리자 전용)'}
+                        {/* Reply Input Form (Only for Admin, President, Officer) */}
+                        {canAnswerFeedback ? (
+                          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-indigo-100 bg-indigo-50/20 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                <MessageCircle className="w-4 h-4 text-indigo-600" />
+                                학생회 임원 공식 답변 댓글 작성
+                              </span>
+                              <span className="text-[11px] text-indigo-600 font-medium">
+                                임원 권한 확인됨
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <input
+                                type="text"
+                                placeholder={member?.nickname || '작성자 (예: 학생회장, 총무부장)'}
+                                value={replyAuthorMap[fb.id] || ''}
+                                onChange={(e) =>
+                                  setReplyAuthorMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
+                                }
+                                className="sm:col-span-1 px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <input
+                                type="text"
+                                placeholder="학우에게 전할 공식 답변 내용을 입력해 주세요..."
+                                value={replyInputMap[fb.id] || ''}
+                                onChange={(e) =>
+                                  setReplyInputMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddFeedbackReply(fb.id);
+                                }}
+                                className="sm:col-span-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <button
+                                onClick={() => handleAddFeedbackReply(fb.id)}
+                                className="sm:col-span-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                답변 등록
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 font-medium">
+                              <MessageCircle className="w-4 h-4 text-slate-400" />
+                              건의사항에 대한 답변은 학생회 임원진만 작성할 수 있습니다.
                             </span>
-                            {!isAdmin && (
+                            {!member && !isAdmin && (
                               <Link
                                 to="/admin"
-                                className="text-xs text-indigo-600 hover:underline font-semibold"
+                                className="text-indigo-600 hover:underline font-semibold"
                               >
                                 임원 관리자 로그인 →
                               </Link>
                             )}
                           </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                            {isAdmin && (
-                            <input
-                              type="text"
-                              placeholder="작성자 (예: 학생회장, 학술부장)"
-                              value={replyAuthorMap[fb.id] || ''}
-                              onChange={(e) =>
-                                setReplyAuthorMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
-                              }
-                              className="sm:col-span-1 px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-                            />
-                            )}
-                            <input
-                              type="text"
-                              placeholder="답변 내용을 입력해 주세요..."
-                              value={replyInputMap[fb.id] || ''}
-                              onChange={(e) =>
-                                setReplyInputMap((prev) => ({ ...prev, [fb.id]: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleAddFeedbackReply(fb.id);
-                              }}
-                              className={` px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500`}
-                            />
-                            <button
-                              onClick={() => handleAddFeedbackReply(fb.id)}
-                              className="sm:col-span-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              답변 등록
-                            </button>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>

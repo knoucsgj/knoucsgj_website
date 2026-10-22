@@ -478,6 +478,14 @@ export const api = {
     return true;
   },
 
+  async updateMemberRole(id: string, role: AdminMember['role']): Promise<boolean> {
+    await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+    return true;
+  },
+
   async deleteMember(id: string): Promise<boolean> {
     await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;

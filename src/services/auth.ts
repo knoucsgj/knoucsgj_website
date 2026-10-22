@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react';
 
 const ADMIN_FLAG_KEY = 'knoucs_admin_session'; // UI hint only. The server session cookie is the source of truth.
 
+export type MemberRole = 'president' | 'officer' | 'regular' | 'associate';
+
 export interface MemberProfile {
   id: string;
   username: string;
@@ -12,6 +14,7 @@ export interface MemberProfile {
   student_no: string;
   regional_college: string;
   department: string;
+  role: MemberRole;
   created_at: string;
 }
 
@@ -83,8 +86,54 @@ export const auth = {
     return state.member;
   },
   isLoggedIn(): boolean {
-    return !!state.member;
+    return !!state.member || state.isAdmin;
   },
+  getRole(): 'admin' | MemberRole | 'guest' {
+    if (state.isAdmin) return 'admin';
+    if (state.member) return state.member.role || 'associate';
+    return 'guest';
+  },
+  isMasterAdmin(): boolean {
+    return state.isAdmin;
+  },
+  isPresident(): boolean {
+    return state.member?.role === 'president';
+  },
+  isOfficer(): boolean {
+    return state.member?.role === 'officer';
+  },
+  isCouncil(): boolean {
+    return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
+  },
+  isRegularOrAbove(): boolean {
+    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+  },
+  canAccessAdmin(): boolean {
+    return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
+  },
+  canManageMembers(): boolean {
+    return state.isAdmin || state.member?.role === 'president';
+  },
+  canDeleteNotice(category?: string): boolean {
+    if (category === '결산' || category === '회의록') return state.isAdmin;
+    return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
+  },
+  canAnswerFeedback(): boolean {
+    return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
+  },
+  canDownloadMaterials(): boolean {
+    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+  },
+  canWriteFreePost(): boolean {
+    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+  },
+  canUploadMaterials(): boolean {
+    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+  },
+  canCreateStudy(): boolean {
+    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+  },
+
   subscribe(listener: () => void) {
     listeners.add(listener);
     return () => listeners.delete(listener);
@@ -145,13 +194,19 @@ export const auth = {
   },
 
   // ---- admin (student council) session
-  async adminLogin(usernameOrPw: string, pw?: string): Promise<boolean> {
+  async adminLogin(usernameOrPw: string, pw?: string): Promise<{ success: boolean; role?: string }> {
     const username = pw !== undefined ? usernameOrPw : 'admin';
     const password = pw !== undefined ? pw : usernameOrPw;
     try {
-      await call('admin-login', 'POST', { username, password });
-      setState({ isAdmin: true });
-      return true;
+      const res = await call<{ success: boolean; role?: string; member?: MemberProfile }>('admin-login', 'POST', { username, password });
+      if (res.role === 'admin') {
+        setState({ isAdmin: true });
+      } else if (res.member) {
+        setState({ member: res.member, isAdmin: false });
+      } else {
+        setState({ isAdmin: true });
+      }
+      return res;
     } catch (e: any) {
       throw e;
     }

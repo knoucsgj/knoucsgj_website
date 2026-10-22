@@ -198,6 +198,7 @@ export interface AdminMember {
   student_no: string;
   regional_college: string;
   department: string;
+  role: 'president' | 'officer' | 'regular' | 'associate';
   consent_version: string;
   consented_at: string;
   created_at: string;

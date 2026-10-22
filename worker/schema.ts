@@ -78,6 +78,7 @@ const ADD_COLUMNS: [string, string, string][] = [
   ['academic_materials', 'author_id', 'TEXT'],
   ['studies', 'author_id', 'TEXT'],
   ['studies', 'approval', "TEXT NOT NULL DEFAULT 'approved'"],
+  ['members', 'role', "TEXT NOT NULL DEFAULT 'associate'"],
 ];
 
 let ready: Promise<void> | null = null;
@@ -151,5 +152,18 @@ async function run(db: D1) {
     }
     stmtsV2.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v2', '1')"));
     await db.batch(stmtsV2);
+  }
+
+  // Role auto-migration for existing members
+  const migratedRoles = await db.prepare("SELECT value FROM settings WHERE key = 'migrated_roles_v1'").first();
+  if (!migratedRoles) {
+    try {
+      await db.prepare(
+        "UPDATE members SET role = 'regular' WHERE regional_college = '광주전남' AND (department LIKE '%컴퓨터과학%' OR department = '컴퓨터과학과')"
+      ).run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('migrated_roles_v1', '1')").run();
+    } catch {
+      /* ignore */
+    }
   }
 }

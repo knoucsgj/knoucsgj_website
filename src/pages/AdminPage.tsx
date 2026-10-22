@@ -30,10 +30,20 @@ import {
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, member } = useAuth();
+  const isPresident = member?.role === 'president';
+  const isOfficer = member?.role === 'officer';
+  const canAccess = isAdmin || isPresident || isOfficer;
+  const canManageMembers = isAdmin || isPresident;
+
   const [adminIdInput, setAdminIdInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Member Role Edit state
+  const [editingRoleMember, setEditingRoleMember] = useState<AdminMember | null>(null);
+  const [newMemberRole, setNewMemberRole] = useState<AdminMember['role']>('regular');
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'
   const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'>('notices');
@@ -151,10 +161,16 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (canAccess) {
       loadAllData();
     }
-  }, [isAdmin]);
+  }, [canAccess]);
+
+  useEffect(() => {
+    if (!canManageMembers && activeTab === 'members') {
+      setActiveTab('notices');
+    }
+  }, [canManageMembers, activeTab]);
 
   const loadAllData = async () => {
     const [nData, eData, sData, iData, mData, minData, memberData] = await Promise.all([
@@ -242,7 +258,11 @@ export const AdminPage: React.FC = () => {
     loadAllData();
   };
 
-  const handleDeleteNotice = async (id: string, title: string) => {
+  const handleDeleteNotice = async (id: string, title: string, category?: string) => {
+    if ((category === '결산' || category === '회의록') && !isAdmin) {
+      alert('결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다.');
+      return;
+    }
     if (confirm(`"${title}" 공지사항을 정말 삭제하시겠습니까?`)) {
       await api.deleteNotice(id);
       loadAllData();
@@ -392,10 +412,56 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleOpenRoleModal = (m: AdminMember) => {
+    setEditingRoleMember(m);
+    setNewMemberRole(m.role || 'associate');
+  };
+
+  const handleSaveMemberRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoleMember) return;
+    try {
+      setIsUpdatingRole(true);
+      await api.updateMemberRole(editingRoleMember.id, newMemberRole);
+      setMembers((prev) =>
+        prev.map((m) => (m.id === editingRoleMember.id ? { ...m, role: newMemberRole } : m))
+      );
+      const roleNames: Record<AdminMember['role'], string> = {
+        president: '학생회장',
+        officer: '임원진',
+        regular: '정회원',
+        associate: '준회원',
+      };
+      alert(`[${editingRoleMember.name}] 학우의 회원 등급이 '${roleNames[newMemberRole]}'(으)로 변경되었습니다.`);
+      setEditingRoleMember(null);
+    } catch (err: any) {
+      alert(err.message || '등급 변경에 실패했습니다.');
+    } finally {
+      setIsUpdatingRole(false);
+    }
+  };
+
   const handleDownloadMembersCsv = () => {
     const esc = (v: string) => '"' + String(v).replace(/"/g, '""') + '"';
-    const header = ['가입일', '아이디', '닉네임', '성명', '연락처', '주소', '학번', '지역대학', '학과'];
-    const rows = members.map((m) => [m.created_at.split('T')[0], m.username, m.nickname, m.name, m.phone, m.address, m.student_no, m.regional_college, m.department]);
+    const roleNames: Record<string, string> = {
+      president: '학생회장',
+      officer: '임원진',
+      regular: '정회원',
+      associate: '준회원',
+    };
+    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '주소', '학번', '지역대학', '학과'];
+    const rows = members.map((m) => [
+      m.created_at.split('T')[0],
+      roleNames[m.role] || m.role || '준회원',
+      m.username,
+      m.nickname,
+      m.name,
+      m.phone,
+      m.address,
+      m.student_no,
+      m.regional_college,
+      m.department
+    ]);
     const csv = '\uFEFF' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
@@ -604,7 +670,7 @@ export const AdminPage: React.FC = () => {
   // ==========================================
   // Login Gate
   // ==========================================
-  if (!isAdmin) {
+  if (!canAccess) {
     return (
       <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 shadow-xl text-center space-y-6">
         <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center">
@@ -681,12 +747,24 @@ export const AdminPage: React.FC = () => {
       {/* Top Header */}
       <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-              관리자 모드 활성화됨
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                최고 관리자 (Master Admin)
+              </span>
+            )}
+            {isPresident && (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                학생회장: {member?.name} ({member?.nickname})
+              </span>
+            )}
+            {isOfficer && (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                학생회 임원: {member?.name} ({member?.nickname})
+              </span>
+            )}
             <span className="text-xs text-slate-400">
-              • Cloudflare 올인원 모드
+              • 관리자 센터
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -750,17 +828,19 @@ export const AdminPage: React.FC = () => {
           <BookOpen className="w-4 h-4 text-teal-600" />
           스터디 그룹 관리 ({studies.length})
         </button>
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'members'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Users className="w-4 h-4 text-rose-600" />
-          회원 관리 (${members.length})
-        </button>
+        {canManageMembers && (
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'members'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Users className="w-4 h-4 text-rose-600" />
+            회원 관리 (${members.length})
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('council')}
           className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -846,13 +926,24 @@ export const AdminPage: React.FC = () => {
                     <Pencil className="w-3.5 h-3.5" />
                     수정
                   </button>
-                  <button
-                    onClick={() => handleDeleteNotice(n.id, n.title)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    삭제
-                  </button>
+                  {(n.category === '결산' || n.category === '회의록') && !isAdmin ? (
+                    <button
+                      disabled
+                      title="결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다."
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-semibold cursor-not-allowed opacity-60"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      삭제불가
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDeleteNotice(n.id, n.title, n.category)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      삭제
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -1065,43 +1156,64 @@ export const AdminPage: React.FC = () => {
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    {['가입일', '닉네임(아이디)', '성명', '연락처', '학번', '지역대학 / 학과', '주소', ''].map((h) => (
+                    {['가입일', '등급', '닉네임(아이디)', '성명', '연락처', '학번', '지역대학 / 학과', '주소', '관리'].map((h) => (
                       <th key={h} className="px-3 py-2 font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {members.map((m) => (
-                    <tr key={m.id} className="align-top">
-                      <td className="px-3 py-2.5 whitespace-nowrap">{m.created_at.split('T')[0]}</td>
-                      <td className="px-3 py-2.5">
-                        <span className="font-bold text-slate-900">{m.nickname}</span>
-                        <span className="block text-slate-400">{m.username}</span>
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{m.name}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{m.phone}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{m.regional_college} / {m.department}</td>
-                      <td className="px-3 py-2.5 min-w-[200px]">{m.address}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap space-x-1.5">
-                        <button
-                          onClick={() => handleOpenNicknameModal(m)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold"
-                          title="학생회장, 부장 등 임원 직함 닉네임 부여"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          임원/닉네임 변경
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSiteMember(m)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          강제 탈퇴
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {members.map((m) => {
+                    const roleBadge = m.role === 'president' ? (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200 whitespace-nowrap">학생회장</span>
+                    ) : m.role === 'officer' ? (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">임원진</span>
+                    ) : m.role === 'regular' ? (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">정회원</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">준회원</span>
+                    );
+
+                    return (
+                      <tr key={m.id} className="align-top">
+                        <td className="px-3 py-2.5 whitespace-nowrap">{m.created_at.split('T')[0]}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{roleBadge}</td>
+                        <td className="px-3 py-2.5">
+                          <span className="font-bold text-slate-900">{m.nickname}</span>
+                          <span className="block text-slate-400">{m.username}</span>
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{m.name}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{m.phone}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">{m.regional_college} / {m.department}</td>
+                        <td className="px-3 py-2.5 min-w-[200px]">{m.address}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap space-x-1.5">
+                          <button
+                            onClick={() => handleOpenRoleModal(m)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold"
+                            title="회원 등급 변경 (학생회장, 임원진, 정회원, 준회원)"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                            등급 변경
+                          </button>
+                          <button
+                            onClick={() => handleOpenNicknameModal(m)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold"
+                            title="학생회장, 부장 등 임원 직함 닉네임 부여"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            닉네임 변경
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSiteMember(m)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            강제 탈퇴
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2085,6 +2197,92 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       )}
+            {/* Member Role Edit Modal */}
+      {editingRoleMember && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <Shield className="w-4 h-4" />
+                </div>
+                회원 등급 변경
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRoleMember(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+              <div><span className="text-slate-400 font-medium">대상 학우:</span> <strong className="text-slate-800">{editingRoleMember.name}</strong> ({editingRoleMember.username})</div>
+              <div><span className="text-slate-400 font-medium">닉네임:</span> <span className="text-slate-700 font-bold">{editingRoleMember.nickname}</span></div>
+              <div><span className="text-slate-400 font-medium">학번 / 소속:</span> <span className="text-slate-700">{editingRoleMember.student_no} / {editingRoleMember.regional_college} {editingRoleMember.department}</span></div>
+              <div><span className="text-slate-400 font-medium">현재 등급:</span> <span className="font-bold text-indigo-600">{editingRoleMember.role === 'president' ? '학생회장' : editingRoleMember.role === 'officer' ? '임원진' : editingRoleMember.role === 'regular' ? '정회원' : '준회원'}</span></div>
+            </div>
+
+            <form onSubmit={handleSaveMemberRole} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 mb-2">변경할 회원 등급 선택</label>
+                <div className="space-y-2">
+                  {[
+                    { value: 'president', label: '학생회장', badge: 'bg-purple-100 text-purple-700', desc: '관리자 센터 및 회원 관리 가능. 회칙 수정 및 결산/회의록 삭제 제한.' },
+                    { value: 'officer', label: '임원진', badge: 'bg-blue-100 text-blue-700', desc: '공지/일정 등록 및 건의함 공식 답변 작성 가능. 회원 관리 및 타인 글 강제 삭제 불가.' },
+                    { value: 'regular', label: '정회원', badge: 'bg-emerald-100 text-emerald-700', desc: '광주전남 컴퓨터과학과 재학생. 자료 다운로드/업로드, 자유게시판 글/댓글 작성 가능.' },
+                    { value: 'associate', label: '준회원', badge: 'bg-amber-100 text-amber-700', desc: '타 지역/타 학과 회원. 게시글/자료 열람만 가능하며 학습자료 다운로드 불가.' },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                        newMemberRole === opt.value
+                          ? 'border-indigo-600 bg-indigo-50/40 ring-1 ring-indigo-600'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="memberRole"
+                        value={opt.value}
+                        checked={newMemberRole === opt.value}
+                        onChange={(e) => setNewMemberRole(e.target.value as AdminMember['role'])}
+                        className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">{opt.label}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${opt.badge}`}>{opt.value}</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] leading-relaxed">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRoleMember(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingRole}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-xs"
+                >
+                  {isUpdatingRole ? '저장 중...' : '등급 변경 저장'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Member Nickname Edit Modal */}
       {editingNicknameMember && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
