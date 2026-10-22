@@ -7,6 +7,7 @@ const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none';
 
 const maskPhone = (p: string) => (p.length >= 8 ? `${p.slice(0, 3)}-****-${p.slice(-4)}` : p);
+const maskStudentNo = (sn: string) => (sn.length > 5 ? `${sn.slice(0, -5)}*****` : '*****');
 
 export const AccountPage: React.FC = () => {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ export const AccountPage: React.FC = () => {
     ['성명', member.name],
     ['연락처', showSensitive ? member.phone : maskPhone(member.phone)],
     ['주소', showSensitive ? member.address : `${member.address.slice(0, 6)}***`],
-    ['학번', showSensitive ? member.student_no : (member.student_no.length >= 12 ? `${member.student_no.slice(0, 6)}******` : `${member.student_no.slice(0, 4)}****`)],
+    ['학번', showSensitive ? member.student_no : maskStudentNo(member.student_no)],
     ['소속 지역대학', `${member.regional_college} 지역대학`],
     ['소속 학과', member.department],
     ['가입일', member.created_at.split('T')[0]],
