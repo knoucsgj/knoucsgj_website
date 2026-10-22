@@ -106,7 +106,10 @@ export const auth = {
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
   },
   isRegularOrAbove(): boolean {
-    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+    // 준회원(associate)은 어떠한 경우에도 글쓰기/다운로드 권한 불가
+    if (state.member && state.member.role === 'associate') return false;
+    if (state.isAdmin) return true;
+    return !!state.member && state.member.role !== 'associate';
   },
   canAccessAdmin(): boolean {
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
@@ -122,16 +125,19 @@ export const auth = {
     return state.isAdmin || state.member?.role === 'president' || state.member?.role === 'officer';
   },
   canDownloadMaterials(): boolean {
-    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+    return this.isRegularOrAbove();
   },
   canWriteFreePost(): boolean {
-    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+    return this.isRegularOrAbove();
+  },
+  canCreateFeedback(): boolean {
+    return this.isRegularOrAbove();
   },
   canUploadMaterials(): boolean {
-    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+    return this.isRegularOrAbove();
   },
   canCreateStudy(): boolean {
-    return state.isAdmin || (!!state.member && state.member.role !== 'associate');
+    return this.isRegularOrAbove();
   },
 
   subscribe(listener: () => void) {
@@ -142,7 +148,7 @@ export const auth = {
     return state;
   },
 
-  /** Sync UI state with the server session (call once on app start). */
+  /** Sync UI state with the server session (call on app start or event). */
   async refresh(): Promise<void> {
     try {
       const data = await call<{ member: MemberProfile | null; admin: boolean }>('me', 'GET');
@@ -150,6 +156,21 @@ export const auth = {
     } catch {
       setState({ loaded: true });
     }
+  },
+
+  /** Notify all browser tabs that auth/role state changed */
+  notifySync() {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('knoucs_auth_channel');
+        bc.postMessage({ type: 'AUTH_SYNC', time: Date.now() });
+        bc.close();
+      }
+    } catch {}
+    try {
+      localStorage.setItem('knoucs_auth_sync_event', String(Date.now()));
+    } catch {}
+    this.refresh();
   },
 
   // ---- member accounts
@@ -161,24 +182,28 @@ export const auth = {
   },
   async register(payload: RegisterPayload): Promise<MemberProfile> {
     const data = await call<{ member: MemberProfile }>('register', 'POST', payload);
-    setState({ member: data.member });
+    setState({ member: data.member, isAdmin: false });
+    this.notifySync();
     return data.member;
   },
   async login(username: string, password: string): Promise<MemberProfile> {
-    const data = await call<{ member: MemberProfile }>('login', 'POST', { username, password });
-    setState({ member: data.member });
+    const data = await call<{ member: MemberProfile; admin?: boolean }>('login', 'POST', { username, password });
+    setState({ member: data.member, isAdmin: !!data.admin });
+    this.notifySync();
     return data.member;
   },
   async logout(): Promise<void> {
     try {
       await call('logout');
     } finally {
-      setState({ member: null });
+      setState({ member: null, isAdmin: false });
+      this.notifySync();
     }
   },
   async withdraw(password: string): Promise<void> {
     await call('withdraw', 'POST', { password });
-    setState({ member: null });
+    setState({ member: null, isAdmin: false });
+    this.notifySync();
   },
   async changeMemberPassword(oldPw: string, newPw: string): Promise<void> {
     await call('change-password', 'POST', { old_password: oldPw, new_password: newPw });
@@ -206,6 +231,7 @@ export const auth = {
       } else {
         setState({ isAdmin: true });
       }
+      this.notifySync();
       return res;
     } catch (e: any) {
       throw e;
@@ -216,6 +242,7 @@ export const auth = {
       await call('admin-logout');
     } finally {
       setState({ isAdmin: false });
+      this.notifySync();
     }
   },
   async adminChangePassword(oldPw: string, newPw: string): Promise<{ success: boolean; message: string }> {
@@ -227,6 +254,40 @@ export const auth = {
     }
   },
 };
+
+// Global cross-tab and real-time auto-synchronization
+if (typeof window !== 'undefined') {
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const bc = new BroadcastChannel('knoucs_auth_channel');
+      bc.onmessage = () => {
+        auth.refresh();
+      };
+    }
+  } catch {}
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'knoucs_auth_sync_event') {
+      auth.refresh();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    auth.refresh();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      auth.refresh();
+    }
+  });
+
+  setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      auth.refresh();
+    }
+  }, 8000);
+}
 
 export function useAuth(): AuthState {
   return useSyncExternalStore(auth.subscribe, auth.getSnapshot);

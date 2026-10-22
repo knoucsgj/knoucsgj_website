@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { auth } from '../../services/auth';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
@@ -8,9 +9,11 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const location = useLocation();
+
   useEffect(() => {
     auth.refresh();
-  }, []);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">

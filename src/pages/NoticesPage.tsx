@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../services/auth';
 import type { Notice, NoticeCategory } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import { ASSETS } from '../lib/assets';
@@ -33,6 +34,9 @@ export const NoticesPage: React.FC = () => {
   const [newAuthor, setNewAuthor] = useState('학생회');
   const [newIsPinned, setNewIsPinned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { member, isAdmin } = useAuth();
+  const canWriteNotice = isAdmin || member?.role === 'president' || member?.role === 'officer';
 
   useEffect(() => {
     loadNotices();
@@ -71,6 +75,10 @@ export const NoticesPage: React.FC = () => {
 
   const handleCreateNotice = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canWriteNotice) {
+      alert('공지사항 등록은 학생회 임원진, 학생회장 및 관리자만 가능합니다.');
+      return;
+    }
     if (!newTitle.trim() || !newContent.trim()) {
       alert('제목과 내용을 모두 입력해주세요.');
       return;
@@ -158,13 +166,15 @@ export const NoticesPage: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsWriteModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm sm:text-base transition-colors shrink-0 self-start sm:self-auto shadow-xs"
-        >
-          <PlusCircle className="w-5 h-5" />
-          공지 등록
-        </button>
+        {canWriteNotice && (
+          <button
+            onClick={() => setIsWriteModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm sm:text-base transition-colors shrink-0 self-start sm:self-auto shadow-xs"
+          >
+            <PlusCircle className="w-5 h-5" />
+            공지 등록
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

@@ -24,7 +24,8 @@ import {
   FileCode,
   Upload,
   Edit3,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 
 export const StudyMaterialsPage: React.FC = () => {
@@ -343,7 +344,14 @@ export const StudyMaterialsPage: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
           {activeTab === 'materials' && (
             <button
-              onClick={() => requireLogin() && openCreateModal('출석수업요약')}
+              onClick={() => {
+                if (!requireLogin()) return;
+                if (member?.role === 'associate') {
+                  alert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  return;
+                }
+                openCreateModal('출석수업요약');
+              }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition-colors shadow-xs"
             >
               <PlusCircle className="w-4 h-4" />
@@ -368,6 +376,17 @@ export const StudyMaterialsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {member?.role === 'associate' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 text-sm text-amber-950 font-medium shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>
+              <strong className="text-amber-900">준회원 열람 모드:</strong> 현재 준회원 등급으로 로그인되어 있어 학습자료 및 스터디 목록 열람만 가능하며, 자료 다운로드 및 등록, 스터디 개설 신청은 제한됩니다.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
@@ -632,7 +651,14 @@ export const StudyMaterialsPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => requireLogin() && openCreateModal('기타자료')}
+              onClick={() => {
+                if (!requireLogin()) return;
+                if (member?.role === 'associate') {
+                  alert('기타자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  return;
+                }
+                openCreateModal('기타자료');
+              }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />

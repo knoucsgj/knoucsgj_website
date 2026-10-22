@@ -146,6 +146,10 @@ export const CommunityPage: React.FC = () => {
   // 건의함 핸들러
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isAssociate) {
+      alert('건의사항 등록은 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+      return;
+    }
     if (!feedbackTitle.trim() || !feedbackContent.trim()) {
       alert('제목과 내용을 입력해 주세요.');
       return;
@@ -277,7 +281,14 @@ export const CommunityPage: React.FC = () => {
 
         {activeTab === 'feedback' && (
           <button
-            onClick={() => requireLogin() && setIsWriteFeedbackModalOpen(true)}
+            onClick={() => {
+              if (!requireLogin()) return;
+              if (isAssociate) {
+                alert('건의사항 작성은 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+                return;
+              }
+              setIsWriteFeedbackModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm transition-colors shrink-0 self-start sm:self-auto shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
@@ -285,6 +296,17 @@ export const CommunityPage: React.FC = () => {
           </button>
         )}
       </div>
+
+      {isAssociate && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 text-sm text-amber-950 font-medium shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>
+              <strong className="text-amber-900">준회원 열람 모드:</strong> 현재 준회원 등급으로 로그인되어 있어 게시글 열람만 가능하며, 자유 글쓰기, 건의사항 작성 및 댓글 등록은 제한됩니다.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-slate-200 overflow-x-auto gap-1">
@@ -339,7 +361,14 @@ export const CommunityPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => requireLogin() && setIsWriteFreeModalOpen(true)}
+              onClick={() => {
+                if (!requireLogin()) return;
+                if (isAssociate) {
+                  alert('자유게시판 글쓰기는 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+                  return;
+                }
+                setIsWriteFreeModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
@@ -464,27 +493,36 @@ export const CommunityPage: React.FC = () => {
                           ))}
 
                           {/* Write reply input */}
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2">
-                            <input
-                              type="text"
-                              placeholder="댓글을 남겨보세요..."
-                              value={freeReplyInputMap[post.id] || ''}
-                              onChange={(e) =>
-                                setFreeReplyInputMap((prev) => ({ ...prev, [post.id]: e.target.value }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleAddFreeReply(post.id);
-                              }}
-                              className="sm:col-span-3 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
-                            />
-                            <button
-                              onClick={() => handleAddFreeReply(post.id)}
-                              className="sm:col-span-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              댓글 등록
-                            </button>
-                          </div>
+                          {isAssociate ? (
+                            <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-800 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <strong>준회원 안내:</strong> 자유게시판 댓글 작성은 정회원(광주전남 컴퓨터과학과 재학생) 전용입니다. 준회원은 열람만 가능합니다.
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2">
+                              <input
+                                type="text"
+                                placeholder="댓글을 남겨보세요..."
+                                value={freeReplyInputMap[post.id] || ''}
+                                onChange={(e) =>
+                                  setFreeReplyInputMap((prev) => ({ ...prev, [post.id]: e.target.value }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAddFreeReply(post.id);
+                                }}
+                                className="sm:col-span-3 px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white"
+                              />
+                              <button
+                                onClick={() => handleAddFreeReply(post.id)}
+                                className="sm:col-span-1 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                댓글 등록
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -511,7 +549,14 @@ export const CommunityPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => requireLogin() && setIsWriteFeedbackModalOpen(true)}
+              onClick={() => {
+                if (!requireLogin()) return;
+                if (isAssociate) {
+                  alert('건의사항 작성은 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+                  return;
+                }
+                setIsWriteFeedbackModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 self-start sm:self-center shadow-xs transition-colors"
             >
               <PlusCircle className="w-4 h-4" />

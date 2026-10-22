@@ -166,7 +166,11 @@ const isMasterAdmin = (s: Session) => s.admin;
 const isPresident = (s: Session) => s.member?.role === 'president';
 const isOfficer = (s: Session) => s.member?.role === 'officer';
 const isCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
-const isRegularOrAbove = (s: Session) => s.admin || (!!s.member && s.member.role !== 'associate');
+const isRegularOrAbove = (s: Session) => {
+  if (s.member && s.member.role === 'associate') return false; // 준회원은 절대 글쓰기/다운로드 불가
+  if (s.admin) return true;
+  return !!s.member && (s.member.role === 'regular' || s.member.role === 'officer' || s.member.role === 'president');
+};
 const canManageMembers = (s: Session) => s.admin || isPresident(s);
 
 const requireCouncil = (s: Session) => {
@@ -522,6 +526,8 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     if (isMasterLogin) {
       const adminToken = await createSession(db, 'admin', null, ADMIN_TTL);
       h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, adminToken, ADMIN_TTL));
+    } else {
+      h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, '', 0));
     }
 
     if (row) {
@@ -552,8 +558,12 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     if (cookies[MEMBER_COOKIE]) {
       await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256Hex(cookies[MEMBER_COOKIE])).run();
     }
+    if (cookies[ADMIN_COOKIE]) {
+      await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256Hex(cookies[ADMIN_COOKIE])).run();
+    }
     const h = new Headers();
     h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, '', 0));
+    h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, '', 0));
     return json({ success: true }, 200, h);
   }
 
@@ -916,8 +926,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   if (resource === 'materials') {
     if (method === 'GET' && id) {
       // single item incl. file data (used for download)
-      if (!isRegularOrAbove(session)) {
-        throw new HttpError(403, '학습자료 다운로드는 광주전남 컴퓨터과학과 재학생(정회원) 전용 기능입니다. 준회원은 열람만 가능합니다.');
+      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+        throw new HttpError(403, '준회원 등급은 학습자료 다운로드가 불가능합니다. (열람 전용)');
       }
       const row = await db.prepare('SELECT * FROM academic_materials WHERE id = ?').bind(id).first();
       return row ? json(row) : json({ error: 'Not found' }, 404);
@@ -954,8 +964,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'POST') {
       const member = requireMember(session);
-      if (!isRegularOrAbove(session)) {
-        throw new HttpError(403, '학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+        throw new HttpError(403, '준회원 등급은 자료 등록이 불가능합니다. (열람 전용)');
       }
       const b: any = await readJson(req);
       if (b.file_url && String(b.file_url).length > 1500000) throw new HttpError(413, '첨부 파일은 1MB 이하만 가능합니다.');
@@ -1006,8 +1016,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'POST') {
       const member = requireMember(session);
-      if (!isRegularOrAbove(session)) {
-        throw new HttpError(403, '자유게시판 글 및 댓글 작성은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+        throw new HttpError(403, '준회원 등급은 글 및 댓글 작성이 불가능합니다. (열람 전용)');
       }
       const b: any = await readJson(req);
       if (b.type === 'reply') {
@@ -1087,6 +1097,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         return json(r);
       }
       const member = requireMember(session);
+      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+        throw new HttpError(403, '준회원 등급은 건의사항 작성이 불가능합니다. (열람 전용)');
+      }
       const f = {
         id: `fb-${Date.now()}-${randomHex(3)}`,
         title: str(b.title, 200),
@@ -1140,8 +1153,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         approval = 'approved';
       } else {
         const member = requireMember(session);
-        if (!isRegularOrAbove(session)) {
-          throw new HttpError(403, '스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+        if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+          throw new HttpError(403, '준회원 등급은 스터디 개설 신청이 불가능합니다. (열람 전용)');
         }
         leader = member.nickname;
         authorId = member.id;
