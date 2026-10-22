@@ -1,12 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
 import { PrivacyConsentText, TermsText } from '../components/auth/PrivacyConsent';
-import { UserPlus, AlertCircle, Mail, CheckCircle2, Clock, Send, RefreshCw } from 'lucide-react';
+import { UserPlus, AlertCircle, Mail, CheckCircle2, Clock, Send, RefreshCw, Search, MapPin } from 'lucide-react';
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
 const labelCls = 'block font-bold text-slate-800 mb-1.5 text-sm';
+
+// Daum Postcode dynamic script loader fallback
+const loadDaumPostcodeScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).daum && (window as any).daum.Postcode) {
+      return resolve();
+    }
+    const existing = document.getElementById('daum-postcode-script');
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('우편번호 검색 스크립트 로드 실패')));
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'daum-postcode-script';
+    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('우편번호 검색 서비스를 불러오지 못했습니다. 네트워크 상태를 확인해 주세요.'));
+    document.head.appendChild(script);
+  });
+};
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,11 +41,17 @@ export const RegisterPage: React.FC = () => {
     nickname: '',
     name: '',
     phone: '',
-    address: '',
     student_no: '',
     regional_college: '광주전남',
     department: '컴퓨터과학과',
   });
+
+  // Standardized Address states
+  const [zonecode, setZonecode] = useState('');
+  const [baseAddress, setBaseAddress] = useState('');
+  const [detailAddress, setDetailAddress] = useState('');
+  const detailAddressRef = useRef<HTMLInputElement>(null);
+
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +83,6 @@ export const RegisterPage: React.FC = () => {
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (key === 'username') {
-      // If user changes email after verification, reset verified status
       if (isEmailVerified) {
         setIsEmailVerified(false);
         setIsCodeSent(false);
@@ -112,6 +138,47 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  // Address search with Daum Postcode API
+  const handleSearchAddress = async () => {
+    try {
+      await loadDaumPostcodeScript();
+      new (window as any).daum.Postcode({
+        oncomplete: (data: any) => {
+          // Standardized address: 도로명 또는 지번
+          let addr = '';
+          let extraAddr = '';
+
+          if (data.userSelectedType === 'R') {
+            addr = data.roadAddress;
+            if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
+              extraAddr += data.bname;
+            }
+            if (data.buildingName !== '' && data.apartment === 'Y') {
+              extraAddr += extraAddr !== '' ? `, ${data.buildingName}` : data.buildingName;
+            }
+            if (extraAddr !== '') {
+              extraAddr = ` (${extraAddr})`;
+            }
+          } else {
+            // 지번 주소 선택 시
+            addr = data.jibunAddress || data.address;
+          }
+
+          setZonecode(data.zonecode); // 5자리 우편번호
+          setBaseAddress(`${addr}${extraAddr}`);
+          setError('');
+
+          // Auto-focus detail address field
+          setTimeout(() => {
+            detailAddressRef.current?.focus();
+          }, 100);
+        },
+      }).open();
+    } catch (err: any) {
+      alert(err.message || '주소 검색 서비스를 불러올 수 없습니다.');
+    }
+  };
+
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -132,10 +199,19 @@ export const RegisterPage: React.FC = () => {
       setError('비밀번호 확인이 일치하지 않습니다.');
       return;
     }
+
+    if (!zonecode || !baseAddress.trim()) {
+      setError('주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.');
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+      return;
+    }
+
     if (!agreePrivacy || !agreeTerms) {
       setError('개인정보 수집·이용 및 이용약관에 모두 동의해 주세요.');
       return;
     }
+
+    const fullAddress = `(${zonecode}) ${baseAddress} ${detailAddress}`.trim();
 
     try {
       setSubmitting(true);
@@ -145,7 +221,7 @@ export const RegisterPage: React.FC = () => {
         nickname: form.nickname.trim(),
         name: form.name.trim(),
         phone: form.phone.trim(),
-        address: form.address.trim(),
+        address: fullAddress,
         student_no: form.student_no.trim(),
         regional_college: form.regional_college,
         department: form.department,
@@ -167,7 +243,12 @@ export const RegisterPage: React.FC = () => {
         <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
           <UserPlus className="w-4 h-4" /> Member Registration
         </div>
-        <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950">회원가입</h1>
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950">회원가입</h1>
+          <span className="text-xs text-slate-500 font-medium">
+            <span className="text-rose-500 font-bold">*</span> 표시는 필수 입력 항목입니다.
+          </span>
+        </div>
         <p className="text-sm sm:text-base text-slate-600 mt-1.5">
           외부 이메일 인증 후 가입하시면 자유게시판·열린 건의함·학습자료 등록과 스터디 개설 신청을 이용하실 수 있습니다.
         </p>
@@ -181,6 +262,7 @@ export const RegisterPage: React.FC = () => {
       )}
 
       <form onSubmit={submit} className="space-y-6">
+        {/* Section 1: Account & Email Verification */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
           <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
             <Mail className="w-5 h-5 text-blue-600" />
@@ -189,7 +271,7 @@ export const RegisterPage: React.FC = () => {
 
           <div>
             <label className={labelCls}>
-              아이디 (외부 이메일 주소) <span className="text-rose-500">*</span>
+              아이디 (외부 이메일 주소) <span className="text-rose-500 font-bold">*</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -244,11 +326,13 @@ export const RegisterPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Verification Code Input (Shown after code is sent and not yet verified) */}
+          {/* Verification Code Input */}
           {isCodeSent && !isEmailVerified && (
             <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-blue-950">인증번호 6자리 입력</label>
+                <label className="text-xs font-bold text-blue-950">
+                  인증번호 6자리 입력 <span className="text-rose-500 font-bold">*</span>
+                </label>
                 {expireSeconds > 0 && (
                   <span className="text-xs font-semibold text-rose-600 flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
@@ -303,13 +387,15 @@ export const RegisterPage: React.FC = () => {
           {isEmailVerified && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-bold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              이메일 소유권이 확인되었습니다. 아래 정보를 마저 입력해 주세요.
+              이메일 소유권이 확인되었습니다. 아래 필수 정보를 마저 입력해 주세요.
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
-              <label className={labelCls}>비밀번호</label>
+              <label className={labelCls}>
+                비밀번호 <span className="text-rose-500 font-bold">*</span>
+              </label>
               <input
                 className={inputCls}
                 type="password"
@@ -322,7 +408,9 @@ export const RegisterPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className={labelCls}>비밀번호 확인</label>
+              <label className={labelCls}>
+                비밀번호 확인 <span className="text-rose-500 font-bold">*</span>
+              </label>
               <input
                 className={inputCls}
                 type="password"
@@ -337,7 +425,9 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div>
-            <label className={labelCls}>닉네임 (게시물에 표시되는 이름)</label>
+            <label className={labelCls}>
+              닉네임 (게시물에 표시되는 이름) <span className="text-rose-500 font-bold">*</span>
+            </label>
             <input
               className={inputCls}
               required
@@ -350,15 +440,24 @@ export const RegisterPage: React.FC = () => {
           </div>
         </section>
 
+        {/* Section 2: Student & Address Information */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
-          <h2 className="font-bold text-slate-900 text-lg">학우 정보</h2>
+          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            학우 정보 및 주소
+          </h2>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>성명</label>
+              <label className={labelCls}>
+                성명 <span className="text-rose-500 font-bold">*</span>
+              </label>
               <input className={inputCls} required value={form.name} onChange={set('name')} autoComplete="name" maxLength={30} />
             </div>
             <div>
-              <label className={labelCls}>연락처 (휴대전화)</label>
+              <label className={labelCls}>
+                연락처 (휴대전화) <span className="text-rose-500 font-bold">*</span>
+              </label>
               <input
                 className={inputCls}
                 type="tel"
@@ -373,7 +472,9 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div>
-            <label className={labelCls}>학번 (숫자 8~10자리)</label>
+            <label className={labelCls}>
+              학번 (숫자 8~10자리) <span className="text-rose-500 font-bold">*</span>
+            </label>
             <input
               className={inputCls}
               required
@@ -384,21 +485,61 @@ export const RegisterPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className={labelCls}>자택 주소 (시·군·구 포함)</label>
+          {/* Standardized Address with Daum Postcode Search */}
+          <div className="space-y-2 pt-1">
+            <label className={labelCls}>
+              자택 주소 <span className="text-rose-500 font-bold">*</span>
+            </label>
+
+            {/* Postal Code + Search Button */}
+            <div className="flex gap-2 max-w-xs">
+              <input
+                type="text"
+                readOnly
+                value={zonecode}
+                placeholder="우편번호 (5자리)"
+                className={`${inputCls} bg-slate-50 font-mono font-bold text-slate-800 cursor-pointer`}
+                onClick={handleSearchAddress}
+              />
+              <button
+                type="button"
+                onClick={handleSearchAddress}
+                className="shrink-0 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-1.5"
+              >
+                <Search className="w-3.5 h-3.5" /> 우편번호 검색
+              </button>
+            </div>
+
+            {/* Base Address (Readonly) */}
             <input
-              className={inputCls}
-              required
-              value={form.address}
-              onChange={set('address')}
-              placeholder="예: 광주광역시 광산구 첨단내촌로..."
-              maxLength={200}
+              type="text"
+              readOnly
+              value={baseAddress}
+              placeholder="기본 주소 (우편번호 검색 시 자동 입력)"
+              className={`${inputCls} bg-slate-50 cursor-pointer text-slate-800 font-medium`}
+              onClick={handleSearchAddress}
             />
+
+            {/* Detail Address */}
+            <input
+              ref={detailAddressRef}
+              type="text"
+              value={detailAddress}
+              onChange={(e) => setDetailAddress(e.target.value)}
+              placeholder="상세 주소 입력 (동·호수 등)"
+              maxLength={100}
+              className={inputCls}
+            />
+            <p className="text-xs text-slate-500">
+              우편번호 검색 버튼을 눌러 표준화된 도로명 주소 또는 지번 주소를 검색하실 수 있습니다.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
-              <label className={labelCls}>소속 지역대학</label>
+              <label className={labelCls}>
+                소속 지역대학 <span className="text-rose-500 font-bold">*</span>
+              </label>
               <select className={inputCls} value={form.regional_college} onChange={set('regional_college')}>
                 {REGIONAL_COLLEGES.map((c) => (
                   <option key={c} value={c}>
@@ -408,12 +549,15 @@ export const RegisterPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>소속 학과</label>
+              <label className={labelCls}>
+                소속 학과 <span className="text-rose-500 font-bold">*</span>
+              </label>
               <input className={inputCls} required value={form.department} onChange={set('department')} maxLength={30} />
             </div>
           </div>
         </section>
 
+        {/* Section 3: Terms & Consents */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
           <h2 className="font-bold text-slate-900 text-lg">약관 및 개인정보 동의</h2>
 
@@ -425,7 +569,7 @@ export const RegisterPage: React.FC = () => {
                 onChange={(e) => setAgreePrivacy(e.target.checked)}
                 className="w-4.5 h-4.5 accent-blue-600"
               />
-              [필수] 개인정보 수집 및 이용에 동의합니다.
+              [필수] 개인정보 수집 및 이용에 동의합니다. <span className="text-rose-500 font-bold">*</span>
             </label>
             <div className="max-h-40 overflow-y-auto p-3 rounded-2xl border border-slate-200 bg-slate-50/60">
               <PrivacyConsentText compact />
@@ -440,7 +584,7 @@ export const RegisterPage: React.FC = () => {
                 onChange={(e) => setAgreeTerms(e.target.checked)}
                 className="w-4.5 h-4.5 accent-blue-600"
               />
-              [필수] 이용약관에 동의합니다.
+              [필수] 이용약관에 동의합니다. <span className="text-rose-500 font-bold">*</span>
             </label>
             <div className="max-h-40 overflow-y-auto p-3 rounded-2xl border border-slate-200 bg-slate-50/60">
               <TermsText compact />
