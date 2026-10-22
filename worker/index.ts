@@ -172,6 +172,7 @@ const isRegularOrAbove = (s: Session) => {
   return !!s.member && (s.member.role === 'regular' || s.member.role === 'officer' || s.member.role === 'president');
 };
 const canManageMembers = (s: Session) => s.admin || isPresident(s);
+const canManageCouncil = (s: Session) => s.admin || isPresident(s);
 
 const requireCouncil = (s: Session) => {
   if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 관리자만 접근할 수 있습니다.');
@@ -180,6 +181,11 @@ const requireCouncil = (s: Session) => {
 const requireMemberManager = (s: Session) => {
   if (isOfficer(s)) throw new HttpError(403, '임원진 등급은 회원 관리 권한이 없습니다.');
   if (!canManageMembers(s)) throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
+};
+
+const requireCouncilManager = (s: Session) => {
+  if (isOfficer(s)) throw new HttpError(403, '임원진 등급은 인사말 및 임원진 관리 권한이 없습니다.');
+  if (!canManageCouncil(s)) throw new HttpError(403, '학생회장 또는 최고 관리자만 인사말 및 임원진을 관리할 수 있습니다.');
 };
 
 const canModify = (s: Session, ownerId: string | null) => {
@@ -1189,7 +1195,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(s);
     }
     if (method === 'PUT' && id) {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
       const allowedStatus = ['모집중', '진행중', '마감', '종료'];
       const allowedApproval = ['approved', 'pending', 'rejected'];
@@ -1239,7 +1245,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(null);
     }
     if (method === 'PUT' || method === 'POST') {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
       const intro = {
         title: str(b.title, 200),
@@ -1259,7 +1265,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(results);
     }
     if (method === 'POST') {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
       const m = {
         id: b.id ? str(b.id, 50) : `cm-${Date.now()}-${randomHex(2)}`,
@@ -1292,7 +1298,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json({ success: true });
     }
     if (method === 'DELETE' && id) {
-      requireCouncil(session);
+      requireCouncilManager(session);
       await db.prepare('DELETE FROM council_members WHERE id = ?').bind(id).run();
       return json({ success: true });
     }

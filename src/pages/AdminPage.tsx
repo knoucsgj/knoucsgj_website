@@ -34,6 +34,8 @@ export const AdminPage: React.FC = () => {
   const isOfficer = member?.role === 'officer';
   const canAccess = isAdmin || isPresident || isOfficer;
   const canManageMembers = isAdmin || isPresident;
+  const canManageCouncil = isAdmin || isPresident;
+  const canManageBackup = isAdmin;
 
   const [adminIdInput, setAdminIdInput] = useState('admin');
   const [passwordInput, setPasswordInput] = useState('');
@@ -46,6 +48,13 @@ export const AdminPage: React.FC = () => {
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'
   const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'minutes' | 'backup'>('notices');
+
+  // Reset activeTab if user does not have permission
+  useEffect(() => {
+    if (activeTab === 'members' && !canManageMembers) setActiveTab('notices');
+    if (activeTab === 'council' && !canManageCouncil) setActiveTab('notices');
+    if (activeTab === 'backup' && !canManageBackup) setActiveTab('notices');
+  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup]);
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -909,17 +918,19 @@ export const AdminPage: React.FC = () => {
             회원 관리 (${members.length})
           </button>
         )}
-        <button
-          onClick={() => setActiveTab('council')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'council'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Users className="w-4 h-4 text-emerald-600" />
-          인사말 & 임원진 관리
-        </button>
+        {canManageCouncil && (
+          <button
+            onClick={() => setActiveTab('council')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'council'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Users className="w-4 h-4 text-emerald-600" />
+            인사말 & 임원진 관리
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('minutes')}
           className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -931,17 +942,19 @@ export const AdminPage: React.FC = () => {
           <FileText className="w-4 h-4 text-purple-600" />
           자치 회의록 관리 ({minutes.length})
         </button>
-        <button
-          onClick={() => setActiveTab('backup')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'backup'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Key className="w-4 h-4 text-amber-500" />
-          데이터 백업 & 설정
-        </button>
+        {canManageBackup && (
+          <button
+            onClick={() => setActiveTab('backup')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'backup'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Key className="w-4 h-4 text-amber-500" />
+            데이터 백업 & 설정
+          </button>
+        )}
       </div>
 
       {/* ========================================== */}
@@ -1289,7 +1302,7 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'council' && (
+      {canManageCouncil && activeTab === 'council' && (
         <div className="space-y-8">
           {/* President Greeting Editor */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -1390,7 +1403,7 @@ export const AdminPage: React.FC = () => {
       {/* ========================================== */}
       {/* TAB 5: Backup & Password Settings          */}
       {/* ========================================== */}
-      {activeTab === 'backup' && (
+      {canManageBackup && activeTab === 'backup' && (
         <div className="space-y-6">
           {/* Backup & Restore */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-4">
