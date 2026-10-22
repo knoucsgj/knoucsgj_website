@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
@@ -15,15 +15,30 @@ import {
   ChevronDown,
   ChevronUp,
   Award,
-  Search
+  Search,
+  FileText,
+  Download,
+  ExternalLink,
+  ArrowLeft,
+  ChevronRight,
+  User,
+  Calendar
 } from 'lucide-react';
+
+interface CohortGroup {
+  key: string;
+  generation: string;
+  period: string;
+  members: PastCouncilMember[];
+  president?: PastCouncilMember;
+}
 
 export const AboutPage: React.FC = () => {
   const [members, setMembers] = useState<CouncilMember[]>([]);
   const [councilIntro, setCouncilIntro] = useState(defaultCouncilIntro);
   const [rules, setRules] = useState<CouncilRuleChapter[]>([]);
   const [pastMembers, setPastMembers] = useState<PastCouncilMember[]>([]);
-  const [selectedGen, setSelectedGen] = useState<string>('전체');
+  const [selectedCohortKey, setSelectedCohortKey] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [openRuleChapter, setOpenRuleChapter] = useState<number | null>(1);
   const [activeTab, setActiveTab] = useState<'greeting' | 'members' | 'alumni' | 'rules'>('greeting');
@@ -43,6 +58,75 @@ export const AboutPage: React.FC = () => {
     }
     loadData();
   }, []);
+
+  // Group past members by cohort (generation & period)
+  const cohorts = useMemo<CohortGroup[]>(() => {
+    const map = new Map<string, CohortGroup>();
+
+    for (const m of pastMembers) {
+      const key = `${m.generation || '기타'}-${m.period || ''}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          generation: m.generation || '기타',
+          period: m.period || '',
+          members: []
+        });
+      }
+      map.get(key)!.members.push(m);
+    }
+
+    const list = Array.from(map.values()).map((group) => {
+      // Sort members inside cohort: sort_order asc, role priority (학생회장 -> 부학생회장 -> others)
+      const sortedMembers = [...group.members].sort((a, b) => {
+        const orderA = a.sort_order ?? 999;
+        const orderB = b.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (a.role === '학생회장') return -1;
+        if (b.role === '학생회장') return 1;
+        if (a.role.includes('부회장') || a.role.includes('부학생회장')) return -1;
+        if (b.role.includes('부회장') || b.role.includes('부학생회장')) return 1;
+        return 0;
+      });
+
+      const president = sortedMembers.find((m) => m.role === '학생회장');
+      return {
+        ...group,
+        members: sortedMembers,
+        president
+      };
+    });
+
+    // Sort cohorts descending (higher generation first, or recent year first)
+    list.sort((a, b) => {
+      const genA = parseInt(a.generation.replace(/[^0-9]/g, '')) || 0;
+      const genB = parseInt(b.generation.replace(/[^0-9]/g, '')) || 0;
+      if (genA !== genB) return genB - genA;
+      const yearA = parseInt(a.period.replace(/[^0-9]/g, '')) || 0;
+      const yearB = parseInt(b.period.replace(/[^0-9]/g, '')) || 0;
+      return yearB - yearA;
+    });
+
+    return list;
+  }, [pastMembers]);
+
+  // Filter cohorts by search keyword
+  const filteredCohorts = useMemo(() => {
+    if (!searchKeyword.trim()) return cohorts;
+    const q = searchKeyword.trim().toLowerCase();
+    return cohorts.filter(
+      (c) =>
+        c.generation.toLowerCase().includes(q) ||
+        c.period.toLowerCase().includes(q) ||
+        c.members.some((m) => m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q))
+    );
+  }, [cohorts, searchKeyword]);
+
+  // Find currently active cohort if selected
+  const activeCohort = useMemo(() => {
+    if (!selectedCohortKey) return null;
+    return cohorts.find((c) => c.key === selectedCohortKey) || null;
+  }, [cohorts, selectedCohortKey]);
 
   return (
     <div className="space-y-10">
@@ -105,7 +189,6 @@ export const AboutPage: React.FC = () => {
           <Scale className="w-4 h-4 text-amber-600" />
           학과 학생회칙 및 세칙
         </button>
-
       </div>
 
       {/* Tab 1: Greeting */}
@@ -223,169 +306,411 @@ export const AboutPage: React.FC = () => {
         </div>
       )}
 
-            {/* Tab 3: Past Council Members (역대 임원 소개 게시판) */}
+      {/* Tab 3: Past Council Members (기수별 게시판 형태 & 선택 시 기수 전체 임원진 노출) */}
       {activeTab === 'alumni' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Header Banner */}
-          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-indigo-50/90 via-blue-50/60 to-purple-50/70 border border-indigo-200/80 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <Award className="w-6 h-6 text-indigo-700" />
-                <h3 className="font-bold text-indigo-950 text-lg">컴퓨터과학과 역대 학생회 임원진</h3>
+                <Award className="w-6 h-6 text-indigo-700 shrink-0" />
+                <h3 className="font-bold text-indigo-950 text-lg">컴퓨터과학과 역대 학생회 임원진 게시판</h3>
               </div>
-              <p className="text-sm sm:text-base text-indigo-900 leading-relaxed">
-                광주전남지역대학 컴퓨터과학과의 발전과 학우 여러분의 권익을 위해 헌신해 온 역대 학생회 임원 명단입니다.
+              <p className="text-sm sm:text-base text-indigo-900/90 leading-relaxed">
+                광주전남 컴퓨터과학과를 이끌어 온 역대 학생회 기록입니다. 열람을 원하시는 기수(임기)를 선택하시면 해당 대수에 등록된 전체 임원진 명단과 사진을 확인하실 수 있습니다.
               </p>
             </div>
-            <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0 self-start sm:self-center">
-              총 {pastMembers.length}명의 임원
-            </span>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+              <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                총 {cohorts.length}개 기수 ({pastMembers.length}명의 임원)
+              </span>
+            </div>
           </div>
 
-          {/* Filters & Search */}
-          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Generation Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-              {['전체', ...Array.from(new Set(pastMembers.map((m) => m.generation))).filter(Boolean)].map((gen) => (
+          {/* DETAIL VIEW: Specific Cohort Selected */}
+          {activeCohort ? (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Back to list & Cohort Quick Selector Bar */}
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <button
-                  key={gen}
-                  onClick={() => setSelectedGen(gen)}
-                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
-                    selectedGen === gen
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
-                  }`}
+                  onClick={() => setSelectedCohortKey(null)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-colors w-fit"
                 >
-                  {gen}
+                  <ArrowLeft className="w-4 h-4" />
+                  전체 기수 목록으로 돌아가기
                 </button>
-              ))}
-            </div>
 
-            {/* Search Input */}
-            <div className="relative min-w-[220px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="성명, 직책, 기수 검색..."
-                className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
+                {/* Cohort Switcher Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                  <span className="text-xs font-semibold text-slate-500 mr-1 whitespace-nowrap">다른 기수 바로가기:</span>
+                  {cohorts.map((c) => (
+                    <button
+                      key={c.key}
+                      onClick={() => setSelectedCohortKey(c.key)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                        c.key === activeCohort.key
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80'
+                      }`}
+                    >
+                      {c.generation} ({c.period})
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Past Council Members Board (게시판 형태) */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                    <th className="py-3.5 px-4 sm:px-6 w-20 text-center">사진</th>
-                    <th className="py-3.5 px-4 sm:px-6 w-28 text-center">기수</th>
-                    <th className="py-3.5 px-4 sm:px-6 w-32 text-center">임기</th>
-                    <th className="py-3.5 px-4 sm:px-6 w-36">직책명</th>
-                    <th className="py-3.5 px-4 sm:px-6">성명</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pastMembers
-                    .filter((m) => {
-                      const matchesGen = selectedGen === '전체' || m.generation === selectedGen;
-                      const q = searchKeyword.trim().toLowerCase();
-                      const matchesQ =
-                        !q ||
-                        m.name.toLowerCase().includes(q) ||
-                        m.role.toLowerCase().includes(q) ||
-                        m.generation.toLowerCase().includes(q) ||
-                        m.period.toLowerCase().includes(q);
-                      return matchesGen && matchesQ;
-                    })
-                    .map((m) => (
-                      <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
-                        {/* 1. 사진 (없으면 공란) */}
-                        <td className="py-3.5 px-4 sm:px-6 text-center">
-                          {m.photo_url ? (
+              {/* Cohort Detail Header Card */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-xs sm:text-sm">
+                        {activeCohort.generation}
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                        임기: {activeCohort.period}
+                      </span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-knou">
+                      {activeCohort.generation} 컴퓨터과학과 학생회 임원 명단
+                    </h2>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <span className="text-xs sm:text-sm text-slate-500 block">등록된 임원 수</span>
+                    <span className="text-lg sm:text-xl font-extrabold text-indigo-600">
+                      총 {activeCohort.members.length}명
+                    </span>
+                  </div>
+                </div>
+
+                {/* Visual Officer Cards Grid (사진 & 직책 & 성명) */}
+                <div className="pt-2">
+                  <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    임원진 소개 카드 (총 {activeCohort.members.length}명)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                    {activeCohort.members.map((member) => (
+                      <div
+                        key={member.id}
+                        className={`bg-white rounded-2xl p-5 border transition-all flex flex-col items-center text-center ${
+                          member.role === '학생회장'
+                            ? 'border-purple-300 ring-2 ring-purple-100 shadow-sm'
+                            : member.role.includes('부회장') || member.role.includes('부학생회장')
+                            ? 'border-blue-200 hover:border-blue-300 shadow-xs'
+                            : 'border-slate-200 hover:border-indigo-200 shadow-xs'
+                        }`}
+                      >
+                        {/* Member Photo (사진이 없는 경우 공란 처리) */}
+                        <div className="mb-3.5">
+                          {member.photo_url ? (
                             <img
-                              src={m.photo_url}
-                              alt={m.name}
-                              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 mx-auto shadow-xs"
+                              src={member.photo_url}
+                              alt={member.name}
+                              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border border-slate-200 shadow-xs"
                             />
                           ) : (
-                            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-100 border border-slate-200 mx-auto flex items-center justify-center text-slate-300">
-                              <span className="text-[10px] text-slate-400 font-medium">공란</span>
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400">
+                              <User className="w-8 h-8 opacity-30 mb-1" />
+                              <span className="text-[11px] font-medium text-slate-400">사진 공란</span>
                             </div>
                           )}
-                        </td>
+                        </div>
 
-                        {/* 2. 기수 */}
-                        <td className="py-3.5 px-4 sm:px-6 text-center">
-                          <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200 whitespace-nowrap">
-                            {m.generation}
-                          </span>
-                        </td>
+                        {/* Role Badge */}
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold mb-2 ${
+                            member.role === '학생회장'
+                              ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                              : member.role.includes('부회장') || member.role.includes('부학생회장')
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}
+                        >
+                          {member.role}
+                        </span>
 
-                        {/* 3. 임기 */}
-                        <td className="py-3.5 px-4 sm:px-6 text-center text-slate-600 font-medium whitespace-nowrap">
-                          {m.period}
-                        </td>
+                        {/* Member Name */}
+                        <h4 className="text-lg font-bold text-slate-900 tracking-tight">
+                          {member.name}
+                        </h4>
 
-                        {/* 4. 직책명 */}
-                        <td className="py-3.5 px-4 sm:px-6 font-semibold">
-                          <span
-                            className={`px-2.5 py-1 rounded-md text-xs font-bold inline-block ${
-                              m.role === '학생회장'
-                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                : m.role.includes('부회장') || m.role.includes('부학생회장')
-                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}
-                          >
-                            {m.role}
-                          </span>
-                        </td>
-
-                        {/* 5. 성명 */}
-                        <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-900 text-sm sm:text-base">
-                          {m.name}
-                        </td>
-                      </tr>
+                        {/* Cohort & Period Tag */}
+                        <p className="text-xs text-slate-500 mt-1 font-medium">
+                          {member.generation} · {member.period}
+                        </p>
+                      </div>
                     ))}
-                  {pastMembers.filter((m) => {
-                    const matchesGen = selectedGen === '전체' || m.generation === selectedGen;
-                    const q = searchKeyword.trim().toLowerCase();
-                    return matchesGen && (!q || m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q));
-                  }).length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-500 font-medium">
-                        조건에 해당하는 역대 임원 정보가 없습니다.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </div>
+                </div>
+
+                {/* Tabular Officer List for Official Record */}
+                <div className="pt-6 border-t border-slate-100 space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-slate-500" />
+                    임원 명단 공식 기록표
+                  </h4>
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                          <th className="py-3 px-4 w-16 text-center">순번</th>
+                          <th className="py-3 px-4 w-32">직책명</th>
+                          <th className="py-3 px-4 font-bold">성명</th>
+                          <th className="py-3 px-4 w-28 text-center">기수</th>
+                          <th className="py-3 px-4 w-32 text-center">임기</th>
+                          <th className="py-3 px-4 w-24 text-center">사진 유무</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {activeCohort.members.map((m, idx) => (
+                          <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3 px-4 text-center text-slate-500 font-medium">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3 px-4 font-semibold">
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs font-bold inline-block ${
+                                  m.role === '학생회장'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : m.role.includes('부회장')
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                {m.role}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-900 text-sm">
+                              {m.name}
+                            </td>
+                            <td className="py-3 px-4 text-center text-indigo-700 font-semibold">
+                              {m.generation}
+                            </td>
+                            <td className="py-3 px-4 text-center text-slate-600">
+                              {m.period}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {m.photo_url ? (
+                                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                  등록됨
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                                  공란
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Bottom Back Button */}
+                <div className="pt-4 flex justify-between items-center border-t border-slate-100">
+                  <button
+                    onClick={() => setSelectedCohortKey(null)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    전체 기수 목록으로 돌아가기
+                  </button>
+                  <p className="text-xs text-slate-400">
+                    * 역대 임원 수정 및 등록은 관리자 센터(학생회장·최고관리자)에서 가능합니다.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* BOARD LIST VIEW: List of Cohorts (기수/임기연도별 게시글 목록) */
+            <div className="space-y-6">
+              {/* Search Bar & Instructions */}
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="text-xs sm:text-sm text-slate-600">
+                  아래 게시판에서 <span className="font-bold text-indigo-700">기수 또는 임기연도를 선택</span>하시면 해당 대수의 전체 임원 명단이 상세히 노출됩니다.
+                </div>
+                <div className="relative min-w-[240px]">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    placeholder="기수, 임기, 임원 성명 검색..."
+                    className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Board Table */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                        <th className="py-3.5 px-4 w-16 text-center">번호</th>
+                        <th className="py-3.5 px-4 w-24 text-center">기수</th>
+                        <th className="py-3.5 px-4 w-28 text-center">임기연도</th>
+                        <th className="py-3.5 px-4">게시글 제목 (임원진 명단)</th>
+                        <th className="py-3.5 px-4 w-32 text-center">학생회장</th>
+                        <th className="py-3.5 px-4 w-24 text-center">임원 수</th>
+                        <th className="py-3.5 px-4 w-32 text-center">상세보기</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredCohorts.map((cohort, idx) => (
+                        <tr
+                          key={cohort.key}
+                          onClick={() => setSelectedCohortKey(cohort.key)}
+                          className="hover:bg-indigo-50/50 transition-colors cursor-pointer group"
+                        >
+                          {/* 1. 번호 */}
+                          <td className="py-4 px-4 text-center text-slate-500 font-semibold">
+                            {filteredCohorts.length - idx}
+                          </td>
+
+                          {/* 2. 기수 */}
+                          <td className="py-4 px-4 text-center">
+                            <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-200 whitespace-nowrap">
+                              {cohort.generation}
+                            </span>
+                          </td>
+
+                          {/* 3. 임기연도 */}
+                          <td className="py-4 px-4 text-center font-medium text-slate-600 whitespace-nowrap">
+                            {cohort.period}
+                          </td>
+
+                          {/* 4. 게시글 제목 */}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors text-sm sm:text-base">
+                                {cohort.generation} 컴퓨터과학과 학생회 임원 명단
+                              </span>
+                              <span className="text-xs text-slate-400 font-normal hidden sm:inline">
+                                ({cohort.period})
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                              <span>주요 임원:</span>
+                              {cohort.members.slice(0, 3).map((m) => (
+                                <span key={m.id} className="text-slate-700 font-medium">
+                                  {m.role} {m.name}
+                                </span>
+                              ))}
+                              {cohort.members.length > 3 && (
+                                <span className="text-slate-400">외 {cohort.members.length - 3}명</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 5. 당시 학생회장 */}
+                          <td className="py-4 px-4 text-center">
+                            {cohort.president ? (
+                              <span className="px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 font-bold text-xs border border-purple-200">
+                                {cohort.president.name}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
+                            )}
+                          </td>
+
+                          {/* 6. 임원 수 */}
+                          <td className="py-4 px-4 text-center">
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
+                              {cohort.members.length}명
+                            </span>
+                          </td>
+
+                          {/* 7. 상세보기 버튼 */}
+                          <td className="py-4 px-4 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCohortKey(cohort.key);
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white text-indigo-700 font-bold text-xs transition-colors shadow-2xs"
+                            >
+                              <span>임원 보기</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+
+                      {filteredCohorts.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-slate-500 font-medium">
+                            조건에 해당하는 역대 학생회 기수 정보가 없습니다.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Tab: Council Rules (학생회칙 및 세칙) */}
+      {/* Tab 4: Council Rules (학생회칙 및 세칙 + PDF 바로보기/다운로드 연동) */}
       {activeTab === 'rules' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
-            <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="pb-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회칙
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                    공식 회칙
+                  </span>
+                  <span className="text-xs text-slate-500">한국방송통신대학교 광주전남지역대학</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-knou">
+                  컴퓨터과학과 학생회칙 및 운영세칙
                 </h2>
                 <p className="text-sm sm:text-base text-slate-600 mt-1">
-                  본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 기본 규범입니다.
+                  본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 공식 기본 규범입니다.
                 </p>
               </div>
-              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100 hidden sm:block">
-                <Scale className="w-6 h-6 text-amber-600" />
+
+              {/* PDF Viewer & Download Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a
+                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>학생회칙 PDF 바로보기</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+                <a
+                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                  download="컴퓨터과학과학생회칙.pdf"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition-all"
+                >
+                  <Download className="w-4 h-4 text-slate-500" />
+                  <span>PDF 다운로드</span>
+                </a>
               </div>
             </div>
 
+            {/* Official PDF Document Notice Banner */}
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
+              <Scale className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm text-amber-900 leading-relaxed">
+                <p className="font-bold mb-0.5">학생회칙 전문 PDF 원본 안내</p>
+                <p>
+                  학과 학생회 공식 인준을 거친 학생회칙 원본 문서(PDF)가 상단 바로보기 및 다운로드 버튼을 통해 제공되고 있습니다. 아래 각 조항을 펼쳐 웹에서도 즉시 열람하실 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            {/* Web Articles Accordion */}
             <div className="space-y-4">
               {rules.map((chapter) => {
                 const isOpen = openRuleChapter === chapter.chapter;

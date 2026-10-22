@@ -12,7 +12,9 @@ import {
   ChevronDown,
   ChevronUp,
   Receipt,
-  FileCheck
+  FileCheck,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 export const GovernancePage: React.FC = () => {
@@ -317,13 +319,54 @@ export const GovernancePage: React.FC = () => {
       {activeTab === 'rules' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div className="pb-4 border-b border-slate-100">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회칙
-              </h2>
-              <p className="text-sm sm:text-base text-slate-600 mt-1">
-                본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 기본 규범입니다.
-              </p>
+            <div className="pb-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                    공식 규범
+                  </span>
+                  <span className="text-xs text-slate-500">한국방송통신대학교 광주전남지역대학</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-knou">
+                  컴퓨터과학과 학생회칙 및 운영세칙
+                </h2>
+                <p className="text-sm sm:text-base text-slate-600 mt-1">
+                  본 회칙은 광주전남 컴퓨터과학과 모든 학우의 권익과 자치 활동의 근간이 되는 공식 기본 규범입니다.
+                </p>
+              </div>
+
+              {/* PDF Viewer & Download Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a
+                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>학생회칙 PDF 바로보기</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+                <a
+                  href="/Constitution/컴퓨터과학과학생회칙.pdf"
+                  download="컴퓨터과학과학생회칙.pdf"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm border border-slate-200 transition-all"
+                >
+                  <Download className="w-4 h-4 text-slate-500" />
+                  <span>PDF 다운로드</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Official PDF Document Notice Banner */}
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3">
+              <Scale className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm text-amber-900 leading-relaxed">
+                <p className="font-bold mb-0.5">학생회칙 전문 PDF 원본 안내</p>
+                <p>
+                  학과 학생회 공식 인준을 거친 학생회칙 원본 문서(PDF)가 상단 바로보기 및 다운로드 버튼을 통해 제공되고 있습니다. 아래 각 조항을 펼쳐 웹에서도 즉시 열람하실 수 있습니다.
+                </p>
+              </div>
             </div>
 
             <div className="space-y-4">
