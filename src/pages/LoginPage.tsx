@@ -218,14 +218,14 @@ export const LoginPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">학번</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">학번 (숫자 12자리)</label>
                   <input
                     type="text"
                     required
                     value={resetStudentNo}
-                    onChange={(e) => setResetStudentNo(e.target.value)}
-                    placeholder="숫자 8~10자리"
-                    maxLength={10}
+                    onChange={(e) => setResetStudentNo(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))}
+                    placeholder="12자리 숫자 (- 제외)"
+                    maxLength={12}
                     className={inputCls}
                   />
                 </div>

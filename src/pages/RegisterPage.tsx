@@ -207,6 +207,12 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (!/^\d{12}$/.test(form.student_no.trim())) {
+      setError('학번은 하이픈(-)을 제외한 숫자 12자리로 정확히 입력해 주세요.');
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+      return;
+    }
+
     if (!zonecode || !baseAddress.trim()) {
       setError('주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.');
       window.scrollTo({ top: 350, behavior: 'smooth' });
@@ -480,16 +486,22 @@ export const RegisterPage: React.FC = () => {
 
           <div>
             <label className={labelCls}>
-              학번 (숫자 8~10자리) <span className="text-rose-500 font-bold">*</span>
+              학번 (숫자 12자리, - 제외) <span className="text-rose-500 font-bold">*</span>
             </label>
             <input
               className={inputCls}
               required
               value={form.student_no}
-              onChange={set('student_no')}
-              placeholder="예: 202612345"
-              maxLength={10}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 12);
+                setForm((f) => ({ ...f, student_no: val }));
+              }}
+              placeholder="예: 202634123456 (12자리 숫자)"
+              maxLength={12}
             />
+            <p className="text-xs text-slate-500 mt-1">
+              하이픈(-)을 제외한 숫자 12자리를 입력해 주세요. (숫자 외 자동 제거)
+            </p>
           </div>
 
           {/* Standardized Address with Daum Postcode Search */}

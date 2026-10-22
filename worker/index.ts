@@ -184,7 +184,7 @@ function validateRegistration(b: any) {
   const name = str(b.name, 30);
   const phone = str(b.phone, 20).replace(/[^0-9]/g, '');
   const address = str(b.address, 200);
-  const student_no = str(b.student_no, 12).replace(/[^0-9]/g, '');
+  const student_no = str(b.student_no, 20).replace(/[^0-9]/g, '');
   const regional_college = str(b.regional_college, 20);
   const department = str(b.department, 30);
 
@@ -207,7 +207,7 @@ function validateRegistration(b: any) {
   if (name.length < 2) throw new HttpError(400, '성명을 입력해 주세요.');
   if (!/^0\d{8,10}$/.test(phone)) throw new HttpError(400, '연락처를 올바르게 입력해 주세요.');
   if (address.length < 5) throw new HttpError(400, '주소를 입력해 주세요.');
-  if (!/^\d{8,10}$/.test(student_no)) throw new HttpError(400, '학번은 숫자 8~10자리로 입력해 주세요.');
+  if (!/^\d{12}$/.test(student_no)) throw new HttpError(400, '학번은 하이픈(-)을 제외한 숫자 12자리로 입력해 주세요.');
   if (!REGIONAL_COLLEGES.includes(regional_college)) throw new HttpError(400, '소속 지역대학을 선택해 주세요.');
   if (department.length < 2) throw new HttpError(400, '소속 학과를 입력해 주세요.');
   if (b.consent_privacy !== true) throw new HttpError(400, '개인정보 수집·이용에 동의해 주세요.');

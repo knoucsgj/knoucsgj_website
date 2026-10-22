@@ -64,7 +64,7 @@ export const AccountPage: React.FC = () => {
     ['성명', member.name],
     ['연락처', showSensitive ? member.phone : maskPhone(member.phone)],
     ['주소', showSensitive ? member.address : `${member.address.slice(0, 6)}***`],
-    ['학번', showSensitive ? member.student_no : `${member.student_no.slice(0, 4)}****`],
+    ['학번', showSensitive ? member.student_no : (member.student_no.length >= 12 ? `${member.student_no.slice(0, 6)}******` : `${member.student_no.slice(0, 4)}****`)],
     ['소속 지역대학', `${member.regional_college} 지역대학`],
     ['소속 학과', member.department],
     ['가입일', member.created_at.split('T')[0]],
