@@ -200,6 +200,13 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
+    const RESTRICTED_NICK_REGEX = /(관리자|운영자|학생회|회장|국장|부장|차장|팀장|임원)/i;
+    if (RESTRICTED_NICK_REGEX.test(form.nickname.trim())) {
+      setError('관리자, 운영자 또는 학생회 임원 직함(회장, 부장, 국장 등)이 포함된 닉네임은 가입 시 사용하실 수 없습니다. 임원 닉네임은 관리자 승인 후 별도 설정됩니다.');
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+      return;
+    }
+
     if (!zonecode || !baseAddress.trim()) {
       setError('주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.');
       window.scrollTo({ top: 350, behavior: 'smooth' });
@@ -436,7 +443,7 @@ export const RegisterPage: React.FC = () => {
               placeholder="예: 3학년 불꽃코너"
               maxLength={12}
             />
-            <p className="text-xs text-slate-500 mt-1">실명은 공개되지 않으며 닉네임만 표시됩니다. (2~12자)</p>
+            <p className="text-xs text-slate-500 mt-1">실명은 공개되지 않으며 닉네임만 표시됩니다. (2~12자, 임원 직함 제외)</p>
           </div>
         </section>
 

@@ -197,8 +197,13 @@ function validateRegistration(b: any) {
     throw new HttpError(400, '비밀번호는 영문과 숫자를 포함하여 8자 이상이어야 합니다.');
   if (password.toLowerCase().includes(username.split('@')[0])) throw new HttpError(400, '비밀번호에 아이디를 포함할 수 없습니다.');
   if (nickname.length < 2) throw new HttpError(400, '닉네임은 2자 이상 입력해 주세요.');
-  if (nickname.includes('학생회') || nickname.includes('관리자'))
-    throw new HttpError(400, "닉네임에 '학생회', '관리자'는 사용할 수 없습니다.");
+  const RESTRICTED_NICK_REGEX = /(관리자|운영자|학생회|회장|국장|부장|차장|팀장|임원)/i;
+  if (RESTRICTED_NICK_REGEX.test(nickname)) {
+    throw new HttpError(
+      400,
+      '관리자, 운영자 또는 학생회 임원 직함(회장, 부장, 국장 등)이 포함된 닉네임은 가입 시 사용하실 수 없습니다. 임원 닉네임은 관리자 승인 후 별도 설정됩니다.'
+    );
+  }
   if (name.length < 2) throw new HttpError(400, '성명을 입력해 주세요.');
   if (!/^0\d{8,10}$/.test(phone)) throw new HttpError(400, '연락처를 올바르게 입력해 주세요.');
   if (address.length < 5) throw new HttpError(400, '주소를 입력해 주세요.');
@@ -656,6 +661,28 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         )
         .all();
       return json(results);
+    }
+    if (method === 'PUT' && id) {
+      const b: any = await readJson(req);
+      const nickname = str(b.nickname, 20);
+      if (nickname.length < 2) throw new HttpError(400, '닉네임은 2자 이상이어야 합니다.');
+      const dup = await db
+        .prepare('SELECT id FROM members WHERE nickname = ? COLLATE NOCASE AND id != ?')
+        .bind(nickname, id)
+        .first();
+      if (dup) throw new HttpError(409, '이미 다른 회원이 사용 중인 닉네임입니다.');
+
+      await db.prepare('UPDATE members SET nickname = ? WHERE id = ?').bind(nickname, id).run();
+
+      for (const t of ['free_posts', 'feedbacks', 'academic_materials']) {
+        await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
+      }
+      for (const t of ['free_post_replies', 'feedback_replies']) {
+        await db.prepare(`UPDATE ${t} SET author = ? WHERE author_id = ?`).bind(nickname, id).run();
+      }
+      await db.prepare('UPDATE studies SET leader = ? WHERE author_id = ?').bind(nickname, id).run();
+
+      return json({ success: true, nickname });
     }
     if (method === 'DELETE' && id) {
       for (const t of ['free_posts', 'free_post_replies', 'feedbacks', 'feedback_replies', 'academic_materials', 'studies']) {

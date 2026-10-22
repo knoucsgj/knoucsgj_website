@@ -470,6 +470,14 @@ export const api = {
     return fetchStrict<AdminMember[]>('members');
   },
 
+  async updateMemberNickname(id: string, nickname: string): Promise<boolean> {
+    await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ nickname }),
+    });
+    return true;
+  },
+
   async deleteMember(id: string): Promise<boolean> {
     await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;

@@ -134,6 +134,11 @@ export const AdminPage: React.FC = () => {
   const [isEmailSaving, setIsEmailSaving] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
 
+  // Member Nickname Edit state
+  const [editingNicknameMember, setEditingNicknameMember] = useState<AdminMember | null>(null);
+  const [newMemberNickname, setNewMemberNickname] = useState('');
+  const [isUpdatingNickname, setIsUpdatingNickname] = useState(false);
+
   useEffect(() => {
     const onRejection = (ev: PromiseRejectionEvent) => {
       if (ev.reason instanceof Error) {
@@ -362,6 +367,29 @@ export const AdminPage: React.FC = () => {
     if (!confirm(`'${m.nickname}'(${m.name}) 회원을 강제 탈퇴(개인정보 삭제) 처리하시겠습니까?`)) return;
     await api.deleteMember(m.id);
     loadAllData();
+  };
+
+  const handleOpenNicknameModal = (m: AdminMember) => {
+    setEditingNicknameMember(m);
+    setNewMemberNickname(m.nickname);
+  };
+
+  const handleSaveMemberNickname = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingNicknameMember || !newMemberNickname.trim()) return;
+    try {
+      setIsUpdatingNickname(true);
+      await api.updateMemberNickname(editingNicknameMember.id, newMemberNickname.trim());
+      setMembers((prev) =>
+        prev.map((m) => (m.id === editingNicknameMember.id ? { ...m, nickname: newMemberNickname.trim() } : m))
+      );
+      alert(`[${editingNicknameMember.name}] 학우의 닉네임이 '${newMemberNickname.trim()}'(으)로 변경되었습니다.`);
+      setEditingNicknameMember(null);
+    } catch (err: any) {
+      alert(err.message || '닉네임 변경에 실패했습니다.');
+    } finally {
+      setIsUpdatingNickname(false);
+    }
   };
 
   const handleDownloadMembersCsv = () => {
@@ -1055,10 +1083,18 @@ export const AdminPage: React.FC = () => {
                       <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{m.regional_college} / {m.department}</td>
                       <td className="px-3 py-2.5 min-w-[200px]">{m.address}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2.5 whitespace-nowrap space-x-1.5">
+                        <button
+                          onClick={() => handleOpenNicknameModal(m)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold"
+                          title="학생회장, 부장 등 임원 직함 닉네임 부여"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          임원/닉네임 변경
+                        </button>
                         <button
                           onClick={() => handleDeleteSiteMember(m)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold whitespace-nowrap"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           강제 탈퇴
@@ -2043,6 +2079,86 @@ export const AdminPage: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700"
                 >
                   회의록 저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Member Nickname Edit Modal */}
+      {editingNicknameMember && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                회원 임원 직함 / 닉네임 변경
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingNicknameMember(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+              <div><span className="text-slate-400 font-medium">대상 학우:</span> <strong className="text-slate-800">{editingNicknameMember.name}</strong> ({editingNicknameMember.username})</div>
+              <div><span className="text-slate-400 font-medium">학번 / 소속:</span> <span className="text-slate-700">{editingNicknameMember.student_no} / {editingNicknameMember.regional_college} {editingNicknameMember.department}</span></div>
+              <div><span className="text-slate-400 font-medium">현재 닉네임:</span> <span className="text-slate-700 font-bold">{editingNicknameMember.nickname}</span></div>
+            </div>
+
+            <form onSubmit={handleSaveMemberNickname} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">새 닉네임 (임원 직책 입력 가능)</label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberNickname}
+                  onChange={(e) => setNewMemberNickname(e.target.value)}
+                  placeholder="예: 학생회장, 총무부장, 기획국장 등"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 font-bold text-slate-900"
+                  maxLength={15}
+                />
+              </div>
+
+              <div>
+                <span className="block text-[11px] font-semibold text-slate-500 mb-1.5">빠른 임원 직함 선택:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['학생회장', '부학생회장', '총무부장', '학술부장', '기획부장', '홍보부장', '사무국장', '운영위원'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setNewMemberNickname(preset)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 text-xs font-semibold transition-colors border border-slate-200"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-xl text-[11px] text-blue-800 leading-relaxed">
+                관리자가 부여한 임원 닉네임은 해당 학우가 작성한 모든 게시글, 댓글, 건의함에 즉시 반영됩니다.
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingNicknameMember(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingNickname || !newMemberNickname.trim()}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-xs"
+                >
+                  {isUpdatingNickname ? '저장 중...' : '닉네임 변경 적용'}
                 </button>
               </div>
             </form>
