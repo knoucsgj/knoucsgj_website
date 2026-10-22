@@ -696,9 +696,21 @@ export const AdminPage: React.FC = () => {
                 required
                 value={adminIdInput}
                 onChange={(e) => setAdminIdInput(e.target.value)}
-                placeholder="admin"
+                placeholder="admin 또는 knoucsgj@gmail.com"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {['admin', 'knoucsgj@gmail.com', 'knoucsgj@daum.net', 'knoucsgj@kakao.com'].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setAdminIdInput(id)}
+                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 text-[10px] font-semibold transition-colors border border-slate-200"
+                >
+                  {id}
+                </button>
+              ))}
             </div>
           </div>
           <div>
@@ -732,8 +744,10 @@ export const AdminPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
-          관리자 비밀번호는 학생회 임원진만 공유하며, 로그인 후 관리자 센터에서 변경할 수 있습니다.
+        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 leading-relaxed text-left space-y-1">
+          <p className="font-semibold text-slate-700">💡 로그인 안내:</p>
+          <p>• 최고 관리자: <span className="font-mono text-blue-600">admin</span> 또는 최고관리자 이메일(<span className="font-mono text-slate-700">knoucsgj@gmail.com</span>, <span className="font-mono text-slate-700">daum.net</span>, <span className="font-mono text-slate-700">hanmail.net</span>, <span className="font-mono text-slate-700">kakao.com</span>)</p>
+          <p>• 학생회 임원: 임원 승격된 본인 이메일 계정 및 비밀번호로 로그인</p>
         </div>
       </div>
     );
@@ -1446,7 +1460,23 @@ export const AdminPage: React.FC = () => {
                     placeholder="knoucsgj@gmail.com"
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-[11px] text-slate-400 mt-0.5">Brevo의 'Senders & IP'에 등록된 이메일과 일치해야 합니다.</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {['knoucsgj@gmail.com', 'knoucsgj@daum.net', 'knoucsgj@hanmail.net', 'knoucsgj@kakao.com'].map((em) => (
+                      <button
+                        key={em}
+                        type="button"
+                        onClick={() => setEmailConfig((c) => ({ ...c, sender: em }))}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-colors ${
+                          emailConfig.sender === em
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">최고 관리자 공식 메일 목록에서 발신용 주소를 빠르게 선택할 수 있습니다.</p>
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">발신자 표시 이름</label>

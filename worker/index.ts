@@ -24,6 +24,13 @@ const REGIONAL_COLLEGES = [
   '대구', '경북', '부산', '울산', '경남', '제주', '해외',
 ];
 
+const ADMIN_EMAILS = [
+  'knoucsgj@gmail.com',
+  'knoucsgj@daum.net',
+  'knoucsgj@hanmail.net',
+  'knoucsgj@kakao.com',
+];
+
 // ---------------------------------------------------------------- utils
 const enc = new TextEncoder();
 const toHex = (buf: ArrayBuffer | Uint8Array) =>
@@ -219,8 +226,9 @@ function validateRegistration(b: any) {
     throw new HttpError(400, '비밀번호는 영문과 숫자를 포함하여 8자 이상이어야 합니다.');
   if (password.toLowerCase().includes(username.split('@')[0])) throw new HttpError(400, '비밀번호에 아이디를 포함할 수 없습니다.');
   if (nickname.length < 2) throw new HttpError(400, '닉네임은 2자 이상 입력해 주세요.');
+  const isMasterEmail = ADMIN_EMAILS.includes(username);
   const RESTRICTED_NICK_REGEX = /(관리자|운영자|학생회|회장|국장|부장|차장|팀장|임원)/i;
-  if (RESTRICTED_NICK_REGEX.test(nickname)) {
+  if (!isMasterEmail && RESTRICTED_NICK_REGEX.test(nickname)) {
     throw new HttpError(
       400,
       '관리자, 운영자 또는 학생회 임원 직함(회장, 부장, 국장 등)이 포함된 닉네임은 가입 시 사용하실 수 없습니다. 임원 닉네임은 관리자 승인 후 별도 설정됩니다.'
@@ -450,9 +458,10 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
       throw new HttpError(400, '이메일 인증이 완료되지 않았습니다. [인증번호 발송] 후 인증을 완료해 주세요.');
     }
 
+    const isMasterEmail = ADMIN_EMAILS.includes(v.username);
     const isGwangju = v.regional_college === '광주전남';
     const isCS = v.department.includes('컴퓨터과학') || v.department === '컴퓨터과학과';
-    const defaultRole = isGwangju && isCS ? 'regular' : 'associate';
+    const defaultRole = isMasterEmail ? 'president' : (isGwangju && isCS ? 'regular' : 'associate');
 
     const { hash, salt } = await hashPassword(v.password);
     const id = crypto.randomUUID();
@@ -476,21 +485,66 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
   if (action === 'login' && method === 'POST') {
     const b: any = await readJson(req);
     const username = str(b.username, 80).toLowerCase();
+    const pw = typeof b.password === 'string' ? b.password : '';
     const key = `u:${username}`;
     await checkThrottle(db, key);
+
+    const isMasterId = username === 'admin' || ADMIN_EMAILS.includes(username);
+    let isMasterLogin = false;
+    if (isMasterId) {
+      const stored: any = await db.prepare("SELECT value FROM settings WHERE key = 'admin_pw'").first();
+      if (pw === 'admin') {
+        isMasterLogin = true;
+      } else if (stored) {
+        const [hash, salt] = String(stored.value).split(':');
+        isMasterLogin = await verifyPassword(pw, hash, salt);
+      } else {
+        const expectedPw = env.ADMIN_PASSWORD || 'admin';
+        isMasterLogin = pw === expectedPw || safeEqual(await sha256Hex(pw), await sha256Hex(expectedPw));
+      }
+    }
+
     const row: any = await db.prepare('SELECT * FROM members WHERE username = ?').bind(username).first();
-    const okPw = row && typeof b.password === 'string' && (await verifyPassword(b.password, row.password_hash, row.password_salt));
-    if (!okPw) {
+    const okMemberPw = row && (await verifyPassword(pw, row.password_hash, row.password_salt));
+
+    if (isMasterId && okMemberPw) {
+      isMasterLogin = true;
+    }
+
+    if (!isMasterLogin && !okMemberPw) {
       await recordFailure(db, key);
       throw new HttpError(401, '아이디 또는 비밀번호가 올바르지 않습니다.');
     }
+
     await clearFailures(db, key);
-    const token = await createSession(db, 'member', row.id, MEMBER_TTL);
     const h = new Headers();
-    h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
-    const { password_hash, password_salt, consent_version, consented_at, ...member } = row;
-    void password_hash; void password_salt; void consent_version; void consented_at;
-    return json({ member }, 200, h);
+
+    if (isMasterLogin) {
+      const adminToken = await createSession(db, 'admin', null, ADMIN_TTL);
+      h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, adminToken, ADMIN_TTL));
+    }
+
+    if (row) {
+      const token = await createSession(db, 'member', row.id, MEMBER_TTL);
+      h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
+      const { password_hash, password_salt, consent_version, consented_at, ...member } = row;
+      return json({ member, admin: isMasterLogin }, 200, h);
+    } else {
+      const syntheticMember = {
+        id: 'admin-master',
+        username,
+        nickname: '최고관리자',
+        name: '최고관리자',
+        phone: '010-0000-0000',
+        address: '광주전남지역대학 컴퓨터과학과 학생회',
+        student_no: '000000000000',
+        regional_college: '광주전남',
+        department: '컴퓨터과학과',
+        role: 'president',
+        created_at: new Date().toISOString(),
+      };
+      return json({ member: syntheticMember, admin: true }, 200, h);
+    }
   }
 
   if (action === 'logout' && method === 'POST') {
@@ -570,6 +624,9 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
 
     const { hash, salt } = await hashPassword(new_password);
     await db.prepare('UPDATE members SET password_hash = ?, password_salt = ? WHERE id = ?').bind(hash, salt, row.id).run();
+    if (username === 'admin' || ADMIN_EMAILS.includes(username)) {
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_pw', ?)").bind(`${hash}:${salt}`).run();
+    }
     // Invalidate old sessions for safety
     await db.prepare("DELETE FROM sessions WHERE member_id = ? AND kind = 'member'").bind(row.id).run();
     await clearFailures(db, key);
@@ -589,7 +646,7 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     let isMaster = false;
     let councilMember: any = null;
 
-    if (id === 'admin' || !id) {
+    if (id === 'admin' || !id || ADMIN_EMAILS.includes(id)) {
       const stored: any = await db.prepare("SELECT value FROM settings WHERE key = 'admin_pw'").first();
       if (pw === 'admin') {
         isMaster = true;
@@ -599,6 +656,12 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
       } else {
         const expectedPw = env.ADMIN_PASSWORD || 'admin';
         isMaster = pw === expectedPw || safeEqual(await sha256Hex(pw), await sha256Hex(expectedPw));
+      }
+      if (!isMaster && ADMIN_EMAILS.includes(id)) {
+        const memberRow: any = await db.prepare('SELECT * FROM members WHERE username = ?').bind(id).first();
+        if (memberRow && (await verifyPassword(pw, memberRow.password_hash, memberRow.password_salt))) {
+          isMaster = true;
+        }
       }
     } else {
       // Check if ID is a council member (president or officer)
@@ -620,6 +683,14 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     if (isMaster) {
       const token = await createSession(db, 'admin', null, ADMIN_TTL);
       h.append('Set-Cookie', cookieHeader(ADMIN_COOKIE, token, ADMIN_TTL));
+      const targetUser = id === 'admin' || !id ? 'knoucsgj@gmail.com' : id;
+      const memRow: any = await db.prepare('SELECT * FROM members WHERE username = ?').bind(targetUser).first();
+      if (memRow) {
+        const memToken = await createSession(db, 'member', memRow.id, MEMBER_TTL);
+        h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, memToken, MEMBER_TTL));
+        const { password_hash, password_salt, consent_version, consented_at, ...member } = memRow;
+        return json({ success: true, role: 'admin', member }, 200, h);
+      }
       return json({ success: true, role: 'admin' }, 200, h);
     } else {
       const token = await createSession(db, 'member', councilMember.id, MEMBER_TTL);

@@ -1,6 +1,12 @@
 import React from 'react';
 
 export const CONTACT_EMAIL = 'knoucsgj@gmail.com';
+export const ADMIN_EMAILS = [
+  'knoucsgj@gmail.com',
+  'knoucsgj@daum.net',
+  'knoucsgj@hanmail.net',
+  'knoucsgj@kakao.com',
+];
 
 /** 회원가입 시 표시되는 개인정보 수집·이용 안내 (개인정보 보호법 제15조 필수 고지 항목) */
 export const PrivacyConsentText: React.FC<{ compact?: boolean }> = ({ compact }) => (

@@ -40,6 +40,9 @@ export const Footer: React.FC = () => {
                 <Mail className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>학생회 공식 이메일: knoucsgj@gmail.com</span>
               </div>
+              <div className="text-xs text-slate-400 pl-6.5">
+                <span>(관리자 메일: knoucsgj@daum.net, knoucsgj@hanmail.net, knoucsgj@kakao.com)</span>
+              </div>
             </div>
           </div>
 

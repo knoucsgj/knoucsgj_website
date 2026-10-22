@@ -166,4 +166,13 @@ async function run(db: D1) {
       /* ignore */
     }
   }
+
+  // Ensure master admin emails always have president/council role
+  try {
+    await db.prepare(
+      "UPDATE members SET role = 'president' WHERE username IN ('knoucsgj@gmail.com', 'knoucsgj@daum.net', 'knoucsgj@hanmail.net', 'knoucsgj@kakao.com')"
+    ).run();
+  } catch {
+    /* ignore */
+  }
 }
