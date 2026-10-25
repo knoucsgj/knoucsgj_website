@@ -1340,6 +1340,192 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   }
 
   // ---- past council members (Read: public / Write: president & master admin only)
+  // ---- budget reports (Read: public / Write: council & master admin)
+  if (resource === 'budget-reports') {
+    if (method === 'GET') {
+      const { results } = await db.prepare('SELECT * FROM budget_reports ORDER BY published_date DESC, id DESC').all();
+      return json(
+        results.map((r: any) => {
+          let items: any[] = [];
+          try {
+            items = JSON.parse(r.items_json || '[]');
+          } catch {
+            items = [];
+          }
+          return {
+            id: r.id,
+            title: r.title,
+            period: r.period,
+            income_total: Number(r.income_total) || 0,
+            expense_total: Number(r.expense_total) || 0,
+            balance: Number(r.balance) || 0,
+            status: r.status,
+            published_date: r.published_date,
+            items,
+          };
+        })
+      );
+    }
+    if (method === 'POST') {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const report = {
+        id: b.id ? str(b.id, 50) : `budget-${Date.now()}-${randomHex(2)}`,
+        title: str(b.title, 150),
+        period: str(b.period, 100),
+        income_total: Number(b.income_total) || 0,
+        expense_total: Number(b.expense_total) || 0,
+        balance: Number(b.balance) || 0,
+        status: str(b.status, 20) || '감사완료',
+        published_date: str(b.published_date, 20) || today(),
+        items: Array.isArray(b.items) ? b.items : [],
+      };
+      if (!report.title) throw new HttpError(400, '결산 보고서 제목을 입력해 주세요.');
+      await db
+        .prepare(
+          'INSERT INTO budget_reports (id, title, period, income_total, expense_total, balance, status, published_date, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .bind(
+          report.id,
+          report.title,
+          report.period,
+          report.income_total,
+          report.expense_total,
+          report.balance,
+          report.status,
+          report.published_date,
+          JSON.stringify(report.items)
+        )
+        .run();
+      return json(report, 201);
+    }
+    if (method === 'PUT' && id) {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const existing: any = await db.prepare('SELECT * FROM budget_reports WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 결산보고를 찾을 수 없습니다.');
+      const updated = {
+        title: b.title !== undefined ? str(b.title, 150) : existing.title,
+        period: b.period !== undefined ? str(b.period, 100) : existing.period,
+        income_total: b.income_total !== undefined ? Number(b.income_total) : existing.income_total,
+        expense_total: b.expense_total !== undefined ? Number(b.expense_total) : existing.expense_total,
+        balance: b.balance !== undefined ? Number(b.balance) : existing.balance,
+        status: b.status !== undefined ? str(b.status, 20) : existing.status,
+        published_date: b.published_date !== undefined ? str(b.published_date, 20) : existing.published_date,
+        items_json: Array.isArray(b.items) ? JSON.stringify(b.items) : existing.items_json,
+      };
+      await db
+        .prepare(
+          'UPDATE budget_reports SET title=?, period=?, income_total=?, expense_total=?, balance=?, status=?, published_date=?, items_json=? WHERE id=?'
+        )
+        .bind(
+          updated.title,
+          updated.period,
+          updated.income_total,
+          updated.expense_total,
+          updated.balance,
+          updated.status,
+          updated.published_date,
+          updated.items_json,
+          id
+        )
+        .run();
+      return json({ success: true });
+    }
+    if (method === 'DELETE' && id) {
+      requireCouncil(session);
+      await db.prepare('DELETE FROM budget_reports WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
+  // ---- rentals (Read: public / Write: council & master admin)
+  if (resource === 'rentals') {
+    if (method === 'GET') {
+      const { results } = await db.prepare('SELECT * FROM rental_items ORDER BY rowid ASC').all();
+      return json(
+        results.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          category: r.category,
+          total_qty: Number(r.total_qty) || 0,
+          available_qty: Number(r.available_qty) || 0,
+          location: r.location,
+          status: r.status,
+          desc: r.desc || '',
+        }))
+      );
+    }
+    if (method === 'POST') {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const item = {
+        id: b.id ? str(b.id, 50) : `rent-${Date.now()}-${randomHex(2)}`,
+        name: str(b.name, 100),
+        category: str(b.category, 50),
+        total_qty: Number(b.total_qty) || 1,
+        available_qty: Number(b.available_qty) !== undefined ? Number(b.available_qty) : Number(b.total_qty) || 1,
+        location: str(b.location, 100),
+        status: str(b.status, 20) || '대여가능',
+        desc: str(b.desc, 500),
+      };
+      if (!item.name) throw new HttpError(400, '비품명을 입력해 주세요.');
+      await db
+        .prepare(
+          'INSERT INTO rental_items (id, name, category, total_qty, available_qty, location, status, desc) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .bind(
+          item.id,
+          item.name,
+          item.category,
+          item.total_qty,
+          item.available_qty,
+          item.location,
+          item.status,
+          item.desc
+        )
+        .run();
+      return json(item, 201);
+    }
+    if (method === 'PUT' && id) {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const existing: any = await db.prepare('SELECT * FROM rental_items WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 비품을 찾을 수 없습니다.');
+      const updated = {
+        name: b.name !== undefined ? str(b.name, 100) : existing.name,
+        category: b.category !== undefined ? str(b.category, 50) : existing.category,
+        total_qty: b.total_qty !== undefined ? Number(b.total_qty) : existing.total_qty,
+        available_qty: b.available_qty !== undefined ? Number(b.available_qty) : existing.available_qty,
+        location: b.location !== undefined ? str(b.location, 100) : existing.location,
+        status: b.status !== undefined ? str(b.status, 20) : existing.status,
+        desc: b.desc !== undefined ? str(b.desc, 500) : existing.desc,
+      };
+      await db
+        .prepare(
+          'UPDATE rental_items SET name=?, category=?, total_qty=?, available_qty=?, location=?, status=?, desc=? WHERE id=?'
+        )
+        .bind(
+          updated.name,
+          updated.category,
+          updated.total_qty,
+          updated.available_qty,
+          updated.location,
+          updated.status,
+          updated.desc,
+          id
+        )
+        .run();
+      return json({ success: true });
+    }
+    if (method === 'DELETE' && id) {
+      requireCouncil(session);
+      await db.prepare('DELETE FROM rental_items WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
+  // ---- past council members (Read: public / Write: president & master admin only)
   if (resource === 'past-council-members') {
     if (method === 'GET') {
       const { results } = await db.prepare('SELECT * FROM past_council_members ORDER BY period DESC, generation DESC, sort_order ASC, rowid ASC').all();

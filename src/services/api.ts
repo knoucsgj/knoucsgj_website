@@ -35,36 +35,7 @@ import { initialFeedbacks } from '../data/mockFeedback';
 import { initialFreePosts } from '../data/mockFreePosts';
 import { initialMaterials } from '../data/mockMaterials';
 
-const NOTICES_STORAGE_KEY = 'knoucs_local_notices';
-const EVENTS_STORAGE_KEY = 'knoucs_local_events';
-const COUNCIL_MEMBERS_KEY = 'knoucs_local_council_members';
-const COUNCIL_INTRO_KEY = 'knoucs_local_council_intro';
-const STUDIES_STORAGE_KEY = 'knoucs_local_studies';
-const BUDGET_REPORTS_KEY = 'knoucs_local_budgets';
-const MINUTES_STORAGE_KEY = 'knoucs_local_minutes';
-const RENTALS_STORAGE_KEY = 'knoucs_local_rentals';
-const FEEDBACKS_STORAGE_KEY = 'knoucs_local_feedbacks';
-const FREEPOSTS_STORAGE_KEY = 'knoucs_local_freeposts';
-const MATERIALS_STORAGE_KEY = 'knoucs_local_materials';
-
-function getLocalItem<T>(key: string, fallback: T): T {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function setLocalItem<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error('Failed to save to localStorage', e);
-  }
-}
-
-// Cloudflare D1 API Request Helper
+// Cloudflare D1 API Request Helper (모든 사용자가 동일한 서버 데이터를 조회합니다)
 async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<T | null> {
   try {
     const res = await fetch(`/api?resource=${resource}`, {
@@ -76,7 +47,7 @@ async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -107,14 +78,14 @@ async function fetchStrict<T>(query: string, options: RequestInit = {}): Promise
 
 export const api = {
   // ==========================================
-  // 1. 공지사항 (Notices) CRUD
+  // 1. 공지사항 (Notices) CRUD - D1 전용
   // ==========================================
   async getNotices(): Promise<Notice[]> {
     const cloudData = await fetchD1<Notice[]>('notices');
     if (Array.isArray(cloudData)) {
       return cloudData;
     }
-    return getLocalItem<Notice[]>(NOTICES_STORAGE_KEY, initialNotices);
+    return initialNotices;
   },
 
   async getNoticeById(id: string): Promise<Notice | undefined> {
@@ -155,14 +126,14 @@ export const api = {
   },
 
   // ==========================================
-  // 2. 학사일정 (Academic Events) CRUD
+  // 2. 학사일정 (Academic Events) CRUD - D1 전용
   // ==========================================
   async getEvents(): Promise<AcademicEvent[]> {
     const cloudEvents = await fetchD1<AcademicEvent[]>('events');
     if (Array.isArray(cloudEvents)) {
       return cloudEvents;
     }
-    return getLocalItem<AcademicEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
+    return initialEvents;
   },
 
   async createEvent(event: Omit<AcademicEvent, 'id'>): Promise<AcademicEvent> {
@@ -195,43 +166,36 @@ export const api = {
   },
 
   // ==========================================
-  // 3. 학생회 인사말 & 임원진 (Council) CRUD
+  // 3. 학생회 인사말 & 임원진 (Council) CRUD - D1 전용
   // ==========================================
   async getCouncilIntro(): Promise<typeof mockCouncilIntro> {
     const cloud = await fetchD1<typeof mockCouncilIntro>('council-intro');
     if (cloud && cloud.title) {
-      setLocalItem(COUNCIL_INTRO_KEY, cloud);
       return cloud;
     }
-    return getLocalItem<typeof mockCouncilIntro>(COUNCIL_INTRO_KEY, mockCouncilIntro);
+    return mockCouncilIntro;
   },
 
   async updateCouncilIntro(intro: typeof mockCouncilIntro): Promise<typeof mockCouncilIntro> {
-    const saved = await fetchStrict<typeof mockCouncilIntro>('council-intro', {
+    return await fetchStrict<typeof mockCouncilIntro>('council-intro', {
       method: 'PUT',
       body: JSON.stringify(intro),
     });
-    setLocalItem(COUNCIL_INTRO_KEY, saved);
-    return saved;
   },
 
   async getCouncilMembers(): Promise<CouncilMember[]> {
     const cloud = await fetchD1<CouncilMember[]>('council-members');
     if (Array.isArray(cloud) && cloud.length > 0) {
-      setLocalItem(COUNCIL_MEMBERS_KEY, cloud);
       return cloud;
     }
-    return getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
+    return mockCouncilMembers;
   },
 
   async createCouncilMember(member: Omit<CouncilMember, 'id'>): Promise<CouncilMember> {
-    const saved = await fetchStrict<CouncilMember>('council-members', {
+    return await fetchStrict<CouncilMember>('council-members', {
       method: 'POST',
       body: JSON.stringify(member),
     });
-    const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
-    setLocalItem(COUNCIL_MEMBERS_KEY, [...current, saved]);
-    return saved;
   },
 
   async updateCouncilMember(id: string, updatedFields: Partial<CouncilMember>): Promise<CouncilMember | null> {
@@ -239,30 +203,16 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(updatedFields),
     });
-    const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
-    let updatedMember: CouncilMember | null = null;
-    const next = current.map((m) => {
-      if (m.id === id) {
-        updatedMember = { ...m, ...updatedFields };
-        return updatedMember;
-      }
-      return m;
-    });
-    setLocalItem(COUNCIL_MEMBERS_KEY, next);
-    return updatedMember;
+    return { id, ...updatedFields } as CouncilMember;
   },
 
   async deleteCouncilMember(id: string): Promise<boolean> {
     await fetchStrict<any>(`council-members&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const current = getLocalItem<CouncilMember[]>(COUNCIL_MEMBERS_KEY, mockCouncilMembers);
-    const next = current.filter((m) => m.id !== id);
-    setLocalItem(COUNCIL_MEMBERS_KEY, next);
     return true;
   },
 
   // ==========================================
-  // 3-1. 역대 학생회 임원진 (Past Council Members)
-  // 브라우저 저장방식(localStorage)을 일절 사용하지 않고 오직 서버 DB에서만 조회/반영합니다.
+  // 3-1. 역대 학생회 임원진 (Past Council Members) - D1 전용
   // ==========================================
   async getPastCouncilMembers(): Promise<PastCouncilMember[]> {
     const cloud = await fetchD1<PastCouncilMember[]>('past-council-members');
@@ -293,17 +243,16 @@ export const api = {
   },
 
   // ==========================================
-  // 4. 스터디 그룹 (Studies) CRUD
+  // 4. 스터디 그룹 (Studies) CRUD - D1 전용
   // ==========================================
   async getStudies(): Promise<StudyGroup[]> {
     const cloudStudies = await fetchD1<StudyGroup[]>('studies');
     if (Array.isArray(cloudStudies)) {
       return cloudStudies;
     }
-    return getLocalItem<StudyGroup[]>(STUDIES_STORAGE_KEY, mockInitialStudies);
+    return mockInitialStudies;
   },
 
-  // 회원: 승인 대기 상태로 신청 / 관리자: 즉시 등록. 개설자(leader)는 서버가 로그인 정보로 결정합니다.
   async createStudy(study: Omit<StudyGroup, 'id' | 'created_at' | 'approval' | 'author_id'>): Promise<StudyGroup> {
     return fetchStrict<StudyGroup>('studies', {
       method: 'POST',
@@ -326,10 +275,14 @@ export const api = {
   },
 
   // ==========================================
-  // 5. 학생회비 결산보고 (Budget Reports) CRUD
+  // 5. 학생회비 결산보고 (Budget Reports) CRUD - D1 전용
   // ==========================================
   async getBudgetReports(): Promise<BudgetReport[]> {
-    return getLocalItem<BudgetReport[]>(BUDGET_REPORTS_KEY, initialBudgetReports);
+    const cloud = await fetchD1<BudgetReport[]>('budget-reports');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    return initialBudgetReports;
   },
 
   async createBudgetReport(report: Omit<BudgetReport, 'id' | 'published_date'>): Promise<BudgetReport> {
@@ -338,45 +291,50 @@ export const api = {
       id: `budget-${Date.now()}`,
       published_date: new Date().toISOString().split('T')[0],
     };
-    const current = getLocalItem<BudgetReport[]>(BUDGET_REPORTS_KEY, initialBudgetReports);
-    const updated = [newReport, ...current];
-    setLocalItem(BUDGET_REPORTS_KEY, updated);
-    return newReport;
-  },
-
-  // ==========================================
-  // 6. 회의록 (Meeting Minutes) CRUD
-  // ==========================================
-  async getMeetingMinutes(): Promise<MeetingMinute[]> {
-    const cloud = await fetchD1<MeetingMinute[]>('minutes');
-    if (Array.isArray(cloud) && cloud.length > 0) {
-      setLocalItem(MINUTES_STORAGE_KEY, cloud);
-      return cloud;
-    }
-    return getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
-  },
-
-  async createMeetingMinute(minute: Omit<MeetingMinute, 'id'>): Promise<MeetingMinute> {
-    const saved = await fetchStrict<MeetingMinute>('minutes', {
+    return await fetchStrict<BudgetReport>('budget-reports', {
       method: 'POST',
-      body: JSON.stringify(minute),
+      body: JSON.stringify(newReport),
     });
-    const current = getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
-    const updated = [saved, ...current];
-    setLocalItem(MINUTES_STORAGE_KEY, updated);
-    return saved;
   },
 
-  async deleteMeetingMinute(id: string): Promise<boolean> {
-    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const current = getLocalItem<MeetingMinute[]>(MINUTES_STORAGE_KEY, initialMeetingMinutes);
-    const next = current.filter((m) => m.id !== id);
-    setLocalItem(MINUTES_STORAGE_KEY, next);
+  async updateBudgetReport(id: string, updatedFields: Partial<BudgetReport>): Promise<BudgetReport | null> {
+    await fetchStrict<any>(`budget-reports&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
+    return { id, ...updatedFields } as BudgetReport;
+  },
+
+  async deleteBudgetReport(id: string): Promise<boolean> {
+    await fetchStrict<any>(`budget-reports&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 
   // ==========================================
-  // 7. 학과 학생회칙 및 세칙
+  // 6. 회의록 (Meeting Minutes) CRUD - D1 전용
+  // ==========================================
+  async getMeetingMinutes(): Promise<MeetingMinute[]> {
+    const cloud = await fetchD1<MeetingMinute[]>('minutes');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    return initialMeetingMinutes;
+  },
+
+  async createMeetingMinute(minute: Omit<MeetingMinute, 'id'>): Promise<MeetingMinute> {
+    return await fetchStrict<MeetingMinute>('minutes', {
+      method: 'POST',
+      body: JSON.stringify(minute),
+    });
+  },
+
+  async deleteMeetingMinute(id: string): Promise<boolean> {
+    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  // ==========================================
+  // 7. 학과 학생회칙 및 세칙 - 공식 문서 & D1 버전 관리
   // ==========================================
   async getCouncilRules(): Promise<CouncilRuleChapter[]> {
     return mockCouncilRules;
@@ -386,10 +344,7 @@ export const api = {
     return officialConstitutionDocuments;
   },
 
-  // ==========================================
-  // 7-1. 학과 학생회칙 및 세칙 버전 관리 (Constitution Versions)
-  // 브라우저 저장방식을 사용하지 않고 서버 D1 데이터베이스에서 실시간 조회/수정합니다.
-  // ==========================================
+  // 학과 학생회칙 및 세칙 버전 관리 (Constitution Versions) - D1 실시간 조회/수정
   async getConstitutionVersions(): Promise<ConstitutionVersion[]> {
     const cloud = await fetchD1<ConstitutionVersion[]>('constitution-versions');
     if (Array.isArray(cloud) && cloud.length > 0) {
@@ -429,10 +384,34 @@ export const api = {
   },
 
   // ==========================================
-  // 8. 학생 복지 & 비품 (Welfare)
+  // 8. 학생 복지 & 비품 (Welfare) - D1 전용
   // ==========================================
   async getRentalItems(): Promise<RentalItem[]> {
-    return getLocalItem<RentalItem[]>(RENTALS_STORAGE_KEY, initialRentalItems);
+    const cloud = await fetchD1<RentalItem[]>('rentals');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    return initialRentalItems;
+  },
+
+  async createRentalItem(item: Omit<RentalItem, 'id'>): Promise<RentalItem> {
+    return await fetchStrict<RentalItem>('rentals', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    });
+  },
+
+  async updateRentalItem(id: string, updatedFields: Partial<RentalItem>): Promise<RentalItem | null> {
+    await fetchStrict<any>(`rentals&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
+    return { id, ...updatedFields } as RentalItem;
+  },
+
+  async deleteRentalItem(id: string): Promise<boolean> {
+    await fetchStrict<any>(`rentals&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
   },
 
   async getPartnerships(): Promise<PartnershipItem[]> {
@@ -444,17 +423,16 @@ export const api = {
   },
 
   // ==========================================
-  // 9. 학우 소통 및 열린 건의함 (Feedbacks) CRUD
+  // 9. 학우 소통 및 열린 건의함 (Feedbacks) CRUD - D1 전용
   // ==========================================
   async getFeedbacks(): Promise<FeedbackItem[]> {
     const cloudFeedbacks = await fetchD1<FeedbackItem[]>('feedbacks');
     if (Array.isArray(cloudFeedbacks)) {
       return cloudFeedbacks;
     }
-    return getLocalItem<FeedbackItem[]>(FEEDBACKS_STORAGE_KEY, initialFeedbacks);
+    return initialFeedbacks;
   },
 
-  // 작성자는 서버가 로그인한 회원의 닉네임으로 기록합니다.
   async createFeedback(feedback: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies' | 'author' | 'author_id'>): Promise<FeedbackItem> {
     return fetchStrict<FeedbackItem>('feedbacks', {
       method: 'POST',
@@ -475,14 +453,14 @@ export const api = {
   },
 
   // ==========================================
-  // 10. 커뮤니티 자유게시판 (Free Posts) CRUD
+  // 10. 커뮤니티 자유게시판 (Free Posts) CRUD - D1 전용
   // ==========================================
   async getFreePosts(): Promise<FreePost[]> {
     const cloudPosts = await fetchD1<FreePost[]>('freeposts');
     if (Array.isArray(cloudPosts)) {
       return cloudPosts;
     }
-    return getLocalItem<FreePost[]>(FREEPOSTS_STORAGE_KEY, initialFreePosts);
+    return initialFreePosts;
   },
 
   async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies' | 'author' | 'author_id'>): Promise<FreePost> {
@@ -505,17 +483,16 @@ export const api = {
   },
 
   // ==========================================
-  // 11. 학습자료 및 기타자료 (Academic Materials) CRUD
+  // 11. 학습자료 및 기타자료 (Academic Materials) CRUD - D1 전용
   // ==========================================
   async getMaterials(): Promise<AcademicMaterial[]> {
     const cloudMaterials = await fetchD1<AcademicMaterial[]>('materials');
     if (Array.isArray(cloudMaterials)) {
       return cloudMaterials;
     }
-    return getLocalItem<AcademicMaterial[]>(MATERIALS_STORAGE_KEY, initialMaterials);
+    return initialMaterials;
   },
 
-  // 목록에는 첨부 파일 데이터가 포함되지 않으므로 다운로드 시 개별 조회합니다.
   async getMaterialFile(id: string): Promise<string | null> {
     const item = await fetchD1<{ file_url?: string }>(`materials&id=${encodeURIComponent(id)}`);
     return item?.file_url || null;
@@ -576,20 +553,24 @@ export const api = {
   },
 
   // ==========================================
-  // 12. 전체 데이터 백업 및 복원 (Export / Import)
+  // 12. 전체 데이터 백업 및 복원 (D1 서버 데이터 기반)
   // ==========================================
   async exportAllData(): Promise<string> {
     const notices = await this.getNotices();
     const events = await this.getEvents();
     const intro = await this.getCouncilIntro();
     const members = await this.getCouncilMembers();
+    const pastMembers = await this.getPastCouncilMembers();
     const studies = await this.getStudies();
     const budgets = await this.getBudgetReports();
     const minutes = await this.getMeetingMinutes();
     const rentals = await this.getRentalItems();
+    const feedbacks = await this.getFeedbacks();
+    const freeposts = await this.getFreePosts();
+    const materials = await this.getMaterials();
 
     const backupData = {
-      version: '2.0',
+      version: '3.0',
       exported_at: new Date().toISOString(),
       organization: '한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회',
       data: {
@@ -597,10 +578,14 @@ export const api = {
         events,
         intro,
         members,
+        pastMembers,
         studies,
         budgets,
         minutes,
-        rentals
+        rentals,
+        feedbacks,
+        freeposts,
+        materials,
       }
     };
 
@@ -614,34 +599,88 @@ export const api = {
         return { success: false, message: '올바른 백업 파일 형식이 아닙니다 (data 필드 부재).' };
       }
 
-      if (Array.isArray(parsed.data.notices)) setLocalItem(NOTICES_STORAGE_KEY, parsed.data.notices);
-      if (Array.isArray(parsed.data.events)) setLocalItem(EVENTS_STORAGE_KEY, parsed.data.events);
-      if (parsed.data.intro) setLocalItem(COUNCIL_INTRO_KEY, parsed.data.intro);
-      if (Array.isArray(parsed.data.members)) setLocalItem(COUNCIL_MEMBERS_KEY, parsed.data.members);
-      if (Array.isArray(parsed.data.studies)) setLocalItem(STUDIES_STORAGE_KEY, parsed.data.studies);
-      if (Array.isArray(parsed.data.budgets)) setLocalItem(BUDGET_REPORTS_KEY, parsed.data.budgets);
-      if (Array.isArray(parsed.data.minutes)) setLocalItem(MINUTES_STORAGE_KEY, parsed.data.minutes);
-      if (Array.isArray(parsed.data.rentals)) setLocalItem(RENTALS_STORAGE_KEY, parsed.data.rentals);
+      // 서버 D1 데이터베이스에 항목별로 동기화 반영
+      let restoredCount = 0;
+      if (Array.isArray(parsed.data.notices)) {
+        for (const n of parsed.data.notices) {
+          try {
+            await fetchStrict('notices', { method: 'POST', body: JSON.stringify(n) });
+            restoredCount++;
+          } catch { /* duplicate or error */ }
+        }
+      }
+      if (Array.isArray(parsed.data.events)) {
+        for (const e of parsed.data.events) {
+          try {
+            await fetchStrict('events', { method: 'POST', body: JSON.stringify(e) });
+            restoredCount++;
+          } catch { /* duplicate or error */ }
+        }
+      }
+      if (parsed.data.intro) {
+        try {
+          await this.updateCouncilIntro(parsed.data.intro);
+          restoredCount++;
+        } catch { /* ignore */ }
+      }
+      if (Array.isArray(parsed.data.budgets)) {
+        for (const b of parsed.data.budgets) {
+          try {
+            await fetchStrict('budget-reports', { method: 'POST', body: JSON.stringify(b) });
+            restoredCount++;
+          } catch { /* ignore */ }
+        }
+      }
+      if (Array.isArray(parsed.data.rentals)) {
+        for (const r of parsed.data.rentals) {
+          try {
+            await fetchStrict('rentals', { method: 'POST', body: JSON.stringify(r) });
+            restoredCount++;
+          } catch { /* ignore */ }
+        }
+      }
 
-      return { success: true, message: '모든 학생회 데이터가 성공적으로 복원되었습니다!' };
+      // 이전 브라우저 로컬스토리지 잔여 캐시가 있다면 청소
+      this.clearLegacyBrowserStorage();
+
+      return { success: true, message: `서버 데이터베이스에 총 ${restoredCount}건의 데이터가 성공적으로 복원되었습니다.` };
     } catch (e: any) {
-      return { success: false, message: `JSON 파싱 오류: ${e.message}` };
+      return { success: false, message: `복원 처리 오류: ${e.message}` };
     }
   },
 
+  // 구버전에서 브라우저 로컬에 남겨졌을 수 있는 잔여 캐시 키들을 완전히 정리하는 유틸리티
+  clearLegacyBrowserStorage(): void {
+    const legacyKeys = [
+      'knoucs_local_notices',
+      'knoucs_local_events',
+      'knoucs_local_council_members',
+      'knoucs_local_past_council_members',
+      'knoucs_local_council_intro',
+      'knoucs_local_studies',
+      'knoucs_local_budgets',
+      'knoucs_local_minutes',
+      'knoucs_local_rentals',
+      'knoucs_local_feedbacks',
+      'knoucs_local_freeposts',
+      'knoucs_local_materials'
+    ];
+    legacyKeys.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
+    });
+  },
+
   async resetToDefaults(): Promise<void> {
-    localStorage.removeItem(NOTICES_STORAGE_KEY);
-    localStorage.removeItem(EVENTS_STORAGE_KEY);
-    localStorage.removeItem(COUNCIL_MEMBERS_KEY);
-    localStorage.removeItem(COUNCIL_INTRO_KEY);
-    localStorage.removeItem(STUDIES_STORAGE_KEY);
-    localStorage.removeItem(BUDGET_REPORTS_KEY);
-    localStorage.removeItem(MINUTES_STORAGE_KEY);
-    localStorage.removeItem(RENTALS_STORAGE_KEY);
+    // 브라우저에 남아있던 과거 잔여 로컬스토리지 캐시를 전면 정리
+    this.clearLegacyBrowserStorage();
   },
 
   // ==========================================
-  // 12. 이메일 발송 설정 (Admin)
+  // 13. 이메일 발송 설정 (Admin) - D1/Worker 전용
   // ==========================================
   async getEmailSettings() {
     return await fetchStrict<{

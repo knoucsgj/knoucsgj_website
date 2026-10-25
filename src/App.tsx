@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
@@ -11,8 +12,14 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AccountPage } from './pages/AccountPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { api } from './services/api';
 
 export function App() {
+  useEffect(() => {
+    // 과거 브라우저 로컬스토리지 잔여 캐시 전면 정리 (큰 글씨 모드 제외)
+    api.clearLegacyBrowserStorage();
+  }, []);
+
   return (
     <BrowserRouter>
       <Layout>

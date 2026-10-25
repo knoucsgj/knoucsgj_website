@@ -113,6 +113,74 @@ CREATE TABLE IF NOT EXISTS council_members (
 );
 
 -- 인덱스 생성 (조회 성능 최적화)
+-- 10. 학생회비 결산보고 테이블
+CREATE TABLE IF NOT EXISTS budget_reports (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  period TEXT NOT NULL,
+  income_total INTEGER NOT NULL DEFAULT 0,
+  expense_total INTEGER NOT NULL DEFAULT 0,
+  balance INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT '감사완료' CHECK (status IN ('감사완료', '집행중')),
+  published_date TEXT NOT NULL,
+  items_json TEXT NOT NULL DEFAULT '[]'
+);
+
+-- 11. 학생 복지 및 비품 대여 테이블
+CREATE TABLE IF NOT EXISTS rental_items (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('전산실습 교재', 'IT 기기/소모품', '생활복지')),
+  total_qty INTEGER NOT NULL DEFAULT 1,
+  available_qty INTEGER NOT NULL DEFAULT 1,
+  location TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '대여가능' CHECK (status IN ('대여가능', '대여불가')),
+  desc TEXT
+);
+
+-- 12. 회의록 테이블
+CREATE TABLE IF NOT EXISTS meeting_minutes (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  meeting_type TEXT NOT NULL,
+  meeting_date TEXT NOT NULL,
+  attendees TEXT,
+  agenda TEXT,
+  content TEXT,
+  decisions TEXT
+);
+
+-- 13. 역대 학생회 임원진 테이블
+CREATE TABLE IF NOT EXISTS past_council_members (
+  id TEXT PRIMARY KEY,
+  generation TEXT NOT NULL,
+  period TEXT NOT NULL,
+  role TEXT NOT NULL,
+  name TEXT NOT NULL,
+  photo_url TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- 14. 학생회칙 버전 관리 테이블
+CREATE TABLE IF NOT EXISTS constitution_versions (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  revision_date TEXT NOT NULL,
+  is_current INTEGER NOT NULL DEFAULT 0,
+  description TEXT,
+  content_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- 인덱스 생성 (조회 성능 최적화)
+CREATE INDEX IF NOT EXISTS idx_notices_pinned ON notices (is_pinned, created_at);
+CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name);
+CREATE INDEX IF NOT EXISTS idx_freeposts_created ON free_posts (created_at);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks (created_at);
+CREATE INDEX IF NOT EXISTS idx_budget_published ON budget_reports (published_date);
+CREATE INDEX IF NOT EXISTS idx_constitution_current ON constitution_versions (is_current, revision_date);
 CREATE INDEX IF NOT EXISTS idx_notices_pinned ON notices (is_pinned, created_at);
 CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name);
 CREATE INDEX IF NOT EXISTS idx_freeposts_created ON free_posts (created_at);

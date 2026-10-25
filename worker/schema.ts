@@ -5,6 +5,8 @@ import { initialEvents } from '../src/data/mockEvents';
 import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro, initialPastCouncilMembers } from '../src/data/mockCouncil';
 import { initialMeetingMinutes } from '../src/data/mockGovernance';
 import { officialConstitutionDocuments } from '../src/data/officialConstitution';
+import { initialBudgetReports } from '../src/data/mockFinance';
+import { initialRentalItems } from '../src/data/mockWelfare';
 
 type D1 = any;
 
@@ -76,6 +78,15 @@ const CREATE_STATEMENTS = [
     is_current INTEGER NOT NULL DEFAULT 0, description TEXT,
     content_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_constitution_current ON constitution_versions (is_current, revision_date)`,
+  `CREATE TABLE IF NOT EXISTS budget_reports (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, period TEXT NOT NULL,
+    income_total INTEGER NOT NULL DEFAULT 0, expense_total INTEGER NOT NULL DEFAULT 0, balance INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT '감사완료', published_date TEXT NOT NULL, items_json TEXT NOT NULL DEFAULT '[]')`,
+  `CREATE INDEX IF NOT EXISTS idx_budget_published ON budget_reports (published_date)`,
+  `CREATE TABLE IF NOT EXISTS rental_items (
+    id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,
+    total_qty INTEGER NOT NULL DEFAULT 1, available_qty INTEGER NOT NULL DEFAULT 1,
+    location TEXT NOT NULL, status TEXT NOT NULL DEFAULT '대여가능', desc TEXT)`,
 ];
 
 // Columns added after the first release (ownership + study approval)
@@ -196,6 +207,51 @@ async function run(db: D1) {
         .run();
     }
     await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v4', '1')").run();
+  }
+
+  // Seed budget reports and rental items (v5)
+  const seededV5 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v5'").first();
+  if (!seededV5) {
+    const stmtsV5: any[] = [];
+    for (const b of initialBudgetReports) {
+      stmtsV5.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO budget_reports (id, title, period, income_total, expense_total, balance, status, published_date, items_json) VALUES (?,?,?,?,?,?,?,?,?)'
+          )
+          .bind(
+            b.id,
+            b.title,
+            b.period,
+            b.income_total,
+            b.expense_total,
+            b.balance,
+            b.status,
+            b.published_date,
+            JSON.stringify(b.items || [])
+          )
+      );
+    }
+    for (const r of initialRentalItems) {
+      stmtsV5.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO rental_items (id, name, category, total_qty, available_qty, location, status, desc) VALUES (?,?,?,?,?,?,?,?)'
+          )
+          .bind(
+            r.id,
+            r.name,
+            r.category,
+            r.total_qty,
+            r.available_qty,
+            r.location,
+            r.status,
+            r.desc
+          )
+      );
+    }
+    stmtsV5.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v5', '1')"));
+    await db.batch(stmtsV5);
   }
 
   // Role auto-migration for existing members
