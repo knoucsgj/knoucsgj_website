@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { useAuth } from '../services/auth';
 import { useRequireLogin } from '../lib/useRequireLogin';
 import type { StudyGroup, AcademicMaterial } from '../lib/types';
-import { KNOU_CS_COURSES } from '../data/mockMaterials';
+import { KNOU_COURSES_2026, findCourseType } from '../data/mockMaterials';
 import { ASSETS } from '../lib/assets';
 import {
   BookOpen,
@@ -52,7 +52,21 @@ export const StudyMaterialsPage: React.FC = () => {
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4>(1);
   const [selectedSemester, setSelectedSemester] = useState<1 | 2>(2); // Default 2학기 (현재 학기)
   const [selectedCourse, setSelectedCourse] = useState<string>('전체');
+  const [selectedCourseType, setSelectedCourseType] = useState<string>('전체'); // '전체' | '전공' | '교양' | '일반선택'
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
+
+  const getCourseTypeBadge = (type: string) => {
+    switch (type) {
+      case '전공':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case '교양':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case '일반선택':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
 
   // Other Materials Category Filter
   const [otherCategoryFilter, setOtherCategoryFilter] = useState<string>('전체');
@@ -200,7 +214,14 @@ export const StudyMaterialsPage: React.FC = () => {
     setEditingMaterial(null);
     setNewMatGrade(selectedGrade);
     setNewMatSemester(selectedSemester);
-    setNewMatCourse(selectedCourse === '전체' ? '' : selectedCourse);
+    const courses = KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || [];
+    if (selectedCourse !== '전체' && courses.some((c) => c.name === selectedCourse)) {
+      setNewMatCourse(selectedCourse);
+    } else if (courses.length > 0) {
+      setNewMatCourse(courses[0].name);
+    } else {
+      setNewMatCourse('');
+    }
     setNewMatTitle('');
     setNewMatDescription('');
     setNewMatCategory(defaultCategory);
@@ -288,18 +309,32 @@ export const StudyMaterialsPage: React.FC = () => {
     }
   };
 
-  // Filter Academic Materials by grade & semester & course & search
-  const currentGradeCourses = KNOU_CS_COURSES[selectedGrade][selectedSemester] || [];
+  // 2026년 기준 선택된 학년/학기 개설 교과목 목록 (전공, 교양, 일반선택)
+  const currentGradeCoursesInfo = KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || [];
+  
+  // 교과구분 필터에 따른 과목 목록
+  const displayedCourses = currentGradeCoursesInfo.filter((c) => {
+    if (selectedCourseType === '전체') return true;
+    return c.type === selectedCourseType;
+  });
+
+  // 학습자료 필터링 (학년, 학기, 교과구분, 과목, 검색어)
   const filteredMaterials = materials.filter((m) => {
     const matchesGrade = m.grade === selectedGrade;
     const matchesSemester = m.semester === selectedSemester;
     const matchesCourse = selectedCourse === '전체' ? true : m.course_name === selectedCourse;
+    
+    // 교과구분 필터 매칭
+    const courseType = findCourseType(m.course_name);
+    const matchesType = selectedCourseType === '전체' ? true : courseType === selectedCourseType;
+
     const matchesSearch =
       materialSearchQuery.trim() === '' ||
       m.title.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
       m.course_name.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
-      m.description.toLowerCase().includes(materialSearchQuery.toLowerCase());
-    return matchesGrade && matchesSemester && matchesCourse && matchesSearch;
+      m.description.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
+      m.author.toLowerCase().includes(materialSearchQuery.toLowerCase());
+    return matchesGrade && matchesSemester && matchesCourse && matchesType && matchesSearch;
   });
 
   // Filter Other Materials (category = 기타자료)
@@ -439,7 +474,7 @@ export const StudyMaterialsPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-white">학년 및 학기 선택</h3>
-                  <p className="text-xs sm:text-sm text-slate-300">원하시는 학년과 학기를 선택하시면 개설 전공과목별 자료가 표시됩니다.</p>
+                  <p className="text-xs sm:text-sm text-slate-300">원하시는 학년과 학기를 선택하시면 2026년 기준 개설 교과목(전공, 교양, 일반선택) 자료가 표시됩니다.</p>
                 </div>
               </div>
 
@@ -490,21 +525,21 @@ export const StudyMaterialsPage: React.FC = () => {
                   }`}
                 >
                   <span className="block text-xs text-blue-300 font-semibold mb-0.5">컴퓨터과학과</span>
-                  <strong className="text-base sm:text-lg font-bold block">{grade}학년 전공</strong>
+                  <strong className="text-base sm:text-lg font-bold block">{grade}학년 교과목</strong>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Course Pills and Search Bar */}
+          {/* Course Pills, Classification Tabs and Search Bar */}
           <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  {selectedGrade}학년 {selectedSemester}학기 전공 교과목 목록
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
+                  2026학년도 {selectedGrade}학년 {selectedSemester}학기 개설 교과목
                 </span>
                 <h4 className="text-lg font-bold text-slate-900">
-                  과목을 선택하여 맞춤 학습자료를 확인하세요
+                  교과구분과 과목을 선택하여 맞춤 학습자료를 확인하세요
                 </h4>
               </div>
 
@@ -515,37 +550,73 @@ export const StudyMaterialsPage: React.FC = () => {
                   type="text"
                   value={materialSearchQuery}
                   onChange={(e) => setMaterialSearchQuery(e.target.value)}
-                  placeholder="자료명, 내용 검색..."
+                  placeholder="자료명, 과목명, 작성자 검색..."
                   className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            {/* Course Selector Buttons */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {/* 교과구분 필터 탭 (전체 / 전공 / 교양 / 일반선택) */}
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-fit border border-slate-200/60">
+              {(['전체', '전공', '교양', '일반선택'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setSelectedCourseType(type);
+                    setSelectedCourse('전체');
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    selectedCourseType === type
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {type === '전체' ? '교과 전체' : `${type} 과목`}
+                </button>
+              ))}
+            </div>
+
+            {/* Course Selector Buttons with Badges */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
               <button
                 onClick={() => setSelectedCourse('전체')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
                   selectedCourse === '전체'
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
-                과목 전체 ({filteredMaterials.length})
+                과목 전체 ({displayedCourses.length}과목)
               </button>
-              {currentGradeCourses.map((course) => (
-                <button
-                  key={course}
-                  onClick={() => setSelectedCourse(course)}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border ${
-                    selectedCourse === course
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {course}
-                </button>
-              ))}
+              {displayedCourses.map((c) => {
+                const isSelected = selectedCourse === c.name;
+                return (
+                  <button
+                    key={c.name}
+                    onClick={() => setSelectedCourse(c.name)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{c.name}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : c.type === '전공'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : c.type === '교양'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-purple-50 text-purple-700 border border-purple-200'
+                      }`}
+                    >
+                      {c.type === '전공' ? '전공' : c.type === '교양' ? '교양' : '일선'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -563,9 +634,12 @@ export const StudyMaterialsPage: React.FC = () => {
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
                           {mat.course_name}
+                        </span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getCourseTypeBadge(findCourseType(mat.course_name))}`}>
+                          {findCourseType(mat.course_name)}
                         </span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                           {mat.category}
@@ -1057,11 +1131,20 @@ export const StudyMaterialsPage: React.FC = () => {
             <form onSubmit={handleSaveMaterial} className="space-y-4 text-xs sm:text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">대상 학년</label>
+                  <label className="block font-bold text-slate-800 mb-1">대상 학년 *</label>
                   <select
                     value={newMatGrade}
-                    onChange={(e) => setNewMatGrade(Number(e.target.value) as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50"
+                    onChange={(e) => {
+                      const g = Number(e.target.value) as 1 | 2 | 3 | 4;
+                      setNewMatGrade(g);
+                      if (newMatCategory !== '기타자료') {
+                        const courses = KNOU_COURSES_2026[g]?.[newMatSemester] || [];
+                        if (courses.length > 0 && !courses.some((c) => c.name === newMatCourse)) {
+                          setNewMatCourse(courses[0].name);
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold"
                   >
                     <option value={1}>1학년</option>
                     <option value={2}>2학년</option>
@@ -1070,11 +1153,20 @@ export const StudyMaterialsPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">개설 학기</label>
+                  <label className="block font-bold text-slate-800 mb-1">개설 학기 *</label>
                   <select
                     value={newMatSemester}
-                    onChange={(e) => setNewMatSemester(Number(e.target.value) as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50"
+                    onChange={(e) => {
+                      const s = Number(e.target.value) as 1 | 2;
+                      setNewMatSemester(s);
+                      if (newMatCategory !== '기타자료') {
+                        const courses = KNOU_COURSES_2026[newMatGrade]?.[s] || [];
+                        if (courses.length > 0 && !courses.some((c) => c.name === newMatCourse)) {
+                          setNewMatCourse(courses[0].name);
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold"
                   >
                     <option value={1}>1학기</option>
                     <option value={2}>2학기</option>
@@ -1085,16 +1177,66 @@ export const StudyMaterialsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">
-                    {newMatCategory === '기타자료' ? '구분/소프트웨어명 *' : '전공 교과목명 *'}
+                    {newMatCategory === '기타자료' ? '구분 / 소프트웨어명 *' : '개설 교과목명 선택 *'}
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={newMatCourse}
-                    onChange={(e) => setNewMatCourse(e.target.value)}
-                    placeholder={newMatCategory === '기타자료' ? '예: VS Code, Git, 정보처리기사' : '예: C프로그래밍, 자료구조'}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                  />
+                  {newMatCategory === '기타자료' ? (
+                    <input
+                      type="text"
+                      required
+                      value={newMatCourse}
+                      onChange={(e) => setNewMatCourse(e.target.value)}
+                      placeholder="예: VS Code, Git, Docker, 정보처리기사"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <select
+                      required
+                      value={newMatCourse}
+                      onChange={(e) => setNewMatCourse(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-blue-500 font-semibold text-slate-900"
+                    >
+                      <option value="">-- 교과목 선택 ({newMatGrade}학년 {newMatSemester}학기) --</option>
+                      
+                      {/* 전공 교과목 */}
+                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '전공').length > 0 && (
+                        <optgroup label="📘 전공 교과목">
+                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                            .filter((c) => c.type === '전공')
+                            .map((c) => (
+                              <option key={c.name} value={c.name}>
+                                [전공] {c.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+
+                      {/* 교양 교과목 */}
+                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '교양').length > 0 && (
+                        <optgroup label="📗 교양 교과목">
+                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                            .filter((c) => c.type === '교양')
+                            .map((c) => (
+                              <option key={c.name} value={c.name}>
+                                [교양] {c.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+
+                      {/* 일반선택 교과목 */}
+                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '일반선택').length > 0 && (
+                        <optgroup label="📙 일반선택 교과목">
+                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                            .filter((c) => c.type === '일반선택')
+                            .map((c) => (
+                              <option key={c.name} value={c.name}>
+                                [일선] {c.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">자료 분류</label>
