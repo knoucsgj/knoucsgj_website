@@ -414,10 +414,7 @@ export const NoticesPage: React.FC = () => {
           }`}
         >
           <Camera className="w-4 h-4 text-blue-600" />
-          <span>활동보고 (사진·영상)</span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
-            메인 갤러리 연동
-          </span>
+          <span>활동보고</span>
         </button>
 
         <button
@@ -429,10 +426,7 @@ export const NoticesPage: React.FC = () => {
           }`}
         >
           <Receipt className="w-4 h-4" />
-          <span>학생회비 결산보고</span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-            영수증 100% 공개
-          </span>
+          <span>결산보고</span>
         </button>
 
         <button
@@ -444,10 +438,7 @@ export const NoticesPage: React.FC = () => {
           }`}
         >
           <FileCheck className="w-4 h-4" />
-          <span>정기·임시 회의록</span>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
-            공식 양식 출력
-          </span>
+          <span>회의록</span>
         </button>
       </div>
 
