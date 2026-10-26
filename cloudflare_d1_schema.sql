@@ -123,7 +123,16 @@ CREATE TABLE IF NOT EXISTS budget_reports (
   balance INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT '감사완료' CHECK (status IN ('감사완료', '집행중')),
   published_date TEXT NOT NULL,
-  items_json TEXT NOT NULL DEFAULT '[]'
+  items_json TEXT NOT NULL DEFAULT '[]',
+  receipt_url TEXT,
+  receipt_name TEXT,
+  created_by TEXT,
+  created_at TEXT,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  deleted_reason TEXT,
+  deleted_at TEXT,
+  deleted_by TEXT,
+  edit_history TEXT NOT NULL DEFAULT '[]'
 );
 
 -- 11. 학생 복지 및 비품 대여 테이블
@@ -147,7 +156,18 @@ CREATE TABLE IF NOT EXISTS meeting_minutes (
   attendees TEXT,
   agenda TEXT,
   content TEXT,
-  decisions TEXT
+  decisions TEXT,
+  location TEXT,
+  chairperson TEXT,
+  recorder TEXT,
+  attachments_json TEXT NOT NULL DEFAULT '[]',
+  created_by TEXT,
+  created_at TEXT,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  deleted_reason TEXT,
+  deleted_at TEXT,
+  deleted_by TEXT,
+  edit_history TEXT NOT NULL DEFAULT '[]'
 );
 
 -- 13. 역대 학생회 임원진 테이블

@@ -1304,54 +1304,149 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // ---- meeting minutes
+  // ---- meeting minutes (Read: public / Create&Update: president & master admin / Delete: master admin only with mandatory reason)
   if (resource === 'minutes') {
     if (method === 'GET') {
-      const { results } = await db.prepare('SELECT * FROM meeting_minutes ORDER BY meeting_date DESC, id DESC').all();
-      return json(results);
+      const includeDeleted = session.admin && url.searchParams.get('include_deleted') === 'true';
+      const sql = includeDeleted
+        ? 'SELECT * FROM meeting_minutes ORDER BY meeting_date DESC, id DESC'
+        : 'SELECT * FROM meeting_minutes WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY meeting_date DESC, id DESC';
+      const { results } = await db.prepare(sql).all();
+      return json(
+        results.map((r: any) => {
+          let attachments: any[] = [];
+          try { attachments = JSON.parse(r.attachments_json || '[]'); } catch { attachments = []; }
+          let edit_history: any[] = [];
+          try { edit_history = JSON.parse(r.edit_history || '[]'); } catch { edit_history = []; }
+          return {
+            ...r,
+            attachments,
+            edit_history,
+            is_deleted: !!r.is_deleted,
+          };
+        })
+      );
     }
     if (method === 'POST') {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
       const m = {
         id: b.id ? str(b.id, 50) : `minute-${Date.now()}-${randomHex(2)}`,
         title: str(b.title, 150),
         meeting_type: str(b.meeting_type, 50) || '정기임원회의',
         meeting_date: str(b.meeting_date, 20) || today(),
-        attendees: str(b.attendees, 300),
+        location: str(b.location, 150) || '광주전남지역대학 본관 405호 학생회실',
+        attendees: str(b.attendees, 500),
         agenda: str(b.agenda, 1000),
-        content: str(b.content, 10000),
-        decisions: str(b.decisions, 2000),
+        content: str(b.content, 20000),
+        decisions: str(b.decisions, 3000),
+        chairperson: str(b.chairperson, 50) || (session.member?.name || '학생회장'),
+        recorder: str(b.recorder, 50) || (session.member?.name || '총무부장'),
+        attachments_json: Array.isArray(b.attachments) ? JSON.stringify(b.attachments) : '[]',
+        created_by: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회장'),
+        created_at: new Date().toISOString(),
+        is_deleted: 0,
+        edit_history: '[]'
       };
       if (!m.title) throw new HttpError(400, '회의 제목을 입력해 주세요.');
+      if (!m.decisions) throw new HttpError(400, '의결 사항을 입력해 주세요.');
       await db
         .prepare(
-          'INSERT INTO meeting_minutes (id, title, meeting_type, meeting_date, attendees, agenda, content, decisions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          `INSERT INTO meeting_minutes (
+            id, title, meeting_type, meeting_date, location, attendees, agenda, content, decisions,
+            chairperson, recorder, attachments_json, created_by, created_at, is_deleted, edit_history
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '[]')`
         )
-        .bind(m.id, m.title, m.meeting_type, m.meeting_date, m.attendees, m.agenda, m.content, m.decisions)
+        .bind(
+          m.id, m.title, m.meeting_type, m.meeting_date, m.location, m.attendees, m.agenda, m.content, m.decisions,
+          m.chairperson, m.recorder, m.attachments_json, m.created_by, m.created_at
+        )
         .run();
-      return json(m, 201);
+      return json({ ...m, attachments: Array.isArray(b.attachments) ? b.attachments : [], edit_history: [] }, 201);
+    }
+    if (method === 'PUT' && id) {
+      requireCouncilManager(session);
+      const b: any = await readJson(req);
+      const editReason = str(b.edit_reason, 500);
+      if (!editReason) {
+        throw new HttpError(400, '회의록 수정 시 정정/수정 사유는 필수 입력 사항입니다.');
+      }
+      const existing: any = await db.prepare('SELECT * FROM meeting_minutes WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 회의록을 찾을 수 없습니다.');
+
+      let history: any[] = [];
+      try { history = JSON.parse(existing.edit_history || '[]'); } catch { history = []; }
+      history.push({
+        edited_at: new Date().toISOString(),
+        edited_by: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회장'),
+        reason: editReason
+      });
+
+      const updated = {
+        title: b.title !== undefined ? str(b.title, 150) : existing.title,
+        meeting_type: b.meeting_type !== undefined ? str(b.meeting_type, 50) : existing.meeting_type,
+        meeting_date: b.meeting_date !== undefined ? str(b.meeting_date, 20) : existing.meeting_date,
+        location: b.location !== undefined ? str(b.location, 150) : existing.location,
+        attendees: b.attendees !== undefined ? str(b.attendees, 500) : existing.attendees,
+        agenda: b.agenda !== undefined ? str(b.agenda, 1000) : existing.agenda,
+        content: b.content !== undefined ? str(b.content, 20000) : existing.content,
+        decisions: b.decisions !== undefined ? str(b.decisions, 3000) : existing.decisions,
+        chairperson: b.chairperson !== undefined ? str(b.chairperson, 50) : existing.chairperson,
+        recorder: b.recorder !== undefined ? str(b.recorder, 50) : existing.recorder,
+        attachments_json: Array.isArray(b.attachments) ? JSON.stringify(b.attachments) : existing.attachments_json,
+        edit_history: JSON.stringify(history)
+      };
+
+      await db
+        .prepare(
+          `UPDATE meeting_minutes SET
+            title=?, meeting_type=?, meeting_date=?, location=?, attendees=?, agenda=?, content=?,
+            decisions=?, chairperson=?, recorder=?, attachments_json=?, edit_history=?
+          WHERE id=?`
+        )
+        .bind(
+          updated.title, updated.meeting_type, updated.meeting_date, updated.location, updated.attendees,
+          updated.agenda, updated.content, updated.decisions, updated.chairperson, updated.recorder,
+          updated.attachments_json, updated.edit_history, id
+        )
+        .run();
+      return json({ success: true });
     }
     if (method === 'DELETE' && id) {
-      requireCouncil(session);
-      await db.prepare('DELETE FROM meeting_minutes WHERE id = ?').bind(id).run();
-      return json({ success: true });
+      requireAdmin(session);
+      let reason = str(url.searchParams.get('deleted_reason'), 500);
+      if (!reason) {
+        const b: any = await readJson(req).catch(() => ({}));
+        reason = str(b.deleted_reason, 500);
+      }
+      if (!reason) {
+        throw new HttpError(400, '회의록 삭제 시 삭제 사유를 반드시 입력해야 합니다.');
+      }
+      const existing: any = await db.prepare('SELECT * FROM meeting_minutes WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 회의록을 찾을 수 없습니다.');
+
+      await db
+        .prepare('UPDATE meeting_minutes SET is_deleted = 1, deleted_reason = ?, deleted_at = ?, deleted_by = ? WHERE id = ?')
+        .bind(reason, new Date().toISOString(), '총괄관리자', id)
+        .run();
+      return json({ success: true, message: '감사 사유와 함께 안전하게 보존 처리되었습니다.' });
     }
   }
 
-  // ---- past council members (Read: public / Write: president & master admin only)
-  // ---- budget reports (Read: public / Write: council & master admin)
+  // ---- budget reports (Read: public / Create&Update: president & master admin / Delete: master admin only with mandatory reason / Receipt is mandatory)
   if (resource === 'budget-reports') {
     if (method === 'GET') {
-      const { results } = await db.prepare('SELECT * FROM budget_reports ORDER BY published_date DESC, id DESC').all();
+      const includeDeleted = session.admin && url.searchParams.get('include_deleted') === 'true';
+      const sql = includeDeleted
+        ? 'SELECT * FROM budget_reports ORDER BY published_date DESC, id DESC'
+        : 'SELECT * FROM budget_reports WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY published_date DESC, id DESC';
+      const { results } = await db.prepare(sql).all();
       return json(
         results.map((r: any) => {
           let items: any[] = [];
-          try {
-            items = JSON.parse(r.items_json || '[]');
-          } catch {
-            items = [];
-          }
+          try { items = JSON.parse(r.items_json || '[]'); } catch { items = []; }
+          let edit_history: any[] = [];
+          try { edit_history = JSON.parse(r.edit_history || '[]'); } catch { edit_history = []; }
           return {
             id: r.id,
             title: r.title,
@@ -1362,13 +1457,28 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
             status: r.status,
             published_date: r.published_date,
             items,
+            receipt_url: r.receipt_url || null,
+            receipt_name: r.receipt_name || null,
+            created_by: r.created_by || '학생회',
+            created_at: r.created_at || r.published_date,
+            edit_history,
+            is_deleted: !!r.is_deleted,
+            deleted_reason: r.deleted_reason || null,
+            deleted_at: r.deleted_at || null,
+            deleted_by: r.deleted_by || null,
           };
         })
       );
     }
     if (method === 'POST') {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
+
+      const receiptUrl = typeof b.receipt_url === 'string' ? b.receipt_url.trim() : '';
+      if (!receiptUrl) {
+        throw new HttpError(400, '투명한 학생회비 집행을 위해 영수증/증빙 파일 첨부는 필수입니다.');
+      }
+
       const report = {
         id: b.id ? str(b.id, 50) : `budget-${Date.now()}-${randomHex(2)}`,
         title: str(b.title, 150),
@@ -1379,31 +1489,47 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         status: str(b.status, 20) || '감사완료',
         published_date: str(b.published_date, 20) || today(),
         items: Array.isArray(b.items) ? b.items : [],
+        receipt_url: receiptUrl,
+        receipt_name: str(b.receipt_name, 150) || '결산_영수증_증빙.pdf',
+        created_by: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회장'),
+        created_at: new Date().toISOString(),
+        is_deleted: 0,
+        edit_history: '[]'
       };
       if (!report.title) throw new HttpError(400, '결산 보고서 제목을 입력해 주세요.');
       await db
         .prepare(
-          'INSERT INTO budget_reports (id, title, period, income_total, expense_total, balance, status, published_date, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          `INSERT INTO budget_reports (
+            id, title, period, income_total, expense_total, balance, status, published_date,
+            items_json, receipt_url, receipt_name, created_by, created_at, is_deleted, edit_history
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '[]')`
         )
         .bind(
-          report.id,
-          report.title,
-          report.period,
-          report.income_total,
-          report.expense_total,
-          report.balance,
-          report.status,
-          report.published_date,
-          JSON.stringify(report.items)
+          report.id, report.title, report.period, report.income_total, report.expense_total,
+          report.balance, report.status, report.published_date, JSON.stringify(report.items),
+          report.receipt_url, report.receipt_name, report.created_by, report.created_at
         )
         .run();
-      return json(report, 201);
+      return json({ ...report, edit_history: [] }, 201);
     }
     if (method === 'PUT' && id) {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
+      const editReason = str(b.edit_reason, 500);
+      if (!editReason) {
+        throw new HttpError(400, '결산 수정 시 정정/수정 사유는 필수 입력 사항입니다.');
+      }
       const existing: any = await db.prepare('SELECT * FROM budget_reports WHERE id = ?').bind(id).first();
       if (!existing) throw new HttpError(404, '해당 결산보고를 찾을 수 없습니다.');
+
+      let history: any[] = [];
+      try { history = JSON.parse(existing.edit_history || '[]'); } catch { history = []; }
+      history.push({
+        edited_at: new Date().toISOString(),
+        edited_by: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회장'),
+        reason: editReason
+      });
+
       const updated = {
         title: b.title !== undefined ? str(b.title, 150) : existing.title,
         period: b.period !== undefined ? str(b.period, 100) : existing.period,
@@ -1413,30 +1539,59 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         status: b.status !== undefined ? str(b.status, 20) : existing.status,
         published_date: b.published_date !== undefined ? str(b.published_date, 20) : existing.published_date,
         items_json: Array.isArray(b.items) ? JSON.stringify(b.items) : existing.items_json,
+        receipt_url: b.receipt_url !== undefined ? str(b.receipt_url, 10000000) : existing.receipt_url,
+        receipt_name: b.receipt_name !== undefined ? str(b.receipt_name, 150) : existing.receipt_name,
+        edit_history: JSON.stringify(history)
       };
       await db
         .prepare(
-          'UPDATE budget_reports SET title=?, period=?, income_total=?, expense_total=?, balance=?, status=?, published_date=?, items_json=? WHERE id=?'
+          `UPDATE budget_reports SET
+            title=?, period=?, income_total=?, expense_total=?, balance=?, status=?,
+            published_date=?, items_json=?, receipt_url=?, receipt_name=?, edit_history=?
+          WHERE id=?`
         )
         .bind(
-          updated.title,
-          updated.period,
-          updated.income_total,
-          updated.expense_total,
-          updated.balance,
-          updated.status,
-          updated.published_date,
-          updated.items_json,
-          id
+          updated.title, updated.period, updated.income_total, updated.expense_total,
+          updated.balance, updated.status, updated.published_date, updated.items_json,
+          updated.receipt_url, updated.receipt_name, updated.edit_history, id
         )
         .run();
       return json({ success: true });
     }
     if (method === 'DELETE' && id) {
-      requireCouncil(session);
-      await db.prepare('DELETE FROM budget_reports WHERE id = ?').bind(id).run();
-      return json({ success: true });
+      requireAdmin(session);
+      let reason = str(url.searchParams.get('deleted_reason'), 500);
+      if (!reason) {
+        const b: any = await readJson(req).catch(() => ({}));
+        reason = str(b.deleted_reason, 500);
+      }
+      if (!reason) {
+        throw new HttpError(400, '결산 내역 삭제 시 삭제 사유를 반드시 입력해야 합니다.');
+      }
+      const existing: any = await db.prepare('SELECT * FROM budget_reports WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 결산보고를 찾을 수 없습니다.');
+
+      await db
+        .prepare('UPDATE budget_reports SET is_deleted = 1, deleted_reason = ?, deleted_at = ?, deleted_by = ? WHERE id = ?')
+        .bind(reason, new Date().toISOString(), '총괄관리자', id)
+        .run();
+      return json({ success: true, message: '감사 사유와 함께 안전하게 보존 처리되었습니다.' });
     }
+  }
+
+  // ---- admin-audits (Read: master admin only)
+  if (resource === 'admin-audits') {
+    requireAdmin(session);
+    const { results: deletedBudgets } = await db
+      .prepare('SELECT * FROM budget_reports WHERE is_deleted = 1 ORDER BY deleted_at DESC')
+      .all();
+    const { results: deletedMinutes } = await db
+      .prepare('SELECT * FROM meeting_minutes WHERE is_deleted = 1 ORDER BY deleted_at DESC')
+      .all();
+    return json({
+      budgets: deletedBudgets.map((b: any) => ({ ...b, items: JSON.parse(b.items_json || '[]') })),
+      minutes: deletedMinutes.map((m: any) => ({ ...m, attachments: JSON.parse(m.attachments_json || '[]') })),
+    });
   }
 
   // ---- rentals (Read: public / Write: council & master admin)

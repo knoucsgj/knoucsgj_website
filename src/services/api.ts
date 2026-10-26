@@ -297,16 +297,19 @@ export const api = {
     });
   },
 
-  async updateBudgetReport(id: string, updatedFields: Partial<BudgetReport>): Promise<BudgetReport | null> {
+    async updateBudgetReport(id: string, updatedFields: Partial<BudgetReport>, editReason: string): Promise<BudgetReport | null> {
     await fetchStrict<any>(`budget-reports&id=${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: JSON.stringify(updatedFields),
+      body: JSON.stringify({ ...updatedFields, edit_reason: editReason }),
     });
     return { id, ...updatedFields } as BudgetReport;
   },
 
-  async deleteBudgetReport(id: string): Promise<boolean> {
-    await fetchStrict<any>(`budget-reports&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  async deleteBudgetReport(id: string, deletedReason: string): Promise<boolean> {
+    await fetchStrict<any>(`budget-reports&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ deleted_reason: deletedReason }),
+    });
     return true;
   },
 
@@ -328,9 +331,25 @@ export const api = {
     });
   },
 
-  async deleteMeetingMinute(id: string): Promise<boolean> {
-    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  async updateMeetingMinute(id: string, updatedFields: Partial<MeetingMinute>, editReason: string): Promise<MeetingMinute | null> {
+    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...updatedFields, edit_reason: editReason }),
+    });
+    return { id, ...updatedFields } as MeetingMinute;
+  },
+
+  async deleteMeetingMinute(id: string, deletedReason: string): Promise<boolean> {
+    await fetchStrict<any>(`minutes&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ deleted_reason: deletedReason }),
+    });
     return true;
+  },
+
+  // 총괄관리자(admin) 전용: 투명성 보존 감사 로그 (소프트 삭제된 결산/회의록 이력)
+  async getAdminAudits(): Promise<{ budgets: BudgetReport[]; minutes: MeetingMinute[] }> {
+    return await fetchStrict<{ budgets: BudgetReport[]; minutes: MeetingMinute[] }>('admin-audits');
   },
 
   // ==========================================

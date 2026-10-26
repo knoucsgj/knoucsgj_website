@@ -2,7 +2,7 @@ import { AdminConstitutionManager } from '../components/AdminConstitutionManager
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
-import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import {
   Shield,
@@ -28,7 +28,9 @@ import {
   FileText,
   Mail,
   CheckCircle2,
-  Award
+  Award,
+  Receipt,
+  FileCheck
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -50,7 +52,7 @@ export const AdminPage: React.FC = () => {
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
@@ -94,7 +96,7 @@ export const AdminPage: React.FC = () => {
   const [noticeForm, setNoticeForm] = useState({
     title: '',
     content: '',
-    category: '학생회' as '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록',
+    category: '학생회' as '필독' | '학생회' | '학사' | '행사',
     author: '학생회',
     is_pinned: false
   });
@@ -140,16 +142,72 @@ export const AdminPage: React.FC = () => {
   });
 
   // Governance States
+    // Budget Reports State & Modals
+  const [budgetReports, setBudgetReports] = useState<BudgetReport[]>([]);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [budgetEditReason, setBudgetEditReason] = useState('');
+  const [budgetForm, setBudgetForm] = useState<{
+    title: string;
+    period: string;
+    published_date: string;
+    status: '감사완료' | '집행중';
+    income_total: number;
+    expense_total: number;
+    balance: number;
+    items: BudgetItem[];
+    receipt_url: string;
+    receipt_name: string;
+  }>({
+    title: '',
+    period: '2026학년도 2학기 3분기',
+    published_date: new Date().toISOString().split('T')[0],
+    status: '감사완료',
+    income_total: 0,
+    expense_total: 0,
+    balance: 0,
+    items: [],
+    receipt_url: '',
+    receipt_name: ''
+  });
+
+  // Minute Editing & Auditing
+  const [editingMinuteId, setEditingMinuteId] = useState<string | null>(null);
+  const [minuteEditReason, setMinuteEditReason] = useState('');
+
+  // Transparency Audit Logs State (Master Admin Only)
+  const [auditLogs, setAuditLogs] = useState<{ budgets: BudgetReport[]; minutes: MeetingMinute[] }>({ budgets: [], minutes: [] });
+
+  // Delete Audit Modal State (Reason is mandatory, Master Admin only)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'budget' | 'minute'; id: string; title: string } | null>(null);
+  const [deleteReasonInput, setDeleteReasonInput] = useState('');
   const [minutes, setMeetingMinutes] = useState<MeetingMinute[]>([]);
   const [isMinuteModalOpen, setIsMinuteModalOpen] = useState(false);
-  const [minuteForm, setMinuteForm] = useState({
+  const [minuteForm, setMinuteForm] = useState<{
+    title: string;
+    meeting_type: '정기임원회의' | '개강총회' | '종강총회' | '임시회의' | '운영위원회';
+    meeting_date: string;
+    location: string;
+    chairperson: string;
+    recorder: string;
+    attendees: string;
+    agenda: string;
+    content: string;
+    decisions: string;
+    attachments: Array<{ name: string; url: string; size?: string; type?: 'image' | 'file' }>;
+  }>({
     title: '',
-    meeting_type: '정기임원회의' as '정기임원회의' | '개강총회' | '종강총회' | '임시회의',
+    meeting_type: '정기임원회의',
     meeting_date: new Date().toISOString().split('T')[0],
+    location: '본관 405호 학생회실',
+    chairperson: '학생회장',
+    recorder: '총무부장',
     attendees: '학생회장, 부회장, 총무부장, 기획부장, 학술부장',
     agenda: '',
     content: '',
-    decisions: ''
+    decisions: '',
+    attachments: []
   });
 
   // Password change state
@@ -200,7 +258,7 @@ export const AdminPage: React.FC = () => {
   }, [canManageMembers, activeTab]);
 
   const loadAllData = async () => {
-    const [nData, eData, sData, iData, mData, pastData, minData, memberData] = await Promise.all([
+    const [nData, eData, sData, iData, mData, pastData, minData, memberData, bData] = await Promise.all([
       api.getNotices(),
       api.getEvents(),
       api.getStudies(),
@@ -208,8 +266,10 @@ export const AdminPage: React.FC = () => {
       api.getCouncilMembers(),
       api.getPastCouncilMembers(),
       api.getMeetingMinutes(),
-      api.getMembers().catch(() => [] as AdminMember[])
+      api.getMembers().catch(() => [] as AdminMember[]),
+      api.getBudgetReports()
     ]);
+    setBudgetReports(bData);
     setMembers(memberData);
     setNotices(nData);
     setEvents(eData);
@@ -742,19 +802,213 @@ export const AdminPage: React.FC = () => {
   };
 
   // ==========================================
-  // Governance Minutes & Rental Handlers
+  // Budget Handlers (President & Admin only, Delete: Admin only with mandatory reason)
   // ==========================================
+  const canManageGovernance = isAdmin || isPresident;
+
+  const openNewBudgetModal = () => {
+    if (!canManageGovernance) {
+      alert('결산 보고 등록 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      return;
+    }
+    setEditingBudgetId(null);
+    setBudgetEditReason('');
+    setBudgetForm({
+      title: '',
+      period: '2026학년도 2학기 3분기',
+      published_date: new Date().toISOString().split('T')[0],
+      status: '감사완료',
+      income_total: 0,
+      expense_total: 0,
+      balance: 0,
+      items: [
+        { id: 'b1', date: new Date().toISOString().split('T')[0], type: '수입', category: '학생회비', description: '학생회비 수납금', amount: 1000000, note: '영수증 확인' }
+      ],
+      receipt_url: '',
+      receipt_name: ''
+    });
+    setIsBudgetModalOpen(true);
+  };
+
+  const openEditBudgetModal = (report: BudgetReport) => {
+    if (!canManageGovernance) {
+      alert('결산 보고 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      return;
+    }
+    setEditingBudgetId(report.id);
+    setBudgetEditReason('');
+    setBudgetForm({
+      title: report.title,
+      period: report.period,
+      published_date: report.published_date,
+      status: report.status,
+      income_total: report.income_total,
+      expense_total: report.expense_total,
+      balance: report.balance,
+      items: report.items || [],
+      receipt_url: report.receipt_url || '',
+      receipt_name: report.receipt_name || ''
+    });
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('영수증 파일 크기는 10MB 이하만 가능합니다.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setBudgetForm((prev) => ({
+        ...prev,
+        receipt_url: base64,
+        receipt_name: file.name
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!budgetForm.title.trim()) {
+      alert('결산 보고서 제목을 입력해 주세요.');
+      return;
+    }
+    // 영수증 파일 필수 검증!
+    if (!budgetForm.receipt_url.trim()) {
+      alert('투명한 학생회비 집행 증빙을 위해 [영수증 및 증빙 파일] 첨부는 필수입니다!');
+      return;
+    }
+
+    if (editingBudgetId) {
+      if (!budgetEditReason.trim()) {
+        alert('투명성 보존을 위해 [결산 정정/수정 사유]를 반드시 입력해야 합니다.');
+        return;
+      }
+      await api.updateBudgetReport(editingBudgetId, budgetForm, budgetEditReason.trim());
+      alert('결산 내역이 정정 사유와 함께 성공적으로 수정되었습니다.');
+    } else {
+      await api.createBudgetReport(budgetForm);
+      alert('결산 보고서가 영수증 증빙과 함께 성공적으로 등록되었습니다.');
+    }
+
+    setIsBudgetModalOpen(false);
+    loadAllData();
+  };
+
+  // Delete Request Handler (Only Master Admin)
+  const requestDelete = (type: 'budget' | 'minute', id: string, title: string) => {
+    if (!isAdmin) {
+      alert('투명성과 신뢰 보존을 위해 삭제 권한은 오직 [최고 관리자(admin)]에게만 있습니다.\n학생회장은 삭제 권한이 부여되지 않습니다.');
+      return;
+    }
+    setDeleteTarget({ type, id, title });
+    setDeleteReasonInput('');
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (!deleteReasonInput.trim()) {
+      alert('삭제 사유를 반드시 입력해야 합니다. (투명성 감사 기록에 영구 보존됩니다)');
+      return;
+    }
+
+    if (deleteTarget.type === 'budget') {
+      await api.deleteBudgetReport(deleteTarget.id, deleteReasonInput.trim());
+      alert(`"${deleteTarget.title}" 결산 내역이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
+    } else {
+      await api.deleteMeetingMinute(deleteTarget.id, deleteReasonInput.trim());
+      alert(`"${deleteTarget.title}" 회의록이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
+    }
+
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+    loadAllData();
+    if (activeTab === 'audits') loadAudits();
+  };
+
+  const loadAudits = async () => {
+    if (!isAdmin) return;
+    try {
+      const data = await api.getAdminAudits();
+      setAuditLogs(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Minute Handlers
   const openNewMinuteModal = () => {
+    if (!canManageGovernance) {
+      alert('회의록 작성 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      return;
+    }
+    setEditingMinuteId(null);
+    setMinuteEditReason('');
     setMinuteForm({
       title: '',
       meeting_type: '정기임원회의',
       meeting_date: new Date().toISOString().split('T')[0],
+      location: '본관 405호 학생회실',
+      chairperson: '학생회장',
+      recorder: '총무부장',
       attendees: '학생회장, 부회장, 총무부장, 기획부장, 학술부장',
       agenda: '',
       content: '',
-      decisions: ''
+      decisions: '',
+      attachments: []
     });
     setIsMinuteModalOpen(true);
+  };
+
+  const openEditMinuteModal = (m: MeetingMinute) => {
+    if (!canManageGovernance) {
+      alert('회의록 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      return;
+    }
+    setEditingMinuteId(m.id);
+    setMinuteEditReason('');
+    setMinuteForm({
+      title: m.title,
+      meeting_type: m.meeting_type,
+      meeting_date: m.meeting_date,
+      location: m.location || '본관 405호 학생회실',
+      chairperson: m.chairperson || '학생회장',
+      recorder: m.recorder || '총무부장',
+      attendees: m.attendees || '',
+      agenda: m.agenda || '',
+      content: m.content || '',
+      decisions: m.decisions || '',
+      attachments: m.attachments || []
+    });
+    setIsMinuteModalOpen(true);
+  };
+
+  const handleMinuteAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      const isImg = file.type.startsWith('image/');
+      setMinuteForm((prev) => ({
+        ...prev,
+        attachments: [
+          ...prev.attachments,
+          {
+            name: file.name,
+            url: base64,
+            size: `${(file.size / 1024).toFixed(1)}KB`,
+            type: isImg ? 'image' : 'file'
+          }
+        ]
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveMinute = async (e: React.FormEvent) => {
@@ -763,16 +1017,20 @@ export const AdminPage: React.FC = () => {
       alert('회의 제목과 의결 사항을 입력해 주세요.');
       return;
     }
-    await api.createMeetingMinute(minuteForm);
+
+    if (editingMinuteId) {
+      if (!minuteEditReason.trim()) {
+        alert('투명성 보존을 위해 [회의록 정정/수정 사유]를 반드시 입력해야 합니다.');
+        return;
+      }
+      await api.updateMeetingMinute(editingMinuteId, minuteForm, minuteEditReason.trim());
+      alert('회의록이 정정 사유와 함께 성공적으로 수정되었습니다.');
+    } else {
+      await api.createMeetingMinute(minuteForm);
+      alert('회의록이 성공적으로 등록되었습니다.');
+    }
     setIsMinuteModalOpen(false);
     loadAllData();
-  };
-
-  const handleDeleteMinute = async (id: string, title: string) => {
-    if (confirm(`"${title}" 회의록을 삭제하시겠습니까?`)) {
-      await api.deleteMeetingMinute(id);
-      loadAllData();
-    }
   };
 
   // ==========================================
@@ -1133,24 +1391,13 @@ export const AdminPage: React.FC = () => {
                     <Pencil className="w-3.5 h-3.5" />
                     수정
                   </button>
-                  {(n.category === '결산' || n.category === '회의록') && !isAdmin ? (
-                    <button
-                      disabled
-                      title="결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다."
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-semibold cursor-not-allowed opacity-60"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      삭제불가
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleDeleteNotice(n.id, n.title, n.category)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      삭제
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDeleteNotice(n.id, n.title, n.category)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    삭제
+                  </button>
                 </div>
               </div>
             ))}
@@ -2039,6 +2286,173 @@ export const AdminPage: React.FC = () => {
         <AdminConstitutionManager />
       )}
 
+            {/* TAB: Budget Finance Management */}
+      {/* ========================================== */}
+      {activeTab === 'finance' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-slate-900">투명 재정: 학생회비 결산보고 관리</h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                  영수증 첨부 필수 원칙
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                등록 및 수정 권한은 <strong>학생회장 및 최고관리자</strong>만 가능하며, 삭제는 <strong>최고관리자만 사유 기록 후</strong> 가능합니다.
+              </p>
+            </div>
+            {canManageGovernance && (
+              <button
+                onClick={openNewBudgetModal}
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 self-start sm:self-auto cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>새 결산보고 등록</span>
+              </button>
+            )}
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {budgetReports.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400">등록된 결산 보고서가 없습니다.</div>
+            ) : (
+              budgetReports.map((report) => (
+                <div key={report.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 p-3 rounded-2xl transition-colors">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      <span className="font-semibold text-slate-500">{report.period}</span>
+                      <span className="px-2 py-0.5 rounded-full font-bold text-[11px] bg-emerald-100 text-emerald-800">
+                        {report.status}
+                      </span>
+                      <span className="text-slate-400">공고일: {report.published_date}</span>
+                      {report.receipt_url && (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          ✓ 영수증 증빙 첨부됨
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm">{report.title}</h3>
+                    <div className="text-xs text-slate-600 flex items-center gap-4 flex-wrap">
+                      <span>수입: <strong className="text-blue-700">+{report.income_total.toLocaleString()}원</strong></span>
+                      <span>지출: <strong className="text-rose-600">-{report.expense_total.toLocaleString()}원</strong></span>
+                      <span>잔액: <strong className="text-emerald-700">{report.balance.toLocaleString()}원</strong></span>
+                      <span>작성자: {report.created_by || '학생회'}</span>
+                    </div>
+                    {report.edit_history && report.edit_history.length > 0 && (
+                      <div className="text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
+                        수정 이력 {report.edit_history.length}건 (최근 정정: {report.edit_history[report.edit_history.length - 1].reason})
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canManageGovernance && (
+                      <button
+                        onClick={() => openEditBudgetModal(report)}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        title="수정하기"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>수정</span>
+                      </button>
+                    )}
+                    {isAdmin ? (
+                      <button
+                        onClick={() => requestDelete('budget', report.id, report.title)}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        title="삭제 (사유 보존)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>삭제</span>
+                      </button>
+                    ) : isPresident ? (
+                      <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                        삭제: 최고관리자 전용
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Master Admin Audit Logs */}
+      {/* ========================================== */}
+      {isAdmin && activeTab === 'audits' && (
+        <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900">투명성 보존: 삭제 감사 로그 (Audit Trail)</h2>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold">
+                최고 관리자 전용
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              학생회비 결산 및 회의록은 공정성과 투명성을 위해 삭제 시 사유가 의무 기록되며, 데이터가 영구 보존됩니다.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-rose-600" />
+                <span>삭제 보존된 결산 내역 ({auditLogs.budgets.length})</span>
+              </h3>
+              {auditLogs.budgets.length === 0 ? (
+                <div className="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400">삭제 보존된 결산 기록이 없습니다.</div>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.budgets.map((b) => (
+                    <div key={b.id} className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="font-bold text-slate-800">{b.title} ({b.period})</span>
+                        <span className="text-rose-700 font-semibold">삭제일: {formatDate(b.deleted_at || '')} (삭제자: {b.deleted_by || '총괄관리자'})</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-rose-200 text-rose-900 font-medium">
+                        <strong>📌 삭제 사유: </strong> {b.deleted_reason || '사유 없음'}
+                      </div>
+                      <div className="text-slate-500">
+                        원래 잔액: {b.balance.toLocaleString()}원 | 수입: {b.income_total.toLocaleString()}원 | 지출: {b.expense_total.toLocaleString()}원
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-rose-600" />
+                <span>삭제 보존된 회의록 ({auditLogs.minutes.length})</span>
+              </h3>
+              {auditLogs.minutes.length === 0 ? (
+                <div className="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400">삭제 보존된 회의록이 없습니다.</div>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.minutes.map((m) => (
+                    <div key={m.id} className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="font-bold text-slate-800">{m.title} ({m.meeting_date})</span>
+                        <span className="text-rose-700 font-semibold">삭제일: {formatDate(m.deleted_at || '')} (삭제자: {m.deleted_by || '총괄관리자'})</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-rose-200 text-rose-900 font-medium">
+                        <strong>📌 삭제 사유: </strong> {m.deleted_reason || '사유 없음'}
+                      </div>
+                      <div className="text-slate-500">
+                        회의구분: {m.meeting_type} | 의결내용: {m.decisions}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 5: Minutes Management (회의록 관리)     */}
       {/* ========================================== */}
       {activeTab === 'minutes' && (
@@ -2081,13 +2495,30 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-start">
-                  <button
-                    onClick={() => handleDeleteMinute(m.id, m.title)}
-                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                    title="회의록 삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManageGovernance && (
+                    <button
+                      onClick={() => openEditMinuteModal(m)}
+                      className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                      title="회의록 수정"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>수정</span>
+                    </button>
+                  )}
+                  {isAdmin ? (
+                    <button
+                      onClick={() => requestDelete('minute', m.id, m.title)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                      title="회의록 삭제 (사유 보존)"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>삭제</span>
+                    </button>
+                  ) : isPresident ? (
+                    <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                      삭제: 최고관리자 전용
+                    </span>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -2655,6 +3086,31 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">별첨 자료 및 사진 첨부 (선택)</label>
+                <input
+                  type="file"
+                  onChange={handleMinuteAttachment}
+                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                />
+                {minuteForm.attachments.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {minuteForm.attachments.map((att, i) => (
+                      <div key={i} className="text-[11px] text-slate-600 flex items-center justify-between bg-slate-50 p-1.5 rounded">
+                        <span>{att.name} ({att.size || ''})</span>
+                        <button
+                          type="button"
+                          onClick={() => setMinuteForm(p => ({ ...p, attachments: p.attachments.filter((_, idx) => idx !== i) }))}
+                          className="text-rose-500 hover:underline cursor-pointer"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
@@ -2840,6 +3296,230 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ========================================== */}
+      {/* Budget Report Modal (New / Edit)           */}
+      {/* ========================================== */}
+      {isBudgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-slate-900">
+                  {editingBudgetId ? '학생회비 결산 정정(수정)' : '새 학생회비 결산보고 등록'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsBudgetModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBudget} className="space-y-4 text-xs">
+              {editingBudgetId && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
+                  <label className="block font-bold text-amber-950">결산 정정/수정 사유 (필수) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={budgetEditReason}
+                    onChange={(e) => setBudgetEditReason(e.target.value)}
+                    placeholder="예: 3호 영수증 금액 오기 정정, 잔액 재계산"
+                    className="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white text-xs font-medium text-slate-900 focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-amber-800">투명성 보존을 위해 수정 일시와 사유가 학우 공개 페이지에 영구 기록됩니다.</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">결산 보고서 제목 *</label>
+                <input
+                  type="text"
+                  required
+                  value={budgetForm.title}
+                  onChange={(e) => setBudgetForm({ ...budgetForm, title: e.target.value })}
+                  placeholder="예: 2026학년도 2학기 3분기 학생회비 결산 및 집행 내역 보고"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">대상 기간 (분기)</label>
+                  <input
+                    type="text"
+                    required
+                    value={budgetForm.period}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, period: e.target.value })}
+                    placeholder="예: 2026.07.01 ~ 2026.09.30"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">공고 일자</label>
+                  <input
+                    type="date"
+                    required
+                    value={budgetForm.published_date}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, published_date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">감사 상태</label>
+                  <select
+                    value={budgetForm.status}
+                    onChange={(e) => setBudgetForm({ ...budgetForm, status: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50"
+                  >
+                    <option value="감사완료">감사완료</option>
+                    <option value="집행중">집행중</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Mandatory Receipt Upload Box */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-emerald-400 bg-emerald-50/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-emerald-700" />
+                    <span className="font-bold text-emerald-950 text-xs">영수증 및 증빙 파일 첨부 (필수) *</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-600 text-white">필수 증빙</span>
+                </div>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  결산 등록 시 영수증 원본(사진 이미지 또는 스캔 PDF) 첨부가 없으면 등록할 수 없습니다.
+                </p>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleReceiptFileChange}
+                  className="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
+                />
+                {budgetForm.receipt_name && (
+                  <div className="text-xs text-emerald-900 font-semibold bg-white p-2 rounded-lg border border-emerald-200 flex items-center justify-between">
+                    <span>첨부됨: {budgetForm.receipt_name}</span>
+                    <span className="text-[11px] text-emerald-600">✓ 검증 완료</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">총 수입금액 (원)</label>
+                  <input
+                    type="number"
+                    value={budgetForm.income_total}
+                    onChange={(e) => {
+                      const inc = Number(e.target.value);
+                      setBudgetForm({ ...budgetForm, income_total: inc, balance: inc - budgetForm.expense_total });
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-blue-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">총 지출금액 (원)</label>
+                  <input
+                    type="number"
+                    value={budgetForm.expense_total}
+                    onChange={(e) => {
+                      const exp = Number(e.target.value);
+                      setBudgetForm({ ...budgetForm, expense_total: exp, balance: budgetForm.income_total - exp });
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-rose-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">최종 잔액 (자동계산)</label>
+                  <input
+                    type="number"
+                    readOnly
+                    value={budgetForm.balance}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-extrabold text-emerald-700 bg-slate-50"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBudgetModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 cursor-pointer shadow-xs"
+                >
+                  {editingBudgetId ? '결산 정정사항 저장' : '결산보고 등록'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* Master Admin Delete Audit Reason Modal     */}
+      {/* ========================================== */}
+      {deleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 p-6 sm:p-7 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900">투명성 보존: 삭제 사유 입력</h3>
+                <p className="text-xs text-rose-600 font-semibold">최고 관리자 전용 삭제 감사 프로세스</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
+              <div><strong>삭제 대상: </strong> {deleteTarget.title}</div>
+              <div className="text-[11px] text-slate-500">
+                삭제된 데이터는 영구 파기되지 않고 <strong>삭제 감사 로그</strong>에 사유 및 삭제 일시와 함께 영구 보존됩니다.
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-900 mb-1">삭제 사유를 구체적으로 작성하세요 (필수) *</label>
+              <textarea
+                rows={3}
+                required
+                value={deleteReasonInput}
+                onChange={(e) => setDeleteReasonInput(e.target.value)}
+                placeholder="예: 중복 등록으로 인한 삭제, 작성자 요청에 의한 취소"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-rose-300 text-xs focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => { setDeleteModalOpen(false); setDeleteTarget(null); }}
+                className="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold text-xs cursor-pointer hover:bg-slate-200"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={!deleteReasonInput.trim()}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white font-bold text-xs cursor-pointer shadow-xs"
+              >
+                보존 처리 및 삭제 확정
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </main>
     </div>
   );

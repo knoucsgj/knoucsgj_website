@@ -113,7 +113,7 @@ export const initialNotices: Notice[] = [
 ■ 회계 감사: 학생회 감사 및 자치위원회 승인 완료
 
 영수증 원본 증빙 및 세부 장부는 학생회실(본관 405호)에 상시 비치되어 있으며, 학우 누구나 열람을 요청하실 수 있습니다.`,
-    category: '결산',
+    category: '학생회',
     author: '학생회 총무부',
     created_at: '2026-10-02',
     views: 245,
@@ -138,7 +138,7 @@ export const initialNotices: Notice[] = [
 - 안건 1: 동문 시니어 개발자 초청 특강 예산 40만원 지원 만장일치 가결
 - 안건 2: 신·편입생 대상 온라인 Q&A 멘토링 데이(10/18) 학술부 주관 진행 확정
 - 안건 3: 3분기 학생회비 결산서 감사 승인 후 공지사항 게시 확정`,
-    category: '회의록',
+    category: '학생회',
     author: '학생회 서기',
     created_at: '2026-10-07',
     views: 188,
@@ -154,7 +154,7 @@ export const initialNotices: Notice[] = [
 ■ 주요 의결사항:
 - 2학기 학생회비 예산안 및 주요 사업계획 찬성 46표, 기권 2표로 원안 가결
 - 출석수업 간식 지원 사업 및 학술 스터디룸 지원안 승인`,
-    category: '회의록',
+    category: '학생회',
     author: '학생회 총무부',
     created_at: '2026-09-06',
     views: 210,

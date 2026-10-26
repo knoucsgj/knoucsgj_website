@@ -1,4 +1,4 @@
-export type NoticeCategory = '전체' | '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록';
+export type NoticeCategory = '전체' | '필독' | '학생회' | '학사' | '행사';
 
 export interface Attachment {
   name: string;
@@ -10,7 +10,7 @@ export interface Notice {
   id: string;
   title: string;
   content: string;
-  category: '필독' | '학생회' | '학사' | '행사' | '결산' | '회의록';
+  category: '필독' | '학생회' | '학사' | '행사';
   author: string;
   created_at: string;
   views: number;
@@ -81,6 +81,19 @@ export interface BudgetItem {
   note?: string;
 }
 
+export interface EditHistoryItem {
+  edited_at: string;
+  edited_by: string;
+  reason: string;
+}
+
+export interface MinuteAttachment {
+  name: string;
+  url: string;
+  size?: string;
+  type?: 'image' | 'file';
+}
+
 export interface BudgetReport {
   id: string;
   title: string;
@@ -91,17 +104,37 @@ export interface BudgetReport {
   status: '감사완료' | '집행중';
   published_date: string;
   items: BudgetItem[];
+  receipt_url?: string; // 영수증/증빙 파일 필수 첨부 (Base64 or URL)
+  receipt_name?: string;
+  created_by?: string;
+  created_at?: string;
+  edit_history?: EditHistoryItem[];
+  is_deleted?: boolean;
+  deleted_reason?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 export interface MeetingMinute {
   id: string;
   title: string;
-  meeting_type: '정기임원회의' | '개강총회' | '종강총회' | '임시회의';
+  meeting_type: '정기임원회의' | '개강총회' | '종강총회' | '임시회의' | '운영위원회';
   meeting_date: string;
+  location?: string;
   attendees: string;
   agenda: string;
   content: string;
   decisions: string;
+  chairperson?: string;
+  recorder?: string;
+  attachments?: MinuteAttachment[];
+  created_by?: string;
+  created_at?: string;
+  edit_history?: EditHistoryItem[];
+  is_deleted?: boolean;
+  deleted_reason?: string;
+  deleted_at?: string;
+  deleted_by?: string;
 }
 
 export interface RentalItem {
