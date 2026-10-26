@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HeroSection } from '../components/home/HeroSection';
-import { QuickLinks } from '../components/home/QuickLinks';
 import { RecentNoticesSection } from '../components/home/RecentNoticesSection';
 import { UpcomingEventsSection } from '../components/home/UpcomingEventsSection';
 import { api } from '../services/api';
@@ -37,9 +36,6 @@ export const HomePage: React.FC = () => {
     <div className="space-y-12">
       {/* Hero Banner */}
       <HeroSection events={events} />
-
-      {/* Quick Navigation Cards */}
-      <QuickLinks />
 
       {/* Notice & Academic Events Grid */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
