@@ -1063,21 +1063,9 @@ export const AdminPage: React.FC = () => {
                 required
                 value={adminIdInput}
                 onChange={(e) => setAdminIdInput(e.target.value)}
-                placeholder="admin 또는 knoucsgj@gmail.com"
+                placeholder="관리자 아이디 또는 이메일 입력"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {['admin', 'knoucsgj@gmail.com', 'knoucsgj@daum.net', 'knoucsgj@kakao.com'].map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setAdminIdInput(id)}
-                  className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 text-[10px] font-semibold transition-colors border border-slate-200"
-                >
-                  {id}
-                </button>
-              ))}
             </div>
           </div>
           <div>
@@ -1112,9 +1100,9 @@ export const AdminPage: React.FC = () => {
         </form>
 
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 leading-relaxed text-left space-y-1">
-          <p className="font-semibold text-slate-700">💡 로그인 안내:</p>
-          <p>• 최고 관리자: <span className="font-mono text-blue-600">admin</span> 또는 최고관리자 이메일(<span className="font-mono text-slate-700">knoucsgj@gmail.com</span>, <span className="font-mono text-slate-700">daum.net</span>, <span className="font-mono text-slate-700">hanmail.net</span>, <span className="font-mono text-slate-700">kakao.com</span>)</p>
-          <p>• 학생회 임원: 임원 승격된 본인 이메일 계정 및 비밀번호로 로그인</p>
+          <p className="font-semibold text-slate-700">💡 관리자 로그인 안내:</p>
+          <p>• 관리 권한이 부여된 관리자 또는 학생회 임원 계정으로 로그인해 주세요.</p>
+          <p>• 계정 접속 관련 문의는 학생회로 연락하시기 바랍니다.</p>
         </div>
 
         <div className="pt-3 border-t border-slate-100 flex items-center justify-center">
