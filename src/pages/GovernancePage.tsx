@@ -53,10 +53,10 @@ export const GovernancePage: React.FC = () => {
               <span>Student Government & Transparency</span>
             </div>
             <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
-              투명 재정 & 학생 자치 자료실
+              투명 재정 & 학생회 자료실
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-              광주전남 컴퓨터과학과 학생회는 학우들의 소중한 학생회비 집행 내역과 회의록, 학생회칙을 100% 투명하게 공개하여 공정하고 신뢰받는 학생 자치를 실현합니다.
+              광주전남 컴퓨터과학과 학생회는 학우들의 소중한 학생회비 집행 내역과 회의록, 학생회칙을 100% 투명하게 공개하여 공정하고 신뢰받는 학생회를 실현합니다.
             </p>
           </div>
         </div>

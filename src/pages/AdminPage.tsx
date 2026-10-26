@@ -1324,7 +1324,7 @@ export const AdminPage: React.FC = () => {
           }`}
         >
           <FileText className="w-4 h-4 text-purple-600" />
-          자치 회의록 관리 ({minutes.length})
+          학생회 회의록 관리 ({minutes.length})
         </button>
         {canManageBackup && (
           <button
@@ -2459,7 +2459,7 @@ export const AdminPage: React.FC = () => {
         <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">학생 자치 회의록 관리</h2>
+              <h2 className="text-lg font-bold text-slate-900">학생회 회의록 관리</h2>
               <p className="text-xs text-slate-500">
                 정기임원회의, 개강총회, 종강총회 의결 내용을 기록하고 학우들에게 투명하게 공개합니다.
               </p>

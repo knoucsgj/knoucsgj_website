@@ -205,7 +205,7 @@ export const MeetingMinutePrintView: React.FC<Props> = ({ minute, onClose }) => 
       <div class="univ-name">한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회</div>
       <h1 class="doc-title">회 의 록</h1>
       <div class="doc-meta">
-        <span>문서분류: 학생자치기구 정규의결문서</span>
+        <span>문서분류: 학생회 정규의결문서</span>
         <span>회의구분: [ ${minute.meeting_type} ]</span>
         <span>작성일자: ${formatDate(minute.meeting_date)}</span>
       </div>
@@ -396,7 +396,7 @@ export const MeetingMinutePrintView: React.FC<Props> = ({ minute, onClose }) => 
                 회 의 록
               </h1>
               <div className="flex justify-between items-center text-xs font-sans text-slate-500 mt-4 px-1">
-                <span>문서분류: 학생자치기구 정규의결문서</span>
+                <span>문서분류: 학생회 정규의결문서</span>
                 <span>회의구분: <strong className="text-slate-900">[{minute.meeting_type}]</strong></span>
                 <span>작성일자: {formatDate(minute.meeting_date)}</span>
               </div>

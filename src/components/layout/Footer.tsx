@@ -124,7 +124,7 @@ export const Footer: React.FC = () => {
           {/* Column 4: Student Council Links */}
           <div>
             <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5">
-              학생 자치 & 소통
+              학생회 & 소통
             </h4>
             <ul className="space-y-2.5 text-sm text-slate-300">
               <li>

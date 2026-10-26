@@ -203,7 +203,7 @@ export const NoticesPage: React.FC = () => {
               <span>Notice & Governance</span>
             </div>
             <h1 className="font-knou text-xl sm:text-2xl md:text-3xl font-bold text-slate-950 tracking-tight mb-1.5">
-              공지사항 및 학생 자치 자료실
+              공지사항 및 학생회 자료실
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
               광주전남 컴퓨터과학과 학우들을 위한 학사·학과 공지사항, 100% 투명한 학생회비 결산 증빙, 공식 정기 회의록을 투명하게 공개합니다.
@@ -561,7 +561,7 @@ export const NoticesPage: React.FC = () => {
                 <FileCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-blue-950 text-sm sm:text-base">학생 자치 정기·임시 회의록 공개</h3>
+                <h3 className="font-bold text-blue-950 text-sm sm:text-base">학생회 정기·임시 회의록 공개</h3>
                 <p className="text-xs sm:text-sm text-blue-800/90 mt-0.5 leading-relaxed">
                   학생회 임원회의 및 총회 의결 사항을 기록 보존하며, <strong>[공문서 양식 출력]</strong>을 통해 A4 규격 회의록 서식으로 인쇄 또는 PDF 저장이 가능합니다.
                 </p>

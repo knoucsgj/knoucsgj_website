@@ -162,7 +162,7 @@ export const OfficialConstitutionView: React.FC = () => {
               {activeDoc.title}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
-              본 규정은 광주전남 컴퓨터과학과 모든 학우의 자치 권익과 투명한 학생회 운영의 근간이 되는 공식 원본 전문입니다.
+              본 규정은 광주전남 컴퓨터과학과 모든 학우의 권익과 투명한 학생회 운영의 근간이 되는 공식 원본 전문입니다.
             </p>
           </div>
 
