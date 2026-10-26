@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Calendar, ChevronRight, Scale, Camera, Users } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { getDDay } from '../../lib/dateUtils';
 import { ASSETS } from '../../lib/assets';
 import type { AcademicEvent } from '../../lib/types';
@@ -85,31 +85,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ events: propEvents }) 
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-xl font-normal">
               출석수업 및 과제 가이드, 100% 투명한 학생회비 결산, 학술 스터디 지원, 생생한 학과 활동까지 학생회가 든든한 동반자가 되겠습니다.
             </p>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                to="/notices"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base transition-all shadow-md active:scale-95"
-              >
-                <Bell className="w-4 h-4" />
-                공지사항 바로가기
-              </Link>
-              <Link
-                to="/calendar"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-sm sm:text-base transition-all border border-slate-700 active:scale-95"
-              >
-                <Calendar className="w-4 h-4 text-blue-400" />
-                주요일정 확인
-              </Link>
-              <Link
-                to="/about"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-semibold text-sm sm:text-base transition-all border border-slate-700"
-              >
-                <Users className="w-4 h-4 text-emerald-400" />
-                학생회 소개
-              </Link>
-            </div>
           </div>
 
           {/* Right Column: Dynamic Department Showcase with Real Photos & D-Day */}
@@ -202,49 +177,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ events: propEvents }) 
                   </Link>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Pillar Highlights Grid */}
-        <div className="mt-10 pt-8 border-t border-slate-800 grid grid-cols-2 lg:grid-cols-4 gap-4 text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-400 shrink-0">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white">공개 회계 & 결산</div>
-              <div className="text-[11px] text-slate-400">분기별 결산 공지</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 shrink-0">
-              <Camera className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white">생생한 학과 현장</div>
-              <div className="text-[11px] text-slate-400">경진대회·스터디 모임</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-purple-400 shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white">학술 스터디 & 소통</div>
-              <div className="text-[11px] text-slate-400">온·오프라인 소그룹 모임</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white">주요일정 D-Day</div>
-              <div className="text-[11px] text-slate-400">출석수업·과제·기말시험</div>
             </div>
           </div>
         </div>
