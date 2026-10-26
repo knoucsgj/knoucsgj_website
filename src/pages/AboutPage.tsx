@@ -267,7 +267,14 @@ export const AboutPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {members.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-200">
+              <Users className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+              <p className="text-base font-semibold text-slate-600">등록된 학생회 임원이 없습니다.</p>
+              <p className="text-xs text-slate-400 mt-1">현재 새로운 임원진 등록을 준비 중입니다.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {members.map((member) => (
               <div
                 key={member.id}
@@ -296,6 +303,7 @@ export const AboutPage: React.FC = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
       )}
 

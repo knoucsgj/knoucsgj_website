@@ -189,7 +189,7 @@ export const api = {
 
   async getCouncilMembers(): Promise<CouncilMember[]> {
     const cloud = await fetchD1<CouncilMember[]>('council-members');
-    if (Array.isArray(cloud) && cloud.length > 0) {
+    if (Array.isArray(cloud)) {
       return cloud;
     }
     return mockCouncilMembers;

@@ -173,20 +173,21 @@ const isRegularOrAbove = (s: Session) => {
   return !!s.member && (s.member.role === 'regular' || s.member.role === 'officer' || s.member.role === 'president');
 };
 const canManageMembers = (s: Session) => s.admin || isPresident(s);
-const canManageCouncil = (s: Session) => s.admin || isPresident(s);
+const canManageCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
 
 const requireCouncil = (s: Session) => {
   if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 관리자만 접근할 수 있습니다.');
 };
 
 const requireMemberManager = (s: Session) => {
+  if (s.admin || isPresident(s)) return;
   if (isOfficer(s)) throw new HttpError(403, '임원진 등급은 회원 관리 권한이 없습니다.');
-  if (!canManageMembers(s)) throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
+  throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
 };
 
 const requireCouncilManager = (s: Session) => {
-  if (isOfficer(s)) throw new HttpError(403, '임원진 등급은 인사말 및 임원진 관리 권한이 없습니다.');
-  if (!canManageCouncil(s)) throw new HttpError(403, '학생회장 또는 최고 관리자만 인사말 및 임원진을 관리할 수 있습니다.');
+  if (s.admin || isPresident(s) || isOfficer(s)) return;
+  throw new HttpError(403, '학생회 임원진 또는 최고 관리자만 인사말 및 임원진을 관리할 수 있습니다.');
 };
 
 const canModify = (s: Session, ownerId: string | null) => {
@@ -1584,8 +1585,30 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- council-members
   if (resource === 'council-members') {
     if (method === 'GET') {
-      const { results } = await db.prepare('SELECT * FROM council_members ORDER BY rowid ASC').all();
-      return json(results);
+      let { results } = await db.prepare('SELECT * FROM council_members ORDER BY rowid ASC').all();
+      // If table is empty and has not been initialized yet, seed with initial mock council members
+      if (!results || results.length === 0) {
+        const initRow = await db.prepare("SELECT value FROM settings WHERE key = 'council_members_init'").first();
+        if (!initRow) {
+          const initialCouncilMembers = [
+            { id: 'cm-1', role: '학생회장', name: '김민수', grade_info: '컴퓨터과학과 3학년', message: '학우 여러분의 든든한 러닝메이트가 되겠습니다. 언제든 학생회 문을 두드려주세요!', email: 'president@knou-cs-gj.org' },
+            { id: 'cm-2', role: '부학생회장', name: '이지은', grade_info: '컴퓨터과학과 3학년', message: '신·편입생 여러분이 학교 생활에 빠르게 적응하실 수 있도록 살뜰히 돕겠습니다.', email: 'vice@knou-cs-gj.org' },
+            { id: 'cm-3', role: '총무부장', name: '박진우', grade_info: '컴퓨터과학과 2학년', message: '소중한 학생회비를 1원도 헛되이 쓰지 않고 투명하고 명확하게 관리하겠습니다.', email: 'finance@knou-cs-gj.org' },
+            { id: 'cm-4', role: '학술부장', name: '정현우', grade_info: '컴퓨터과학과 3학년', message: '스터디 그룹 활성화와 과제/기말 가이드로 든든한 학업 나침반이 되겠습니다.', email: 'study@knou-cs-gj.org' },
+            { id: 'cm-5', role: '기획부장', name: '최수연', grade_info: '컴퓨터과학과 4학년', message: '체육대회, MT 등 학우 여러분이 다 함께 즐길 수 있는 특별한 추억을 선물하겠습니다.', email: 'plan@knou-cs-gj.org' },
+            { id: 'cm-6', role: '홍보부장', name: '한동훈', grade_info: '컴퓨터과학과 2학년', message: '학과 소식과 중요한 학사 일정을 언제 어디서든 가장 빠르고 정확하게 전해드리겠습니다.', email: 'press@knou-cs-gj.org' }
+          ];
+          const stmts = initialCouncilMembers.map((m) =>
+            db
+              .prepare('INSERT INTO council_members (id, role, name, grade_info, message, email) VALUES (?, ?, ?, ?, ?, ?)')
+              .bind(m.id, m.role, m.name, m.grade_info, m.message, m.email)
+          );
+          stmts.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_members_init', '1')"));
+          await db.batch(stmts);
+          results = initialCouncilMembers as any;
+        }
+      }
+      return json(results || []);
     }
     if (method === 'POST') {
       requireCouncilManager(session);
@@ -1603,10 +1626,11 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         .prepare('INSERT INTO council_members (id, role, name, grade_info, message, email) VALUES (?, ?, ?, ?, ?, ?)')
         .bind(m.id, m.role, m.name, m.grade_info, m.message, m.email)
         .run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_members_init', '1')").run();
       return json(m, 201);
     }
     if (method === 'PUT' && id) {
-      requireCouncil(session);
+      requireCouncilManager(session);
       const b: any = await readJson(req);
       const sets: string[] = [];
       const vals: any[] = [];
@@ -1618,12 +1642,14 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       }
       if (!sets.length) throw new HttpError(400, '변경할 내용이 없습니다.');
       await db.prepare(`UPDATE council_members SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_members_init', '1')").run();
       return json({ success: true });
     }
     if (method === 'DELETE' && id) {
       requireCouncilManager(session);
       await db.prepare('DELETE FROM council_members WHERE id = ?').bind(id).run();
-      return json({ success: true });
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_members_init', '1')").run();
+      return json({ success: true, id });
     }
   }
 

@@ -42,7 +42,7 @@ export const AdminPage: React.FC = () => {
   const isOfficer = member?.role === 'officer';
   const canAccess = isAdmin || isPresident || isOfficer;
   const canManageMembers = isAdmin || isPresident;
-  const canManageCouncil = isAdmin || isPresident;
+  const canManageCouncil = isAdmin || isPresident || isOfficer;
   const canManageBackup = isAdmin;
 
   const [adminIdInput, setAdminIdInput] = useState('admin');
@@ -615,20 +615,31 @@ export const AdminPage: React.FC = () => {
       return;
     }
 
-    if (editingMemberId) {
-      await api.updateCouncilMember(editingMemberId, memberForm);
-    } else {
-      await api.createCouncilMember(memberForm);
+    try {
+      if (editingMemberId) {
+        await api.updateCouncilMember(editingMemberId, memberForm);
+        alert('임원 정보가 성공적으로 수정되었습니다.');
+      } else {
+        await api.createCouncilMember(memberForm);
+        alert('새로운 임원이 성공적으로 등록되었습니다.');
+      }
+      setIsMemberModalOpen(false);
+      await loadAllData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || '임원 정보 저장에 실패했습니다.');
     }
-
-    setIsMemberModalOpen(false);
-    loadAllData();
   };
 
   const handleDeleteMember = async (id: string, name: string) => {
-    if (confirm(`"${name}" 임원 정보를 정말 삭제하시겠습니까?`)) {
+    if (!confirm(`"${name}" 임원 정보를 정말 삭제하시겠습니까?`)) return;
+    try {
       await api.deleteCouncilMember(id);
-      loadAllData();
+      alert(`"${name}" 임원 정보가 성공적으로 삭제되었습니다.`);
+      await loadAllData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || '임원 정보 삭제에 실패했습니다.');
     }
   };
 
@@ -706,12 +717,17 @@ export const AdminPage: React.FC = () => {
 
   const handleDeletePastMember = async (id: string, name: string) => {
     if (!canManageCouncil) {
-      alert('역대 임원 관리는 학생회장 또는 최고 관리자만 가능합니다.');
+      alert('역대 임원 관리는 학생회 또는 최고 관리자만 가능합니다.');
       return;
     }
-    if (confirm(`"${name}" 역대 임원 정보를 삭제하시겠습니까?`)) {
+    if (!confirm(`"${name}" 역대 임원 정보를 정말 삭제하시겠습니까?`)) return;
+    try {
       await api.deletePastCouncilMember(id);
+      alert(`"${name}" 역대 임원 정보가 성공적으로 삭제되었습니다.`);
       await loadAllData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || '역대 임원 정보 삭제에 실패했습니다.');
     }
   };
 
@@ -1785,40 +1801,48 @@ export const AdminPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {councilMembers.map((m) => (
-                <div key={m.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
-                  <div className="space-y-1 mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                        {m.role}
-                      </span>
-                      <span className="text-xs text-slate-400">{m.grade_info}</span>
+            {councilMembers.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-semibold text-slate-600">등록된 학생회 임원이 없습니다.</p>
+                <p className="text-xs text-slate-400 mt-1">'임원 추가' 버튼을 눌러 임원 정보를 등록해 주세요.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {councilMembers.map((m) => (
+                  <div key={m.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                          {m.role}
+                        </span>
+                        <span className="text-xs text-slate-400">{m.grade_info}</span>
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-900">{m.name}</h3>
+                      <p className="text-xs text-slate-600 line-clamp-2">"{m.message}"</p>
+                      {m.email && <p className="text-[11px] text-slate-400">{m.email}</p>}
                     </div>
-                    <h3 className="text-sm font-bold text-slate-900">{m.name}</h3>
-                    <p className="text-xs text-slate-600 line-clamp-2">"{m.message}"</p>
-                    {m.email && <p className="text-[11px] text-slate-400">{m.email}</p>}
-                  </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-                    <button
-                      onClick={() => openEditMemberModal(m)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white text-slate-700 text-xs font-medium border border-slate-200 hover:bg-slate-100"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      수정
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMember(m.id, m.name)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-50 text-rose-700 text-xs font-medium border border-rose-200 hover:bg-rose-100"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      삭제
-                    </button>
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                      <button
+                        onClick={() => openEditMemberModal(m)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white text-slate-700 text-xs font-medium border border-slate-200 hover:bg-slate-100"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        수정
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMember(m.id, m.name)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-50 text-rose-700 text-xs font-medium border border-rose-200 hover:bg-rose-100"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        삭제
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
