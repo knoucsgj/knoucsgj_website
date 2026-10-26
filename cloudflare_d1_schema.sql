@@ -216,7 +216,20 @@ CREATE TABLE IF NOT EXISTS activity_reports (
   created_at TEXT NOT NULL
 );
 
+-- 15. 개설 교육과정 교과목 테이블
+CREATE TABLE IF NOT EXISTS curriculum_courses (
+  id TEXT PRIMARY KEY,
+  grade INTEGER NOT NULL,
+  semester INTEGER NOT NULL,
+  course_type TEXT NOT NULL CHECK (course_type IN ('전공', '교양', '일반선택')),
+  course_name TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+
 -- 인덱스 생성 (조회 성능 최적화)
+CREATE INDEX IF NOT EXISTS idx_courses_grade_sem ON curriculum_courses (grade, semester, sort_order);
 CREATE INDEX IF NOT EXISTS idx_activity_date ON activity_reports (activity_date DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notices_pinned ON notices (is_pinned, created_at);
 CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name);

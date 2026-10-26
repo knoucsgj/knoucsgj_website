@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
 import { useRequireLogin } from '../lib/useRequireLogin';
-import type { StudyGroup, AcademicMaterial } from '../lib/types';
+import type { StudyGroup, AcademicMaterial, CurriculumCourse } from '../lib/types';
 import { KNOU_COURSES_2026, findCourseType } from '../data/mockMaterials';
 import { ASSETS } from '../lib/assets';
 import {
@@ -47,13 +47,20 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [isSubmittingStudy, setIsSubmittingStudy] = useState(false);
 
-  // Academic Materials State
+  // Academic Materials & Dynamic Curriculum Courses State
   const [materials, setMaterials] = useState<AcademicMaterial[]>([]);
+  const [dbCourses, setDbCourses] = useState<CurriculumCourse[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4>(1);
   const [selectedSemester, setSelectedSemester] = useState<1 | 2>(2); // Default 2학기 (현재 학기)
   const [selectedCourse, setSelectedCourse] = useState<string>('전체');
   const [selectedCourseType, setSelectedCourseType] = useState<string>('전체'); // '전체' | '전공' | '교양' | '일반선택'
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
+
+  const getCourseClassification = (courseName: string) => {
+    const foundDb = dbCourses.find((c) => c.course_name === courseName);
+    if (foundDb) return foundDb.course_type;
+    return findCourseType(courseName);
+  };
 
   const getCourseTypeBadge = (type: string) => {
     switch (type) {
@@ -95,12 +102,16 @@ export const StudyMaterialsPage: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    const [studiesData, matsData] = await Promise.all([
+    const [studiesData, matsData, coursesData] = await Promise.all([
       api.getStudies(),
-      api.getMaterials()
+      api.getMaterials(),
+      api.getCourses().catch(() => [])
     ]);
     setStudies(studiesData);
     setMaterials(matsData);
+    if (coursesData && coursesData.length > 0) {
+      setDbCourses(coursesData);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,11 +225,13 @@ export const StudyMaterialsPage: React.FC = () => {
     setEditingMaterial(null);
     setNewMatGrade(selectedGrade);
     setNewMatSemester(selectedSemester);
-    const courses = KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || [];
-    if (selectedCourse !== '전체' && courses.some((c) => c.name === selectedCourse)) {
+    const available = dbCourses.length > 0
+      ? dbCourses.filter((c) => c.grade === selectedGrade && c.semester === selectedSemester).map((c) => c.course_name)
+      : (KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || []).map((c) => c.name);
+    if (selectedCourse !== '전체' && available.includes(selectedCourse)) {
       setNewMatCourse(selectedCourse);
-    } else if (courses.length > 0) {
-      setNewMatCourse(courses[0].name);
+    } else if (available.length > 0) {
+      setNewMatCourse(available[0]);
     } else {
       setNewMatCourse('');
     }
@@ -309,14 +322,31 @@ export const StudyMaterialsPage: React.FC = () => {
     }
   };
 
-  // 2026년 기준 선택된 학년/학기 개설 교과목 목록 (전공, 교양, 일반선택)
-  const currentGradeCoursesInfo = KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || [];
+  // 선택된 학년/학기 개설 교과목 목록 (D1 DB 동적 조회 우선, fallback은 2026 기본 편제)
+  const currentGradeCoursesInfo = useMemo(() => {
+    if (dbCourses.length > 0) {
+      return dbCourses
+        .filter((c) => c.grade === selectedGrade && c.semester === selectedSemester)
+        .map((c) => ({ name: c.course_name, type: c.course_type }));
+    }
+    return KNOU_COURSES_2026[selectedGrade]?.[selectedSemester] || [];
+  }, [dbCourses, selectedGrade, selectedSemester]);
   
   // 교과구분 필터에 따른 과목 목록
   const displayedCourses = currentGradeCoursesInfo.filter((c) => {
     if (selectedCourseType === '전체') return true;
     return c.type === selectedCourseType;
   });
+
+  // 등록/수정 모달에서 사용할 학년/학기별 과목 목록
+  const modalAvailableCourses = useMemo(() => {
+    if (dbCourses.length > 0) {
+      return dbCourses
+        .filter((c) => c.grade === newMatGrade && c.semester === newMatSemester)
+        .map((c) => ({ name: c.course_name, type: c.course_type }));
+    }
+    return KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [];
+  }, [dbCourses, newMatGrade, newMatSemester]);
 
   // 학습자료 필터링 (학년, 학기, 교과구분, 과목, 검색어)
   const filteredMaterials = materials.filter((m) => {
@@ -325,7 +355,7 @@ export const StudyMaterialsPage: React.FC = () => {
     const matchesCourse = selectedCourse === '전체' ? true : m.course_name === selectedCourse;
     
     // 교과구분 필터 매칭
-    const courseType = findCourseType(m.course_name);
+    const courseType = getCourseClassification(m.course_name);
     const matchesType = selectedCourseType === '전체' ? true : courseType === selectedCourseType;
 
     const matchesSearch =
@@ -638,8 +668,8 @@ export const StudyMaterialsPage: React.FC = () => {
                         <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
                           {mat.course_name}
                         </span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getCourseTypeBadge(findCourseType(mat.course_name))}`}>
-                          {findCourseType(mat.course_name)}
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${getCourseTypeBadge(getCourseClassification(mat.course_name))}`}>
+                          {getCourseClassification(mat.course_name)}
                         </span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                           {mat.category}
@@ -1138,9 +1168,11 @@ export const StudyMaterialsPage: React.FC = () => {
                       const g = Number(e.target.value) as 1 | 2 | 3 | 4;
                       setNewMatGrade(g);
                       if (newMatCategory !== '기타자료') {
-                        const courses = KNOU_COURSES_2026[g]?.[newMatSemester] || [];
-                        if (courses.length > 0 && !courses.some((c) => c.name === newMatCourse)) {
-                          setNewMatCourse(courses[0].name);
+                        const courses = dbCourses.length > 0
+                          ? dbCourses.filter((c) => c.grade === g && c.semester === newMatSemester).map(c => c.course_name)
+                          : (KNOU_COURSES_2026[g]?.[newMatSemester] || []).map(c => c.name);
+                        if (courses.length > 0 && !courses.includes(newMatCourse)) {
+                          setNewMatCourse(courses[0]);
                         }
                       }
                     }}
@@ -1160,9 +1192,11 @@ export const StudyMaterialsPage: React.FC = () => {
                       const s = Number(e.target.value) as 1 | 2;
                       setNewMatSemester(s);
                       if (newMatCategory !== '기타자료') {
-                        const courses = KNOU_COURSES_2026[newMatGrade]?.[s] || [];
-                        if (courses.length > 0 && !courses.some((c) => c.name === newMatCourse)) {
-                          setNewMatCourse(courses[0].name);
+                        const courses = dbCourses.length > 0
+                          ? dbCourses.filter((c) => c.grade === newMatGrade && c.semester === s).map(c => c.course_name)
+                          : (KNOU_COURSES_2026[newMatGrade]?.[s] || []).map(c => c.name);
+                        if (courses.length > 0 && !courses.includes(newMatCourse)) {
+                          setNewMatCourse(courses[0]);
                         }
                       }
                     }}
@@ -1198,9 +1232,9 @@ export const StudyMaterialsPage: React.FC = () => {
                       <option value="">-- 교과목 선택 ({newMatGrade}학년 {newMatSemester}학기) --</option>
                       
                       {/* 전공 교과목 */}
-                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '전공').length > 0 && (
+                      {modalAvailableCourses.filter((c) => c.type === '전공').length > 0 && (
                         <optgroup label="📘 전공 교과목">
-                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                          {modalAvailableCourses
                             .filter((c) => c.type === '전공')
                             .map((c) => (
                               <option key={c.name} value={c.name}>
@@ -1211,9 +1245,9 @@ export const StudyMaterialsPage: React.FC = () => {
                       )}
 
                       {/* 교양 교과목 */}
-                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '교양').length > 0 && (
+                      {modalAvailableCourses.filter((c) => c.type === '교양').length > 0 && (
                         <optgroup label="📗 교양 교과목">
-                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                          {modalAvailableCourses
                             .filter((c) => c.type === '교양')
                             .map((c) => (
                               <option key={c.name} value={c.name}>
@@ -1224,9 +1258,9 @@ export const StudyMaterialsPage: React.FC = () => {
                       )}
 
                       {/* 일반선택 교과목 */}
-                      {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || []).filter((c) => c.type === '일반선택').length > 0 && (
+                      {modalAvailableCourses.filter((c) => c.type === '일반선택').length > 0 && (
                         <optgroup label="📙 일반선택 교과목">
-                          {(KNOU_COURSES_2026[newMatGrade]?.[newMatSemester] || [])
+                          {modalAvailableCourses
                             .filter((c) => c.type === '일반선택')
                             .map((c) => (
                               <option key={c.name} value={c.name}>

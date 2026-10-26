@@ -1,4 +1,5 @@
 import { AdminConstitutionManager } from '../components/AdminConstitutionManager';
+import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
@@ -52,7 +53,7 @@ export const AdminPage: React.FC = () => {
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
@@ -1314,6 +1315,17 @@ export const AdminPage: React.FC = () => {
           <FileText className="w-4 h-4 text-purple-600" />
           학생회 회의록 관리 ({minutes.length})
         </button>
+        <button
+          onClick={() => setActiveTab('curriculum')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'curriculum'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-blue-600" />
+          개설 교과목 관리
+        </button>
         {canManageBackup && (
           <button
             onClick={() => setActiveTab('backup')}
@@ -2512,6 +2524,13 @@ export const AdminPage: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* ========================================== */}
+      {/* TAB: Curriculum Course Management          */}
+      {/* ========================================== */}
+      {activeTab === 'curriculum' && (
+        <AdminCurriculumManager />
       )}
 
       {/* ========================================== */}

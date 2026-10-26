@@ -2,7 +2,7 @@
 // - /api*  : JSON API backed by D1 (members, sessions, boards, notices ...)
 // - others : static assets (SPA)
 
-import { ensureSchema } from './schema';
+import { ensureSchema, defaultCurriculumCourses } from './schema';
 
 // Minimal local typings (no @cloudflare/workers-types dependency).
 type D1 = any;
@@ -1590,6 +1590,140 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         .run();
 
       return json({ success: true, id });
+    }
+  }
+
+  // ---- curriculum courses (개설 교육과정 교과목 관리 - Read: public / Write, Update, Delete: council)
+  if (resource === 'courses') {
+    // 2026 기본 교과목 재설정/복원 (관리자/학생회장 전용)
+    if (tail === 'reset' && method === 'POST') {
+      requireCouncilManager(session);
+      await db.prepare('DELETE FROM curriculum_courses').run();
+      const stmts: any[] = [];
+      const now = new Date().toISOString();
+      defaultCurriculumCourses.forEach((c, idx) => {
+        const cid = `crs-${c.grade}-${c.semester}-${String(idx + 1).padStart(2, '0')}`;
+        stmts.push(
+          db
+            .prepare(
+              'INSERT INTO curriculum_courses (id, grade, semester, course_type, course_name, sort_order, created_at) VALUES (?,?,?,?,?,?,?)'
+            )
+            .bind(cid, c.grade, c.semester, c.type, c.name, idx + 1, now)
+        );
+      });
+      await db.batch(stmts);
+      return json({ success: true, count: defaultCurriculumCourses.length, message: '2026년 정규 교육과정 52개 교과목으로 재설정되었습니다.' });
+    }
+
+    if (method === 'GET') {
+      const { results } = await db
+        .prepare('SELECT * FROM curriculum_courses ORDER BY grade ASC, semester ASC, sort_order ASC, course_name ASC')
+        .all();
+
+      // 만약 아직 시딩되지 않았거나 비어있는 경우 fallback
+      if (!results || results.length === 0) {
+        return json(
+          defaultCurriculumCourses.map((c, idx) => ({
+            id: `crs-${c.grade}-${c.semester}-${String(idx + 1).padStart(2, '0')}`,
+            grade: c.grade,
+            semester: c.semester,
+            course_type: c.type,
+            course_name: c.name,
+            sort_order: idx + 1,
+            created_at: new Date().toISOString(),
+          }))
+        );
+      }
+
+      return json(results);
+    }
+
+    if (method === 'POST') {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const grade = Number(b.grade);
+      const semester = Number(b.semester);
+      const course_type = str(b.course_type, 20);
+      const course_name = str(b.course_name, 100);
+      const sort_order = Number(b.sort_order) || 0;
+
+      if (![1, 2, 3, 4].includes(grade)) throw new HttpError(400, '학년은 1~4학년 중 선택해야 합니다.');
+      if (![1, 2].includes(semester)) throw new HttpError(400, '학기는 1학기 또는 2학기여야 합니다.');
+      if (!['전공', '교양', '일반선택'].includes(course_type)) {
+        throw new HttpError(400, '교과구분은 전공, 교양, 일반선택 중 하나여야 합니다.');
+      }
+      if (!course_name) throw new HttpError(400, '교과목명을 입력해 주세요.');
+
+      // 중복 체크
+      const dup = await db
+        .prepare('SELECT id FROM curriculum_courses WHERE grade = ? AND semester = ? AND course_name = ?')
+        .bind(grade, semester, course_name)
+        .first();
+      if (dup) throw new HttpError(409, `이미 ${grade}학년 ${semester}학기에 등록된 교과목입니다.`);
+
+      const id = b.id ? str(b.id, 50) : `crs-${grade}-${semester}-${Date.now()}`;
+      const now = new Date().toISOString();
+
+      await db
+        .prepare(
+          'INSERT INTO curriculum_courses (id, grade, semester, course_type, course_name, sort_order, created_at) VALUES (?,?,?,?,?,?,?)'
+        )
+        .bind(id, grade, semester, course_type, course_name, sort_order, now)
+        .run();
+
+      return json({ id, grade, semester, course_type, course_name, sort_order, created_at: now }, 201);
+    }
+
+    if (method === 'PUT' && id) {
+      requireCouncil(session);
+      const b: any = await readJson(req);
+      const existing: any = await db.prepare('SELECT * FROM curriculum_courses WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 교과목을 찾을 수 없습니다.');
+
+      const grade = b.grade !== undefined ? Number(b.grade) : existing.grade;
+      const semester = b.semester !== undefined ? Number(b.semester) : existing.semester;
+      const course_type = b.course_type !== undefined ? str(b.course_type, 20) : existing.course_type;
+      const course_name = b.course_name !== undefined ? str(b.course_name, 100) : existing.course_name;
+      const sort_order = b.sort_order !== undefined ? Number(b.sort_order) : existing.sort_order;
+
+      if (![1, 2, 3, 4].includes(grade)) throw new HttpError(400, '학년은 1~4학년 중 선택해야 합니다.');
+      if (![1, 2].includes(semester)) throw new HttpError(400, '학기는 1학기 또는 2학기여야 합니다.');
+      if (!['전공', '교양', '일반선택'].includes(course_type)) {
+        throw new HttpError(400, '교과구분은 전공, 교양, 일반선택 중 하나여야 합니다.');
+      }
+      if (!course_name) throw new HttpError(400, '교과목명을 입력해 주세요.');
+
+      const now = new Date().toISOString();
+
+      await db
+        .prepare(
+          'UPDATE curriculum_courses SET grade = ?, semester = ?, course_type = ?, course_name = ?, sort_order = ?, updated_at = ? WHERE id = ?'
+        )
+        .bind(grade, semester, course_type, course_name, sort_order, now, id)
+        .run();
+
+      // 만약 과목명이 변경된 경우, 기존 등록된 학습자료의 course_name도 연동 업데이트
+      if (existing.course_name !== course_name) {
+        try {
+          await db
+            .prepare('UPDATE academic_materials SET course_name = ? WHERE course_name = ? AND grade = ? AND semester = ?')
+            .bind(course_name, existing.course_name, existing.grade, existing.semester)
+            .run();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      return json({ success: true, id, grade, semester, course_type, course_name, sort_order, updated_at: now });
+    }
+
+    if (method === 'DELETE' && id) {
+      requireCouncil(session);
+      const existing: any = await db.prepare('SELECT * FROM curriculum_courses WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 교과목을 찾을 수 없습니다.');
+
+      await db.prepare('DELETE FROM curriculum_courses WHERE id = ?').bind(id).run();
+      return json({ success: true, id, message: '교과목이 삭제되었습니다.' });
     }
   }
 

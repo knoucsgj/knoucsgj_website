@@ -1,3 +1,67 @@
+export const defaultCurriculumCourses: { grade: number; semester: number; type: string; name: string }[] = [
+  // 1학년 1학기
+  { grade: 1, semester: 1, type: '교양', name: '컴퓨터의이해' },
+  { grade: 1, semester: 1, type: '교양', name: '세계의정치와경제' },
+  { grade: 1, semester: 1, type: '전공', name: '파이썬프로그래밍기초' },
+  { grade: 1, semester: 1, type: '일반선택', name: '사진의이해' },
+  { grade: 1, semester: 1, type: '전공', name: '유비쿼터스컴퓨팅개론' },
+  { grade: 1, semester: 1, type: '일반선택', name: '데이터정보처리입문' },
+  // 1학년 2학기
+  { grade: 1, semester: 2, type: '교양', name: '원격대학교육의이해' },
+  { grade: 1, semester: 2, type: '전공', name: 'AI리터러시' },
+  { grade: 1, semester: 2, type: '전공', name: 'C프로그래밍' },
+  { grade: 1, semester: 2, type: '일반선택', name: '대중영화의이해' },
+  { grade: 1, semester: 2, type: '전공', name: '컴퓨터과학개론' },
+  { grade: 1, semester: 2, type: '교양', name: '심리학에게묻다' },
+  { grade: 1, semester: 2, type: '교양', name: '대학영어' },
+  // 2학년 1학기
+  { grade: 2, semester: 1, type: '전공', name: '이산수학' },
+  { grade: 2, semester: 1, type: '교양', name: '환경과건강' },
+  { grade: 2, semester: 1, type: '교양', name: '테마가있는음악여행' },
+  { grade: 2, semester: 1, type: '전공', name: 'HTML5웹프로그래밍' },
+  { grade: 2, semester: 1, type: '전공', name: 'Java프로그래밍' },
+  { grade: 2, semester: 1, type: '교양', name: '한국사의이해' },
+  // 2학년 2학기
+  { grade: 2, semester: 2, type: '교양', name: '원격대학교육의이해' },
+  { grade: 2, semester: 2, type: '전공', name: '오픈소스기반데이터분석' },
+  { grade: 2, semester: 2, type: '교양', name: '경제학의이해' },
+  { grade: 2, semester: 2, type: '전공', name: '프로그래밍언어론' },
+  { grade: 2, semester: 2, type: '전공', name: '선형대수' },
+  { grade: 2, semester: 2, type: '전공', name: '자료구조' },
+  { grade: 2, semester: 2, type: '교양', name: '대학수학의이해' },
+  // 3학년 1학기
+  { grade: 3, semester: 1, type: '전공', name: '인공지능' },
+  { grade: 3, semester: 1, type: '일반선택', name: '그래픽커뮤니케이션' },
+  { grade: 3, semester: 1, type: '전공', name: '데이터베이스시스템' },
+  { grade: 3, semester: 1, type: '전공', name: '디지털논리회로' },
+  { grade: 3, semester: 1, type: '전공', name: '운영체제' },
+  { grade: 3, semester: 1, type: '전공', name: '알고리즘' },
+  // 3학년 2학기
+  { grade: 3, semester: 2, type: '교양', name: '원격대학교육의이해' },
+  { grade: 3, semester: 2, type: '전공', name: '컴퓨터구조' },
+  { grade: 3, semester: 2, type: '전공', name: 'UNIX시스템' },
+  { grade: 3, semester: 2, type: '전공', name: '시뮬레이션' },
+  { grade: 3, semester: 2, type: '교양', name: '생활법률' },
+  { grade: 3, semester: 2, type: '전공', name: '머신러닝' },
+  { grade: 3, semester: 2, type: '전공', name: 'JSP프로그래밍' },
+  { grade: 3, semester: 2, type: '교양', name: 'AI네이티브가되기위한기초소양' },
+  // 4학년 1학기
+  { grade: 4, semester: 1, type: '전공', name: '소프트웨어공학' },
+  { grade: 4, semester: 1, type: '전공', name: '컴퓨터보안' },
+  { grade: 4, semester: 1, type: '전공', name: '정보통신망' },
+  { grade: 4, semester: 1, type: '전공', name: '컴퓨터그래픽스' },
+  { grade: 4, semester: 1, type: '전공', name: '모바일앱프로그래밍' },
+  { grade: 4, semester: 1, type: '교양', name: '생활과건강' },
+  // 4학년 2학기
+  { grade: 4, semester: 2, type: '일반선택', name: '경영전략론' },
+  { grade: 4, semester: 2, type: '교양', name: '원격대학교육의이해' },
+  { grade: 4, semester: 2, type: '전공', name: '컴파일러구성' },
+  { grade: 4, semester: 2, type: '전공', name: '클라우드컴퓨팅' },
+  { grade: 4, semester: 2, type: '일반선택', name: '빅데이터의이해와활용' },
+  { grade: 4, semester: 2, type: '교양', name: '성,사랑,사회' },
+  { grade: 4, semester: 2, type: '전공', name: '딥러닝' },
+];
+
 // Idempotent schema bootstrap. Runs once per Worker isolate before the first API call, so no manual
 // D1 console work is required. Safe to run repeatedly (CREATE IF NOT EXISTS + guarded ALTERs).
 import { initialNotices } from '../src/data/mockNotices';
@@ -97,6 +161,11 @@ const CREATE_STATEMENTS = [
     id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,
     total_qty INTEGER NOT NULL DEFAULT 1, available_qty INTEGER NOT NULL DEFAULT 1,
     location TEXT NOT NULL, status TEXT NOT NULL DEFAULT '대여가능', desc TEXT)`,
+  `CREATE TABLE IF NOT EXISTS curriculum_courses (
+    id TEXT PRIMARY KEY, grade INTEGER NOT NULL, semester INTEGER NOT NULL,
+    course_type TEXT NOT NULL, course_name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_courses_grade_sem ON curriculum_courses (grade, semester, sort_order)`,
 ];
 
 // Columns added after the first release (ownership + study approval)
@@ -317,6 +386,25 @@ async function run(db: D1) {
     }
     stmtsV6.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v6', '1')"));
     await db.batch(stmtsV6);
+  }
+
+  // Seed curriculum courses (v7)
+  const seededV7 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v7'").first();
+  if (!seededV7) {
+    const stmtsV7: any[] = [];
+    const now = new Date().toISOString();
+    defaultCurriculumCourses.forEach((c, idx) => {
+      const id = `crs-${c.grade}-${c.semester}-${String(idx + 1).padStart(2, '0')}`;
+      stmtsV7.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO curriculum_courses (id, grade, semester, course_type, course_name, sort_order, created_at) VALUES (?,?,?,?,?,?,?)'
+          )
+          .bind(id, c.grade, c.semester, c.type, c.name, idx + 1, now)
+      );
+    });
+    stmtsV7.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v7', '1')"));
+    await db.batch(stmtsV7);
   }
 
   // Role auto-migration for existing members

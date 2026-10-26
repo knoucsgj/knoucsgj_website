@@ -16,8 +16,10 @@ import type {
   AcademicMaterial,
   AdminMember,
   ConstitutionVersion,
-  ActivityReport
+  ActivityReport,
+  CurriculumCourse
 } from '../lib/types';
+import { KNOU_COURSES_2026 } from '../data/mockMaterials';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
 import {
@@ -358,6 +360,62 @@ export const api = {
     } catch {
       /* ignore */
     }
+  },
+
+  // ==========================================
+  // 개설 교육과정 교과목 (Curriculum Courses) - D1 연동
+  // ==========================================
+  async getCourses(): Promise<CurriculumCourse[]> {
+    const cloud = await fetchD1<CurriculumCourse[]>('courses');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    const fallbackList: CurriculumCourse[] = [];
+    Object.entries(KNOU_COURSES_2026).forEach(([gradeStr, sems]) => {
+      const g = Number(gradeStr) as 1 | 2 | 3 | 4;
+      Object.entries(sems).forEach(([semStr, courses]) => {
+        const s = Number(semStr) as 1 | 2;
+        courses.forEach((c, idx) => {
+          fallbackList.push({
+            id: `crs-${g}-${s}-${String(idx + 1).padStart(2, '0')}`,
+            grade: g,
+            semester: s,
+            course_type: c.type,
+            course_name: c.name,
+            sort_order: idx + 1,
+          });
+        });
+      });
+    });
+    return fallbackList;
+  },
+
+  async createCourse(course: Omit<CurriculumCourse, 'id'>): Promise<CurriculumCourse> {
+    return await fetchStrict<CurriculumCourse>('courses', {
+      method: 'POST',
+      body: JSON.stringify(course),
+    });
+  },
+
+  async updateCourse(id: string, updatedFields: Partial<CurriculumCourse>): Promise<boolean> {
+    await fetchStrict<any>(`courses&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
+    return true;
+  },
+
+  async deleteCourse(id: string): Promise<boolean> {
+    await fetchStrict<any>(`courses&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return true;
+  },
+
+  async resetCourses(): Promise<void> {
+    await fetchStrict<any>('courses&tail=reset', {
+      method: 'POST',
+    });
   },
 
   // ==========================================

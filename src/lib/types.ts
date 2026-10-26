@@ -303,3 +303,15 @@ export interface ActivityReport {
   deleted_by?: string;
 }
 
+// 개설 교육과정 교과목 모델
+export interface CurriculumCourse {
+  id: string;
+  grade: 1 | 2 | 3 | 4;
+  semester: 1 | 2;
+  course_type: '전공' | '교양' | '일반선택';
+  course_name: string;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
