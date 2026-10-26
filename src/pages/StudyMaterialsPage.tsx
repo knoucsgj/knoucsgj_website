@@ -25,7 +25,8 @@ import {
   Upload,
   Edit3,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 export const StudyMaterialsPage: React.FC = () => {
@@ -90,6 +91,7 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newMatFileName, setNewMatFileName] = useState('');
   const [newMatFileSize, setNewMatFileSize] = useState('');
   const [newMatFileDataUrl, setNewMatFileDataUrl] = useState<string>('');
+  const [newMatFile, setNewMatFile] = useState<File | null>(null);
   const [isSubmittingMaterial, setIsSubmittingMaterial] = useState(false);
 
   const { member, isAdmin } = useAuth();
@@ -118,9 +120,9 @@ export const StudyMaterialsPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size (max 1MB: files are stored as data URLs in the D1 database row)
-    if (file.size > 1024 * 1024) {
-      alert('파일 크기는 1MB 이하여야 합니다. 용량이 큰 자료는 클라우드 링크를 설명에 남겨 주세요.');
+    // Check size (max 50MB with Cloudflare R2 object storage)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('파일 크기는 최대 50MB 이하여야 합니다.');
       e.target.value = '';
       return;
     }
@@ -130,14 +132,20 @@ export const StudyMaterialsPage: React.FC = () => {
         ? `${(file.size / (1024 * 1024)).toFixed(1)}MB`
         : `${Math.round(file.size / 1024)}KB`;
 
+    setNewMatFile(file);
     setNewMatFileName(file.name);
     setNewMatFileSize(sizeFormatted);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setNewMatFileDataUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // If file is small (<= 1MB), also read as dataUrl for instant local fallback
+    if (file.size <= 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewMatFileDataUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setNewMatFileDataUrl('');
+    }
   };
 
   const handleDownload = async (mat: AcademicMaterial) => {
@@ -155,7 +163,16 @@ export const StudyMaterialsPage: React.FC = () => {
 
     const fileUrl = mat.file_url || (mat.has_file ? await api.getMaterialFile(mat.id) : null);
 
-    if (fileUrl && fileUrl.startsWith('data:')) {
+    if (fileUrl && (fileUrl.startsWith('http') || fileUrl.startsWith('/'))) {
+      // Cloudflare R2 Direct Streaming Download
+      const dlUrl = fileUrl.includes('?') ? `${fileUrl}&download=true` : `${fileUrl}?download=true`;
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else if (fileUrl && fileUrl.startsWith('data:')) {
       // Trigger download for uploaded data URL
       const a = document.createElement('a');
       a.href = fileUrl;
@@ -241,6 +258,7 @@ export const StudyMaterialsPage: React.FC = () => {
     setNewMatFileName('');
     setNewMatFileSize('');
     setNewMatFileDataUrl('');
+    setNewMatFile(null);
     setIsCreateMaterialModalOpen(true);
   };
 
@@ -255,6 +273,7 @@ export const StudyMaterialsPage: React.FC = () => {
     setNewMatFileName(mat.file_name || '');
     setNewMatFileSize(mat.file_size || '');
     setNewMatFileDataUrl(mat.file_url || '');
+    setNewMatFile(null);
     setIsCreateMaterialModalOpen(true);
   };
 
@@ -284,6 +303,29 @@ export const StudyMaterialsPage: React.FC = () => {
     }
     try {
       setIsSubmittingMaterial(true);
+
+      let targetFileUrl = newMatFileDataUrl;
+      let targetFileName = newMatFileName.trim();
+      let targetFileSize = newMatFileSize.trim();
+
+      // If user picked a new file, upload to Cloudflare R2
+      if (newMatFile) {
+        try {
+          const uploadRes = await api.uploadFile(newMatFile, 'materials');
+          targetFileUrl = uploadRes.url;
+          targetFileName = uploadRes.fileName;
+          targetFileSize = uploadRes.fileSize;
+        } catch (uploadErr) {
+          console.warn('R2 upload failed, attempting local fallback:', uploadErr);
+          // If R2 upload fails and a data URL is available (small file <= 1MB), fallback to it
+          if (newMatFileDataUrl) {
+            targetFileUrl = newMatFileDataUrl;
+          } else {
+            throw uploadErr;
+          }
+        }
+      }
+
       if (editingMaterial) {
         await api.updateMaterial(editingMaterial.id, {
           grade: newMatGrade,
@@ -292,9 +334,9 @@ export const StudyMaterialsPage: React.FC = () => {
           title: newMatTitle.trim(),
           description: newMatDescription.trim(),
           category: newMatCategory,
-          file_name: newMatFileName.trim() || editingMaterial.file_name || `${newMatCourse}_참고자료.pdf`,
-          file_size: newMatFileSize.trim() || editingMaterial.file_size || '2.5MB',
-          ...(newMatFileDataUrl ? { file_url: newMatFileDataUrl } : {})
+          file_name: targetFileName || editingMaterial.file_name || `${newMatCourse}_참고자료.pdf`,
+          file_size: targetFileSize || editingMaterial.file_size || '2.5MB',
+          ...(targetFileUrl ? { file_url: targetFileUrl } : {})
         });
         alert('자료가 성공적으로 수정되었습니다!');
       } else {
@@ -305,15 +347,16 @@ export const StudyMaterialsPage: React.FC = () => {
           title: newMatTitle.trim(),
           description: newMatDescription.trim(),
           category: newMatCategory,
-          file_name: newMatFileName.trim() || `${newMatCourse}_참고자료.pdf`,
-          file_size: newMatFileSize.trim() || '2.5MB',
-          file_url: newMatFileDataUrl || undefined
+          file_name: targetFileName || `${newMatCourse}_참고자료.pdf`,
+          file_size: targetFileSize || '2.5MB',
+          file_url: targetFileUrl || undefined
         });
         alert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
       }
       await loadData();
       setIsCreateMaterialModalOpen(false);
       setEditingMaterial(null);
+      setNewMatFile(null);
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : '자료 저장 중 오류가 발생했습니다.');
@@ -1344,7 +1387,7 @@ export const StudyMaterialsPage: React.FC = () => {
                         클릭하여 파일을 선택하거나 이곳으로 드래그하세요
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 1MB)
+                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (Cloudflare R2 스토리지 · 최대 50MB)
                       </p>
                     </div>
                   )}
@@ -1367,10 +1410,11 @@ export const StudyMaterialsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingMaterial}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
+                  {isSubmittingMaterial && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isSubmittingMaterial
-                    ? '저장 중...'
+                    ? '파일 업로드 및 저장 중...'
                     : editingMaterial
                     ? '수정 완료하기'
                     : '자료 등록하기'}

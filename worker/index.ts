@@ -10,6 +10,7 @@ interface Env {
   DB: D1;
   ASSETS: { fetch(req: Request): Promise<Response> };
   ADMIN_PASSWORD?: string; // initial admin password (wrangler secret). Overridden once changed in admin page.
+  R2_BUCKET?: any; // Cloudflare R2 bucket binding
 }
 
 const MEMBER_COOKIE = 'knoucs_sid';
@@ -758,6 +759,139 @@ async function readJson(req: Request): Promise<any> {
   }
 }
 
+// ---------------------------------------------------------------- R2 file storage handlers
+async function handleUpload(req: Request, env: Env, session: SessionState): Promise<Response> {
+  if (req.method !== 'POST') throw new HttpError(405, 'POST 메서드만 지원합니다.');
+
+  // Require logged-in member or admin
+  if (!session.member && !session.admin) {
+    throw new HttpError(401, '파일 업로드는 로그인한 회원만 가능합니다.');
+  }
+
+  if (!env.R2_BUCKET) {
+    throw new HttpError(
+      503,
+      'Cloudflare R2 버킷(R2_BUCKET) 바인딩이 아직 연결되지 않았습니다. Cloudflare 대시보드(Settings > Bindings > R2 Bucket)에서 R2_BUCKET을 연결해 주세요.'
+    );
+  }
+
+  const ct = req.headers.get('content-type') || '';
+  if (!ct.includes('multipart/form-data')) {
+    throw new HttpError(400, 'multipart/form-data 요청이어야 합니다.');
+  }
+
+  const formData = await req.formData();
+  const file = formData.get('file');
+  const category = str(String(formData.get('category') || 'general'), 30);
+
+  if (!file || typeof file === 'string') {
+    throw new HttpError(400, '업로드할 파일이 없습니다.');
+  }
+
+  const uploadFile = file as File;
+  const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+  if (uploadFile.size > MAX_SIZE) {
+    throw new HttpError(413, '파일 크기는 최대 50MB까지 업로드 가능합니다.');
+  }
+
+  const origName = uploadFile.name || 'file.bin';
+  const lastDot = origName.lastIndexOf('.');
+  const ext = lastDot > 0 ? origName.slice(lastDot) : '';
+  const baseName = lastDot > 0 ? origName.slice(0, lastDot) : origName;
+  const safeName = baseName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_').slice(0, 40) + ext;
+  const key = `${category}/${Date.now()}-${randomHex(3)}-${safeName}`;
+
+  await env.R2_BUCKET.put(key, uploadFile.stream(), {
+    httpMetadata: {
+      contentType: uploadFile.type || 'application/octet-stream',
+    },
+    customMetadata: {
+      originalName: encodeURIComponent(origName),
+      fileSize: String(uploadFile.size),
+      uploadedBy: session.admin ? 'admin' : (session.member?.id || 'unknown'),
+      uploadedAt: new Date().toISOString(),
+    },
+  });
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+
+  return json({
+    success: true,
+    key,
+    url: `/api/files/${encodedKey}`,
+    fileName: origName,
+    fileSize: formatBytes(uploadFile.size),
+    size: uploadFile.size,
+    contentType: uploadFile.type || 'application/octet-stream',
+  }, 201);
+}
+
+async function handleFiles(req: Request, env: Env, session: SessionState): Promise<Response> {
+  const url = new URL(req.url);
+  const prefix = '/api/files/';
+  if (!url.pathname.startsWith(prefix)) throw new HttpError(404, '경로가 올바르지 않습니다.');
+
+  const rawKey = url.pathname.slice(prefix.length);
+  const key = decodeURIComponent(rawKey);
+
+  if (!key) throw new HttpError(400, '파일 키가 누락되었습니다.');
+
+  if (req.method === 'GET') {
+    if (!env.R2_BUCKET) {
+      throw new HttpError(503, 'Cloudflare R2 스토리지(R2_BUCKET)가 연결되지 않았습니다.');
+    }
+
+    // Academic materials protection: regular members only
+    if (key.startsWith('materials/')) {
+      if (session.member?.role === 'associate' || (!isRegularOrAbove(session) && !session.admin)) {
+        throw new HttpError(403, '학습자료 다운로드는 광주전남지역대학 컴퓨터과학과 재학생(정회원) 전용입니다. 준회원은 열람만 가능합니다.');
+      }
+    }
+
+    const object = await env.R2_BUCKET.get(key);
+    if (!object) {
+      throw new HttpError(404, '요청하신 파일이 존재하지 않거나 삭제되었습니다.');
+    }
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set('etag', object.httpEtag);
+    headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+
+    const isDownload = url.searchParams.get('download') === 'true' || url.searchParams.get('dl') === '1';
+    const origName = object.customMetadata?.originalName
+      ? decodeURIComponent(object.customMetadata.originalName)
+      : key.split('/').pop() || 'download';
+
+    if (isDownload) {
+      headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(origName)}`);
+    } else {
+      headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(origName)}`);
+    }
+
+    return new Response(object.body, { headers });
+  }
+
+  if (req.method === 'DELETE') {
+    if (!session.member && !session.admin) {
+      throw new HttpError(401, '파일 삭제 권한이 없습니다.');
+    }
+    if (!env.R2_BUCKET) {
+      throw new HttpError(503, 'Cloudflare R2 스토리지(R2_BUCKET)가 연결되지 않았습니다.');
+    }
+    await env.R2_BUCKET.delete(key);
+    return json({ success: true, message: '파일이 성공적으로 삭제되었습니다.', key });
+  }
+
+  throw new HttpError(405, '지원하지 않는 메서드입니다.');
+}
+
 // ---------------------------------------------------------------- resource handlers
 async function handleApi(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
@@ -776,6 +910,16 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   }
 
   const session = await loadSession(req, db);
+
+  // ---- R2 file streaming & management (/api/files/*)
+  if (url.pathname.startsWith('/api/files/')) {
+    return handleFiles(req, env, session);
+  }
+
+  // ---- R2 file upload (/api/upload or /api?resource=upload)
+  if (resource === 'upload' || url.pathname === '/api/upload') {
+    return handleUpload(req, env, session);
+  }
 
   if (resource === 'auth') return handleAuth(req, db, env, session, url.searchParams.get('action'));
 
@@ -967,7 +1111,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const row: any = await db.prepare('SELECT author_id FROM academic_materials WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '자료를 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 등록한 자료만 수정할 수 있습니다.');
-      if (b.file_url && String(b.file_url).length > 1500000) throw new HttpError(413, '첨부 파일은 1MB 이하만 가능합니다.');
+      if (b.file_url && b.file_url.startsWith('data:') && String(b.file_url).length > 2000000) {
+        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 R2 파일 업로드를 이용해 주세요.');
+      }
       await db
         .prepare(
           `UPDATE academic_materials SET grade = ?, semester = ?, course_name = ?, title = ?, description = ?, category = ?,
@@ -984,7 +1130,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         throw new HttpError(403, '준회원 등급은 자료 등록이 불가능합니다. (열람 전용)');
       }
       const b: any = await readJson(req);
-      if (b.file_url && String(b.file_url).length > 1500000) throw new HttpError(413, '첨부 파일은 1MB 이하만 가능합니다.');
+      if (b.file_url && b.file_url.startsWith('data:') && String(b.file_url).length > 2000000) {
+        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 R2 파일 업로드를 이용해 주세요.');
+      }
       const m = {
         id: `mat-${Date.now()}-${randomHex(3)}`,
         grade: Number(b.grade),
@@ -1015,10 +1163,18 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json({ ...pub, has_file: !!file_url });
     }
     if (method === 'DELETE' && id) {
-      const row: any = await db.prepare('SELECT author_id FROM academic_materials WHERE id = ?').bind(id).first();
+      const row: any = await db.prepare('SELECT author_id, file_url FROM academic_materials WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '자료를 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 등록한 자료만 삭제할 수 있습니다.');
       await db.prepare('DELETE FROM academic_materials WHERE id = ?').bind(id).run();
+      if (env.R2_BUCKET && row.file_url && row.file_url.startsWith('/api/files/')) {
+        try {
+          const rawKey = row.file_url.replace('/api/files/', '').split('?')[0];
+          await env.R2_BUCKET.delete(decodeURIComponent(rawKey));
+        } catch (e) {
+          console.error('R2 cleanup error:', e);
+        }
+      }
       return json({ success: true });
     }
   }

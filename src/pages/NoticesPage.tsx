@@ -76,6 +76,7 @@ export const NoticesPage: React.FC = () => {
   const [actDate, setActDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [actMediaType, setActMediaType] = useState<'image' | 'video'>('image');
   const [actMediaUrl, setActMediaUrl] = useState('');
+  const [actImageFile, setActImageFile] = useState<File | null>(null);
   const [actYoutubeUrl, setActYoutubeUrl] = useState('');
   const [actDesc, setActDesc] = useState('');
   const [actIsPinned, setActIsPinned] = useState(false);
@@ -120,7 +121,7 @@ export const NoticesPage: React.FC = () => {
         finalThumbUrl = `https://img.youtube.com/vi/${finalYoutubeId}/hqdefault.jpg`;
       }
     } else {
-      if (!finalMediaUrl) {
+      if (!finalMediaUrl && !actImageFile) {
         alert('활동 사진 이미지를 등록해 주세요.');
         return;
       }
@@ -128,6 +129,22 @@ export const NoticesPage: React.FC = () => {
 
     try {
       setIsSubmittingActivity(true);
+
+      // If user uploaded an image file, store in Cloudflare R2
+      if (actMediaType === 'image' && actImageFile) {
+        try {
+          const uploadRes = await api.uploadFile(actImageFile, 'activities');
+          finalMediaUrl = uploadRes.url;
+        } catch (uploadErr) {
+          console.warn('R2 upload failed, attempting fallback:', uploadErr);
+          if (actMediaUrl.startsWith('data:')) {
+            finalMediaUrl = actMediaUrl;
+          } else {
+            throw uploadErr;
+          }
+        }
+      }
+
       await api.createActivity({
         title: actTitle.trim(),
         category: actCategory,
@@ -145,6 +162,7 @@ export const NoticesPage: React.FC = () => {
       setActTitle('');
       setActDesc('');
       setActMediaUrl('');
+      setActImageFile(null);
       setActYoutubeUrl('');
       setActIsPinned(false);
       loadActivities();
@@ -175,15 +193,14 @@ export const NoticesPage: React.FC = () => {
   const handleActivityImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('사진 파일 크기는 10MB 이하만 가능합니다.');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('사진 파일 크기는 20MB 이하만 가능합니다.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setActMediaUrl(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    setActImageFile(file);
+    // Instant local preview
+    const previewUrl = URL.createObjectURL(file);
+    setActMediaUrl(previewUrl);
   };
 
   const { member, isAdmin } = useAuth();
@@ -1259,14 +1276,14 @@ export const NoticesPage: React.FC = () => {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-100">
-              {receiptModalUrl.startsWith('data:image') || receiptModalUrl.endsWith('.png') || receiptModalUrl.endsWith('.jpg') || receiptModalUrl.endsWith('.jpeg') ? (
+              {receiptModalUrl.startsWith('data:image') || /\.(png|jpe?g|gif|webp|svg)($|\?)/i.test(receiptModalUrl) ? (
                 <img src={receiptModalUrl} alt="영수증 증빙" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
               ) : (
                 <div className="text-center p-8 bg-white rounded-xl shadow-xs">
                   <FileText className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
                   <p className="text-sm font-bold text-slate-800 mb-4">첨부 문서(PDF 등) 파일입니다.</p>
                   <a
-                    href={receiptModalUrl}
+                    href={receiptModalUrl.includes('?') ? `${receiptModalUrl}&download=true` : `${receiptModalUrl}?download=true`}
                     download="결산_영수증_증빙.pdf"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
                   >

@@ -835,5 +835,58 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ test_email: testEmail }),
     });
+  },
+
+  // ==========================================
+  // 14. Cloudflare R2 파일 업로드 & 관리
+  // ==========================================
+  async uploadFile(
+    file: File,
+    category = 'general'
+  ): Promise<{
+    success: boolean;
+    key: string;
+    url: string;
+    fileName: string;
+    fileSize: string;
+    size: number;
+    contentType: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errMsg = '파일 업로드에 실패했습니다.';
+      try {
+        const data = await res.json();
+        if (data.error) errMsg = data.error;
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    return await res.json();
+  },
+
+  async deleteUploadedFile(fileUrlOrKey: string): Promise<boolean> {
+    try {
+      const rawKey = fileUrlOrKey.startsWith('/api/files/')
+        ? fileUrlOrKey.replace('/api/files/', '').split('?')[0]
+        : fileUrlOrKey;
+      const pathKey = decodeURIComponent(rawKey).split('/').map(encodeURIComponent).join('/');
+      const res = await fetch(`/api/files/${pathKey}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 };

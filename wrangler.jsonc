@@ -17,5 +17,11 @@
       "database_name": "knoucs-db",
       "database_id": "62c137a5-14cb-4110-83b5-5a7245b54ad2"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "knoucs-storage"
+    }
   ]
 }

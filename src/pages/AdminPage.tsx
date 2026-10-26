@@ -659,19 +659,23 @@ export const AdminPage: React.FC = () => {
     setIsPastModalOpen(true);
   };
 
-  const handlePastPhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePastPhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) {
-      alert('사진 파일은 1MB 이하여야 합니다.');
-      e.target.value = '';
-      return;
+    try {
+      const res = await api.uploadFile(file, 'past_members');
+      setPastForm((prev) => ({ ...prev, photo_url: res.url }));
+    } catch {
+      if (file.size <= 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setPastForm((prev) => ({ ...prev, photo_url: event.target?.result as string }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('사진 파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+      }
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setPastForm((prev) => ({ ...prev, photo_url: event.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSavePastMember = async (e: React.FormEvent) => {
@@ -853,23 +857,36 @@ export const AdminPage: React.FC = () => {
     setIsBudgetModalOpen(true);
   };
 
-  const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReceiptFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert('영수증 파일 크기는 10MB 이하만 가능합니다.');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('영수증 파일 크기는 20MB 이하만 가능합니다.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    try {
+      const res = await api.uploadFile(file, 'receipts');
       setBudgetForm((prev) => ({
         ...prev,
-        receipt_url: base64,
+        receipt_url: res.url,
         receipt_name: file.name
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      if (file.size <= 1.5 * 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target?.result as string;
+          setBudgetForm((prev) => ({
+            ...prev,
+            receipt_url: base64,
+            receipt_name: file.name
+          }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('영수증 파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+      }
+    }
   };
 
   const handleSaveBudget = async (e: React.FormEvent) => {
@@ -989,27 +1006,47 @@ export const AdminPage: React.FC = () => {
     setIsMinuteModalOpen(true);
   };
 
-  const handleMinuteAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMinuteAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      const isImg = file.type.startsWith('image/');
+    const isImg = file.type.startsWith('image/');
+    try {
+      const res = await api.uploadFile(file, 'minutes');
       setMinuteForm((prev) => ({
         ...prev,
         attachments: [
           ...prev.attachments,
           {
             name: file.name,
-            url: base64,
-            size: `${(file.size / 1024).toFixed(1)}KB`,
+            url: res.url,
+            size: res.fileSize,
             type: isImg ? 'image' : 'file'
           }
         ]
       }));
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      if (file.size <= 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target?.result as string;
+          setMinuteForm((prev) => ({
+            ...prev,
+            attachments: [
+              ...prev.attachments,
+              {
+                name: file.name,
+                url: base64,
+                size: `${(file.size / 1024).toFixed(1)}KB`,
+                type: isImg ? 'image' : 'file'
+              }
+            ]
+          }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('첨부파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+      }
+    }
   };
 
   const handleSaveMinute = async (e: React.FormEvent) => {
