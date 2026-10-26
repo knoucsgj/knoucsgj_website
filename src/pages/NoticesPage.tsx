@@ -189,6 +189,18 @@ export const NoticesPage: React.FC = () => {
   const { member, isAdmin } = useAuth();
   const canWriteNotice = isAdmin || member?.role === 'president' || member?.role === 'officer';
 
+  // 임원은 본인이 게시한 것만 삭제 가능 (관리자/학생회장은 전체 삭제 가능)
+  const canDeleteActivity = (act: ActivityReport) => {
+    if (isAdmin || member?.role === 'president') return true;
+    if (member?.role === 'officer') {
+      if (act.created_by && member?.id) {
+        return act.created_by === member.id;
+      }
+      return act.author === (member?.name || member?.nickname);
+    }
+    return false;
+  };
+
   // 탭 전환 핸들러
   const handleTabChange = (tab: 'notices' | 'activities' | 'finance' | 'minutes') => {
     setSearchParams({ tab });
@@ -693,14 +705,14 @@ export const NoticesPage: React.FC = () => {
                         <span className="truncate max-w-[140px] font-medium text-slate-600">
                           {act.author || '학생회'}
                         </span>
-                        {canWriteNotice && (
+                        {canDeleteActivity(act) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteActivity(act.id);
                             }}
-                            title="삭제"
-                            className="p-1 hover:text-rose-600 transition-colors"
+                            title="활동보고 삭제"
+                            className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1376,12 +1388,23 @@ export const NoticesPage: React.FC = () => {
                     <span>YouTube 원본 영상 보기</span>
                   </a>
                 )}
-                <button
-                  onClick={() => setSelectedActivity(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold ml-auto cursor-pointer"
-                >
-                  닫기
-                </button>
+                <div className="flex items-center gap-2 ml-auto">
+                  {canDeleteActivity(selectedActivity) && (
+                    <button
+                      onClick={() => handleDeleteActivity(selectedActivity.id)}
+                      className="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-1.5 cursor-pointer text-xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>게시물 삭제</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSelectedActivity(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold cursor-pointer"
+                  >
+                    닫기
+                  </button>
+                </div>
               </div>
             </div>
           </div>

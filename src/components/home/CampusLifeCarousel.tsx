@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Image as ImageIcon, Video, Calendar, Eye, X, ExternalLink } from 'lucide-react';
 import type { ActivityReport } from '../../lib/types';
@@ -10,32 +10,91 @@ interface Props {
 
 export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransition, setIsTransition] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityReport | null>(null);
+  const [visibleCount, setVisibleCount] = useState(4);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 화면 크기에 따라 한 화면에 보여줄 카드 수 (모바일: 1~2개, 태블릿: 3개, 데스크톱: 4개)
-  const itemsPerPage = 4;
-  const totalItems = activities.length;
-  const maxIndex = Math.max(0, totalItems - itemsPerPage);
-
-  // 일정 시간(4.5초)마다 왼쪽 방향으로 자동 슬라이드 넘어감
+  // 반응형 한 화면 카드 수 계산 (모바일 1개, 태블릿 2개, 데스크톱 4개)
   useEffect(() => {
-    if (totalItems <= itemsPerPage || isPaused || selectedActivity) return;
+    const updateVisibleCount = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setVisibleCount(1);
+      } else if (width < 1024) {
+        setVisibleCount(2);
+      } else {
+        setVisibleCount(4);
+      }
+    };
+
+    updateVisibleCount();
+    window.addEventListener('resize', updateVisibleCount);
+    return () => window.removeEventListener('resize', updateVisibleCount);
+  }, []);
+
+  const total = activities.length;
+
+  // 끊김 없는 무한 롤링(Seamless Infinite Loop)을 위해 리스트를 복제 연결
+  // 마지막 콘텐츠 뒤에 첫 번째 콘텐츠가 바로 이어져서 한 방향(왼쪽)으로 계속 롤링됨
+  const displayList = total > 0 ? [...activities, ...activities, ...activities] : [];
+
+  // 다음 슬라이드로 이동
+  const handleNext = () => {
+    if (total <= 1) return;
+    setIsTransition(true);
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  // 이전 슬라이드로 이동
+  const handlePrev = () => {
+    if (total <= 1) return;
+    if (currentIndex <= 0) {
+      // 0에서 이전으로 가면 transition 없이 total 위치로 순간이동 후 total - 1로 슬라이드
+      setIsTransition(false);
+      setCurrentIndex(total);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = setTimeout(() => {
+        setIsTransition(true);
+        setCurrentIndex(total - 1);
+      }, 40);
+    } else {
+      setIsTransition(true);
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
+
+  // 슬라이드 애니메이션 완료 시점(transitionend)에 마지막을 지나 첫 번째로 돌아왔을 때 무음 텔레포트
+  const handleTransitionEnd = () => {
+    if (currentIndex >= total) {
+      // 마지막 콘텐츠를 지나 복제된 첫 번째 콘텐츠에 도달한 순간,
+      // 애니메이션 없이 원본 0번 인덱스로 순간이동하여 영원히 한 방향으로 롤링되게 함
+      setIsTransition(false);
+      setCurrentIndex(0);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = setTimeout(() => {
+        setIsTransition(true);
+      }, 50);
+    }
+  };
+
+  // 일정 시간(4초)마다 왼쪽 방향으로 자동 연속 롤링
+  useEffect(() => {
+    if (total <= 1 || isPaused || selectedActivity) return;
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-    }, 4500);
+      handleNext();
+    }, 4000);
 
     return () => clearInterval(timer);
-  }, [totalItems, maxIndex, isPaused, selectedActivity]);
+  }, [total, isPaused, selectedActivity, currentIndex]);
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-  };
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   const getYoutubeEmbedUrl = (act: ActivityReport) => {
     if (act.youtube_id) {
@@ -51,6 +110,11 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
     }
     return act.media_url;
   };
+
+  // 카드 1개의 너비 퍼센트 (모바일: 100%, 태블릿: 50%, 데스크톱: 25%)
+  const cardWidthPercent = 100 / visibleCount;
+  const translateX = -(currentIndex * cardWidthPercent);
+  const activeDotIndex = total > 0 ? currentIndex % total : 0;
 
   return (
     <div
@@ -83,7 +147,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
             <ChevronRight className="w-4 h-4" />
           </Link>
 
-          {totalItems > itemsPerPage && (
+          {total > 1 && (
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handlePrev}
@@ -104,7 +168,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
         </div>
       </div>
 
-      {/* Carousel Track Container */}
+      {/* Carousel Track Container (무한 연속 롤링 트랙) */}
       <div className="relative overflow-hidden rounded-2xl">
         {loading ? (
           <div className="py-20 text-center text-slate-400 text-sm">
@@ -115,108 +179,120 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
             등록된 활동보고 자료가 없습니다.
           </div>
         ) : (
-          <div
-            className="flex transition-transform duration-700 ease-in-out gap-4"
-            style={{
-              transform: `translateX(-${currentIndex * (100 / (totalItems > itemsPerPage ? itemsPerPage : totalItems))}%)`,
-              width: totalItems > itemsPerPage ? `${(totalItems / itemsPerPage) * 100}%` : '100%',
-            }}
-          >
-            {activities.map((act) => {
-              const isVideo = act.media_type === 'video';
-              const displayImg = isVideo
-                ? (act.thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80')
-                : act.media_url;
+          <div className="-mx-2 overflow-hidden">
+            <div
+              className="flex"
+              onTransitionEnd={handleTransitionEnd}
+              style={{
+                transform: `translateX(${translateX}%)`,
+                transition: isTransition ? 'transform 650ms cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
+                willChange: 'transform',
+              }}
+            >
+              {displayList.map((act, index) => {
+                const isVideo = act.media_type === 'video';
+                const displayImg = isVideo
+                  ? (act.thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80')
+                  : act.media_url;
 
-              return (
-                <div
-                  key={act.id}
-                  onClick={() => setSelectedActivity(act)}
-                  className="w-full sm:w-1/2 lg:w-1/4 shrink-0 rounded-2xl overflow-hidden border border-slate-800/90 bg-slate-900 group shadow-md hover:border-blue-500/60 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between"
-                >
-                  <div className="relative aspect-4/3 overflow-hidden bg-slate-950">
-                    <img
-                      src={displayImg}
-                      alt={act.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                    />
-                    
-                    {/* Media Type Badge */}
-                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                      {isVideo ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-rose-600/90 text-white text-[11px] font-bold shadow-md backdrop-blur-xs">
-                          <Video className="w-3 h-3" />
-                          영상
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[11px] font-bold shadow-md backdrop-blur-xs border border-white/20">
-                          <ImageIcon className="w-3 h-3 text-blue-400" />
-                          사진
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded-md bg-black/60 text-slate-200 text-[10px] font-semibold backdrop-blur-xs">
-                        {act.category}
-                      </span>
-                    </div>
+                return (
+                  <div
+                    key={`${act.id}-${index}`}
+                    style={{ width: `${cardWidthPercent}%` }}
+                    className="shrink-0 px-2"
+                  >
+                    <div
+                      onClick={() => setSelectedActivity(act)}
+                      className="h-full rounded-2xl overflow-hidden border border-slate-800/90 bg-slate-900 group shadow-md hover:border-blue-500/60 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between"
+                    >
+                      <div className="relative aspect-4/3 overflow-hidden bg-slate-950">
+                        <img
+                          src={displayImg}
+                          alt={act.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                        />
 
-                    {/* Video Center Play Button (깜빡임/펄스 효과 적용) */}
-                    {isVideo && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
-                        <div className="w-12 h-12 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform animate-pulse">
-                          <Play className="w-6 h-6 ml-0.5 fill-white" />
+                        {/* Media Type Badge */}
+                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                          {isVideo ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-rose-600/90 text-white text-[11px] font-bold shadow-md backdrop-blur-xs">
+                              <Video className="w-3 h-3" />
+                              영상
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[11px] font-bold shadow-md backdrop-blur-xs border border-white/20">
+                              <ImageIcon className="w-3 h-3 text-blue-400" />
+                              사진
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded-md bg-black/60 text-slate-200 text-[10px] font-semibold backdrop-blur-xs">
+                            {act.category}
+                          </span>
+                        </div>
+
+                        {/* Video Center Play Button (깜빡임/펄스 효과) */}
+                        {isVideo && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
+                            <div className="w-12 h-12 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform animate-pulse">
+                              <Play className="w-6 h-6 ml-0.5 fill-white" />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent p-2.5 pt-6 text-[11px] text-slate-400 flex items-center justify-between">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            {act.activity_date}
+                          </span>
+                          {act.views && (
+                            <span className="flex items-center gap-1">
+                              <Eye className="w-3 h-3 text-slate-400" />
+                              {act.views}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent p-2.5 pt-6 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-slate-400" />
-                        {act.activity_date}
-                      </span>
-                      {act.views && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 text-slate-400" />
-                          {act.views}
-                        </span>
-                      )}
+                      {/* Card Bottom Content */}
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-blue-400">{act.category}</span>
+                          <h3 className="text-sm sm:text-base font-bold text-white mt-1 group-hover:text-blue-300 transition-colors line-clamp-1 leading-snug">
+                            {act.title}
+                          </h3>
+                          {act.description && (
+                            <p className="text-xs text-slate-400 mt-1 line-clamp-1 leading-relaxed">
+                              {act.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-2.5 mt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                          <span>{act.author || '학생회'}</span>
+                          <span className="text-blue-400 group-hover:underline">상세보기</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Card Bottom Content */}
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-blue-400">{act.category}</span>
-                      <h3 className="text-sm sm:text-base font-bold text-white mt-1 group-hover:text-blue-300 transition-colors line-clamp-1 leading-snug">
-                        {act.title}
-                      </h3>
-                      {act.description && (
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-1 leading-relaxed">
-                          {act.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="pt-2.5 mt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                      <span>{act.author || '학생회'}</span>
-                      <span className="text-blue-400 group-hover:underline">상세보기</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Indicator Dots */}
-      {totalItems > itemsPerPage && (
+      {/* Indicator Dots (현재 콘텐츠 위치 표시 및 클릭 이동) */}
+      {total > 1 && (
         <div className="flex justify-center items-center gap-1.5 pt-2">
-          {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
+          {activities.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setCurrentIndex(idx)}
+              onClick={() => {
+                setIsTransition(true);
+                setCurrentIndex(idx);
+              }}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                currentIndex === idx ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700 hover:bg-slate-600'
+                activeDotIndex === idx ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700 hover:bg-slate-600'
               }`}
               title={`슬라이드 ${idx + 1}`}
             />

@@ -293,6 +293,7 @@ export interface ActivityReport {
   thumbnail_url?: string; // 동영상 썸네일
   youtube_id?: string;   // 유튜브 영상 ID
   author?: string;
+  created_by?: string;
   created_at: string;
   views?: number;
   is_pinned?: boolean;

@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS activity_reports (
   thumbnail_url TEXT,
   youtube_id TEXT,
   author TEXT NOT NULL DEFAULT '학생회',
+  created_by TEXT,
   views INTEGER NOT NULL DEFAULT 1,
   is_pinned INTEGER NOT NULL DEFAULT 0,
   is_deleted INTEGER NOT NULL DEFAULT 0,

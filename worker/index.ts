@@ -850,7 +850,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         title: str(b.title, 200),
         content: str(b.content, 20000),
         category: str(b.category, 20) || '학생회',
-        author: str(b.author, 50) || '학생회',
+        author: str(b.author, 50) || (session.admin ? '총괄관리자' : (session.member?.name || '학생회')),
+        created_by: session.admin ? 'admin' : (session.member?.id || null),
         created_at: str(b.created_at, 20) || today(),
         views: 1,
         is_pinned: b.is_pinned ? 1 : 0,
@@ -859,8 +860,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       };
       if (!n.title || !n.content) throw new HttpError(400, '제목과 내용을 입력해 주세요.');
       await db
-        .prepare('INSERT INTO notices (id, title, content, category, author, created_at, views, is_pinned, file_name, file_url) VALUES (?,?,?,?,?,?,?,?,?,?)')
-        .bind(n.id, n.title, n.content, n.category, n.author, n.created_at, n.views, n.is_pinned, n.file_name, n.file_url)
+        .prepare('INSERT INTO notices (id, title, content, category, author, created_by, created_at, views, is_pinned, file_name, file_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+        .bind(n.id, n.title, n.content, n.category, n.author, n.created_by, n.created_at, n.views, n.is_pinned, n.file_name, n.file_url)
         .run();
       return json(n);
     }
@@ -876,10 +877,19 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'DELETE' && id) {
       requireCouncil(session);
-      const existing: any = await db.prepare('SELECT category FROM notices WHERE id = ?').bind(id).first();
-      if (existing && (existing.category === '결산' || existing.category === '회의록')) {
+      const existing: any = await db.prepare('SELECT category, author, created_by FROM notices WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '공지사항을 찾을 수 없습니다.');
+      if (existing.category === '결산' || existing.category === '회의록') {
         if (!session.admin) {
           throw new HttpError(403, '공지사항 중 결산 및 회의록 카테고리는 최고 관리자(admin)만 삭제할 수 있습니다.');
+        }
+      }
+      if (isOfficer(session)) {
+        const isNoticeOwner = existing.created_by
+          ? existing.created_by === session.member?.id
+          : (existing.author === session.member?.name || existing.author === session.member?.nickname);
+        if (!isNoticeOwner) {
+          throw new HttpError(403, '임원은 본인이 게시한 공지사항만 삭제할 수 있습니다.');
         }
       }
       await db.prepare('DELETE FROM notices WHERE id = ?').bind(id).run();
@@ -1455,6 +1465,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
           thumbnail_url: r.thumbnail_url || null,
           youtube_id: r.youtube_id || null,
           author: r.author || '학생회',
+          created_by: r.created_by || null,
           views: Number(r.views) || 1,
           is_pinned: !!r.is_pinned,
           created_at: r.created_at,
@@ -1463,7 +1474,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'POST') {
-      requireCouncilManager(session);
+      requireCouncil(session);
       const b: any = await readJson(req);
       const title = str(b.title, 150);
       if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
@@ -1481,6 +1492,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         thumbnail_url: b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
         youtube_id: b.youtube_id ? str(b.youtube_id, 50) : null,
         author: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회'),
+        created_by: session.admin ? 'admin' : (session.member?.id || null),
         views: 1,
         is_pinned: b.is_pinned ? 1 : 0,
         is_deleted: 0,
@@ -1491,13 +1503,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         .prepare(
           `INSERT INTO activity_reports (
             id, title, category, description, activity_date, media_type, media_url,
-            thumbnail_url, youtube_id, author, views, is_pinned, is_deleted, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+            thumbnail_url, youtube_id, author, created_by, views, is_pinned, is_deleted, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
         )
         .bind(
           act.id, act.title, act.category, act.description, act.activity_date,
           act.media_type, act.media_url, act.thumbnail_url, act.youtube_id,
-          act.author, act.views, act.is_pinned, act.created_at
+          act.author, act.created_by, act.views, act.is_pinned, act.created_at
         )
         .run();
 
@@ -1505,7 +1517,16 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'PUT' && id) {
-      requireCouncilManager(session);
+      requireCouncil(session);
+      const existing: any = await db.prepare('SELECT * FROM activity_reports WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '활동보고를 찾을 수 없습니다.');
+      const isManager = session.admin || isPresident(session);
+      const isOwner = session.member && existing.created_by && session.member.id === existing.created_by;
+      const isOwnerByAuthor = !existing.created_by && session.member && (existing.author === session.member.name || existing.author === session.member.nickname);
+      if (!isManager && !isOwner && !isOwnerByAuthor) {
+        throw new HttpError(403, '임원은 본인이 게시한 활동보고만 수정할 수 있습니다.');
+      }
+
       const b: any = await readJson(req);
       const title = str(b.title, 150);
       if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
@@ -1532,9 +1553,30 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'DELETE' && id) {
-      requireCouncilManager(session);
+      requireCouncil(session);
+      const existing: any = await db.prepare('SELECT * FROM activity_reports WHERE id = ?').bind(id).first();
+      if (!existing) throw new HttpError(404, '해당 활동보고를 찾을 수 없습니다.');
+
+      // 임원은 본인이 게시한 것만 삭제 가능! (관리자/학생회장은 전체 삭제 가능)
+      const isManager = session.admin || isPresident(session);
+      const isOwner = session.member && existing.created_by && session.member.id === existing.created_by;
+      const isOwnerByAuthor = !existing.created_by && session.member && (existing.author === session.member.name || existing.author === session.member.nickname);
+
+      if (!isManager && !isOwner && !isOwnerByAuthor) {
+        throw new HttpError(403, '임원은 본인이 게시한 활동보고만 삭제할 수 있습니다.');
+      }
+
       const b: any = await readJson(req).catch(() => ({}));
-      const reason = str(b.reason, 500) || '관리자 삭제';
+      const reason = str(b.reason, 500);
+      if (!reason) {
+        throw new HttpError(400, '삭제 사유를 반드시 입력해야 합니다.');
+      }
+
+      const deleterName = session.admin
+        ? '총괄관리자'
+        : isPresident(session)
+        ? `학생회장(${session.member?.name || ''})`
+        : `임원(${session.member?.name || ''})`;
 
       await db
         .prepare(
@@ -1543,8 +1585,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
           WHERE id = ?`
         )
         .bind(
-          reason, new Date().toISOString(),
-          session.admin ? '총괄관리자' : (session.member?.name || '학생회장'), id
+          reason, new Date().toISOString(), deleterName, id
         )
         .run();
 
