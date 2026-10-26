@@ -1,12 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Calendar, ChevronRight, Scale, Camera, Users } from 'lucide-react';
 import { getDDay } from '../../lib/dateUtils';
 import { ASSETS } from '../../lib/assets';
+import type { AcademicEvent } from '../../lib/types';
+import { api } from '../../services/api';
 
-export const HeroSection: React.FC = () => {
-  // Urgent upcoming deadline: 2학기 중간과제물 제출
-  const assignmentDDay = getDDay('2026-10-15');
+interface HeroSectionProps {
+  events?: AcademicEvent[];
+}
+
+export const HeroSection: React.FC<HeroSectionProps> = ({ events: propEvents }) => {
+  const [events, setEvents] = useState<AcademicEvent[]>(propEvents || []);
+
+  useEffect(() => {
+    if (propEvents && propEvents.length > 0) {
+      setEvents(propEvents);
+    } else {
+      api.getEvents().then(data => {
+        if (data && data.length > 0) {
+          setEvents(data);
+        }
+      }).catch(err => console.error(err));
+    }
+  }, [propEvents]);
+
+  // 오늘 날짜 계산 (YYYY-MM-DD)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // 종료일이 오늘 이후이거나 오늘인(진행 중이거나 다가오는) 유효 일정만 필터링
+  const upcomingEvents = events.filter(evt => {
+    const end = evt.end_date || evt.start_date;
+    return end >= todayStr;
+  });
+
+  // 시작일 및 종료일 순으로 정렬
+  upcomingEvents.sort((a, b) => {
+    if (a.start_date !== b.start_date) {
+      return a.start_date.localeCompare(b.start_date);
+    }
+    return (a.end_date || a.start_date).localeCompare(b.end_date || b.start_date);
+  });
+
+  // 가장 가까운 대표 일정 1건 선정
+  const nearestEvent = upcomingEvents[0];
+
+  let ddayInfo: { label: string; isOngoing: boolean; isImminent: boolean } | null = null;
+  if (nearestEvent) {
+    const isOngoing = nearestEvent.start_date <= todayStr && todayStr <= (nearestEvent.end_date || nearestEvent.start_date);
+    if (isOngoing) {
+      ddayInfo = { label: '진행중', isOngoing: true, isImminent: false };
+    } else {
+      const dday = getDDay(nearestEvent.start_date);
+      ddayInfo = { label: dday.label, isOngoing: false, isImminent: dday.diffDays <= 7 };
+    }
+  }
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-xl mb-12">
@@ -125,24 +174,34 @@ export const HeroSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Urgent D-Day Mini Notice Strip */}
-              <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs sm:text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30 text-xs">
-                    {assignmentDDay.label}
-                  </span>
-                  <span className="text-slate-200 font-medium truncate max-w-[190px] sm:max-w-xs">
-                    2학기 중간과제물 제출 마감 임박
-                  </span>
+              {/* Urgent D-Day Mini Notice Strip: 실제 유효한 다가오는 일정이 있을 때만 동적으로 노출 */}
+              {nearestEvent && ddayInfo && (
+                <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`px-2 py-0.5 rounded-full font-bold border text-xs shrink-0 ${
+                        ddayInfo.isOngoing
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : ddayInfo.isImminent
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                          : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                      }`}
+                    >
+                      {ddayInfo.label}
+                    </span>
+                    <span className="text-slate-200 font-medium truncate max-w-[190px] sm:max-w-xs">
+                      {nearestEvent.title}
+                    </span>
+                  </div>
+                  <Link
+                    to="/calendar"
+                    className="text-blue-400 hover:text-blue-300 font-bold flex items-center shrink-0 ml-2"
+                  >
+                    일정 확인
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
-                <Link
-                  to="/calendar"
-                  className="text-blue-400 hover:text-blue-300 font-bold flex items-center shrink-0 ml-2"
-                >
-                  일정 확인
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
+              )}
             </div>
           </div>
         </div>

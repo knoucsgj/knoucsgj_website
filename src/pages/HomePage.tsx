@@ -36,7 +36,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* Hero Banner */}
-      <HeroSection />
+      <HeroSection events={events} />
 
       {/* Quick Navigation Cards */}
       <QuickLinks />

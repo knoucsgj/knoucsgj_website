@@ -10,8 +10,16 @@ interface UpcomingEventsSectionProps {
 }
 
 export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({ events, loading }) => {
-  // Sort events by date and filter future/current ones
-  const upcomingEvents = [...events]
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // 종료되지 않은(현재 진행 중이거나 앞으로 예정된) 일정 우선 필터링
+  const activeEvents = events.filter(
+    (evt) => (evt.end_date || evt.start_date) >= todayStr
+  );
+
+  // 예정된 일정이 있으면 이를 우선 표시하고, 없으면 전체 일정 중 최근 4개 표시
+  const upcomingEvents = (activeEvents.length > 0 ? activeEvents : [...events])
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
     .slice(0, 4);
 
