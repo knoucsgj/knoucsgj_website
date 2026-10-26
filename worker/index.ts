@@ -1433,6 +1433,125 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
+  // ---- activities (학과 활동보고 사진 & 영상)
+  if (resource === 'activities') {
+    if (tail === 'views' && id && method === 'POST') {
+      await db.prepare('UPDATE activity_reports SET views = views + 1 WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+
+    if (method === 'GET') {
+      const sql = 'SELECT * FROM activity_reports WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY is_pinned DESC, activity_date DESC, created_at DESC';
+      const { results } = await db.prepare(sql).all();
+      return json(
+        results.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          description: r.description || '',
+          activity_date: r.activity_date,
+          media_type: r.media_type || 'image',
+          media_url: r.media_url,
+          thumbnail_url: r.thumbnail_url || null,
+          youtube_id: r.youtube_id || null,
+          author: r.author || '학생회',
+          views: Number(r.views) || 1,
+          is_pinned: !!r.is_pinned,
+          created_at: r.created_at,
+        }))
+      );
+    }
+
+    if (method === 'POST') {
+      requireCouncilManager(session);
+      const b: any = await readJson(req);
+      const title = str(b.title, 150);
+      if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
+      const mediaUrl = str(b.media_url, 1000000);
+      if (!mediaUrl) throw new HttpError(400, '사진 또는 영상 미디어를 등록해 주세요.');
+
+      const act = {
+        id: b.id ? str(b.id, 50) : `act-${Date.now()}-${randomHex(2)}`,
+        title,
+        category: str(b.category, 30) || '행사',
+        description: str(b.description, 2000) || '',
+        activity_date: str(b.activity_date, 20) || today(),
+        media_type: b.media_type === 'video' ? 'video' : 'image',
+        media_url: mediaUrl,
+        thumbnail_url: b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
+        youtube_id: b.youtube_id ? str(b.youtube_id, 50) : null,
+        author: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회'),
+        views: 1,
+        is_pinned: b.is_pinned ? 1 : 0,
+        is_deleted: 0,
+        created_at: new Date().toISOString(),
+      };
+
+      await db
+        .prepare(
+          `INSERT INTO activity_reports (
+            id, title, category, description, activity_date, media_type, media_url,
+            thumbnail_url, youtube_id, author, views, is_pinned, is_deleted, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+        )
+        .bind(
+          act.id, act.title, act.category, act.description, act.activity_date,
+          act.media_type, act.media_url, act.thumbnail_url, act.youtube_id,
+          act.author, act.views, act.is_pinned, act.created_at
+        )
+        .run();
+
+      return json(act, 201);
+    }
+
+    if (method === 'PUT' && id) {
+      requireCouncilManager(session);
+      const b: any = await readJson(req);
+      const title = str(b.title, 150);
+      if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
+      const mediaUrl = str(b.media_url, 1000000);
+      if (!mediaUrl) throw new HttpError(400, '사진 또는 영상 미디어를 등록해 주세요.');
+
+      await db
+        .prepare(
+          `UPDATE activity_reports SET
+            title = ?, category = ?, description = ?, activity_date = ?,
+            media_type = ?, media_url = ?, thumbnail_url = ?, youtube_id = ?,
+            is_pinned = ?
+          WHERE id = ?`
+        )
+        .bind(
+          title, str(b.category, 30) || '행사', str(b.description, 2000) || '',
+          str(b.activity_date, 20) || today(), b.media_type === 'video' ? 'video' : 'image',
+          mediaUrl, b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
+          b.youtube_id ? str(b.youtube_id, 50) : null, b.is_pinned ? 1 : 0, id
+        )
+        .run();
+
+      return json({ success: true, id });
+    }
+
+    if (method === 'DELETE' && id) {
+      requireCouncilManager(session);
+      const b: any = await readJson(req).catch(() => ({}));
+      const reason = str(b.reason, 500) || '관리자 삭제';
+
+      await db
+        .prepare(
+          `UPDATE activity_reports SET
+            is_deleted = 1, deleted_reason = ?, deleted_at = ?, deleted_by = ?
+          WHERE id = ?`
+        )
+        .bind(
+          reason, new Date().toISOString(),
+          session.admin ? '총괄관리자' : (session.member?.name || '학생회장'), id
+        )
+        .run();
+
+      return json({ success: true, id });
+    }
+  }
+
   // ---- budget reports (Read: public / Create&Update: president & master admin / Delete: master admin only with mandatory reason / Receipt is mandatory)
   if (resource === 'budget-reports') {
     if (method === 'GET') {

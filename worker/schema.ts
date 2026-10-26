@@ -7,6 +7,7 @@ import { initialMeetingMinutes } from '../src/data/mockGovernance';
 import { officialConstitutionDocuments } from '../src/data/officialConstitution';
 import { initialBudgetReports } from '../src/data/mockFinance';
 import { initialRentalItems } from '../src/data/mockWelfare';
+import { initialActivities } from '../src/data/mockActivities';
 
 type D1 = any;
 
@@ -83,6 +84,15 @@ const CREATE_STATEMENTS = [
     income_total INTEGER NOT NULL DEFAULT 0, expense_total INTEGER NOT NULL DEFAULT 0, balance INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT '감사완료', published_date TEXT NOT NULL, items_json TEXT NOT NULL DEFAULT '[]')`,
   `CREATE INDEX IF NOT EXISTS idx_budget_published ON budget_reports (published_date)`,
+    `CREATE TABLE IF NOT EXISTS activity_reports (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL DEFAULT '행사',
+    description TEXT, activity_date TEXT NOT NULL,
+    media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
+    media_url TEXT NOT NULL, thumbnail_url TEXT, youtube_id TEXT,
+    author TEXT NOT NULL DEFAULT '학생회', views INTEGER NOT NULL DEFAULT 1,
+    is_pinned INTEGER NOT NULL DEFAULT 0, is_deleted INTEGER NOT NULL DEFAULT 0,
+    deleted_reason TEXT, deleted_at TEXT, deleted_by TEXT, created_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_activity_date ON activity_reports (activity_date DESC, created_at DESC)`,
   `CREATE TABLE IF NOT EXISTS rental_items (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,
     total_qty INTEGER NOT NULL DEFAULT 1, available_qty INTEGER NOT NULL DEFAULT 1,
@@ -272,6 +282,39 @@ async function run(db: D1) {
     }
     stmtsV5.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v5', '1')"));
     await db.batch(stmtsV5);
+  }
+
+
+  // Seed activity reports (v6)
+  const seededV6 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v6'").first();
+  if (!seededV6) {
+    const stmtsV6: any[] = [];
+    for (const a of initialActivities) {
+      stmtsV6.push(
+        db
+          .prepare(
+            'INSERT OR IGNORE INTO activity_reports (id, title, category, description, activity_date, media_type, media_url, thumbnail_url, youtube_id, author, views, is_pinned, is_deleted, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+          )
+          .bind(
+            a.id,
+            a.title,
+            a.category,
+            a.description,
+            a.activity_date,
+            a.media_type,
+            a.media_url,
+            a.thumbnail_url || null,
+            a.youtube_id || null,
+            a.author || '학생회',
+            Number(a.views) || 1,
+            a.is_pinned ? 1 : 0,
+            0,
+            a.created_at
+          )
+      );
+    }
+    stmtsV6.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v6', '1')"));
+    await db.batch(stmtsV6);
   }
 
   // Role auto-migration for existing members

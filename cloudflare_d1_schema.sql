@@ -194,7 +194,29 @@ CREATE TABLE IF NOT EXISTS constitution_versions (
   updated_at TEXT NOT NULL
 );
 
+-- 14. 학과 활동보고 (사진 및 영상 게시판) 테이블
+CREATE TABLE IF NOT EXISTS activity_reports (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT '행사',
+  description TEXT,
+  activity_date TEXT NOT NULL,
+  media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
+  media_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  youtube_id TEXT,
+  author TEXT NOT NULL DEFAULT '학생회',
+  views INTEGER NOT NULL DEFAULT 1,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  deleted_reason TEXT,
+  deleted_at TEXT,
+  deleted_by TEXT,
+  created_at TEXT NOT NULL
+);
+
 -- 인덱스 생성 (조회 성능 최적화)
+CREATE INDEX IF NOT EXISTS idx_activity_date ON activity_reports (activity_date DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notices_pinned ON notices (is_pinned, created_at);
 CREATE INDEX IF NOT EXISTS idx_materials_lookup ON academic_materials (grade, semester, course_name);
 CREATE INDEX IF NOT EXISTS idx_freeposts_created ON free_posts (created_at);

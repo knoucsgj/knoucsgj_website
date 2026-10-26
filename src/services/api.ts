@@ -15,7 +15,8 @@ import type {
   FreePostReply,
   AcademicMaterial,
   AdminMember,
-  ConstitutionVersion
+  ConstitutionVersion,
+  ActivityReport
 } from '../lib/types';
 import { initialNotices } from '../data/mockNotices';
 import { initialEvents } from '../data/mockEvents';
@@ -25,6 +26,7 @@ import {
   mockStudies as mockInitialStudies
 } from '../data/mockCouncil';
 import { initialBudgetReports } from '../data/mockFinance';
+import { initialActivities } from '../data/mockActivities';
 import { initialMeetingMinutes, councilRules as mockCouncilRules } from '../data/mockGovernance';
 import {
   officialConstitutionDocuments,
@@ -311,6 +313,51 @@ export const api = {
       body: JSON.stringify({ deleted_reason: deletedReason }),
     });
     return true;
+  },
+
+
+  // ==========================================
+  // 학과 활동보고 (사진 및 영상 갤러리) - D1 연동
+  // ==========================================
+  async getActivities(): Promise<ActivityReport[]> {
+    const cloud = await fetchD1<ActivityReport[]>('activities');
+    if (Array.isArray(cloud) && cloud.length > 0) {
+      return cloud;
+    }
+    return initialActivities;
+  },
+
+  async createActivity(activity: Omit<ActivityReport, 'id' | 'created_at'>): Promise<ActivityReport> {
+    return await fetchStrict<ActivityReport>('activities', {
+      method: 'POST',
+      body: JSON.stringify(activity),
+    });
+  },
+
+  async updateActivity(id: string, updatedFields: Partial<ActivityReport>): Promise<boolean> {
+    await fetchStrict<any>(`activities&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedFields),
+    });
+    return true;
+  },
+
+  async deleteActivity(id: string, reason?: string): Promise<boolean> {
+    await fetchStrict<any>(`activities&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason }),
+    });
+    return true;
+  },
+
+  async incrementActivityViews(id: string): Promise<void> {
+    try {
+      await fetchD1<any>(`activities&id=${encodeURIComponent(id)}&tail=views`, {
+        method: 'POST',
+      });
+    } catch {
+      /* ignore */
+    }
   },
 
   // ==========================================

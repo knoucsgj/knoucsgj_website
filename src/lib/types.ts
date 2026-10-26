@@ -280,3 +280,25 @@ export interface AdminMember {
   consented_at: string;
   created_at: string;
 }
+
+// 활동보고 (사진 및 영상 게시판 모델)
+export interface ActivityReport {
+  id: string;
+  title: string;
+  category: '대회' | '행사' | '스터디' | '임원회의' | '기타';
+  description: string;
+  activity_date: string; // YYYY-MM-DD
+  media_type: 'image' | 'video';
+  media_url: string;     // 이미지 URL/DataURL 또는 동영상/유튜브 URL
+  thumbnail_url?: string; // 동영상 썸네일
+  youtube_id?: string;   // 유튜브 영상 ID
+  author?: string;
+  created_at: string;
+  views?: number;
+  is_pinned?: boolean;
+  is_deleted?: boolean;
+  deleted_reason?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
