@@ -888,5 +888,64 @@ export const api = {
     } catch {
       return false;
     }
+  },
+
+  async getR2StorageStats(): Promise<{
+    used_bytes: number;
+    file_count: number;
+    used_gb: number;
+    max_gb: number;
+    max_bytes: number;
+    percent: number;
+    is_blocked: boolean;
+    recent_files?: Array<{
+      key: string;
+      file_name: string;
+      size: number;
+      category: string;
+      uploaded_by: string;
+      uploaded_at: string;
+    }>;
+  }> {
+    try {
+      const res = await fetch('/api?resource=r2-storage', { credentials: 'same-origin' });
+      if (!res.ok) {
+        return {
+          used_bytes: 0,
+          file_count: 0,
+          used_gb: 0,
+          max_gb: 9.9,
+          max_bytes: 9900000000,
+          percent: 0,
+          is_blocked: false,
+        };
+      }
+      return await res.json();
+    } catch {
+      return {
+        used_bytes: 0,
+        file_count: 0,
+        used_gb: 0,
+        max_gb: 9.9,
+        max_bytes: 9900000000,
+        percent: 0,
+        is_blocked: false,
+      };
+    }
+  },
+
+  async syncR2StorageStats(): Promise<{
+    success: boolean;
+    message: string;
+    used_bytes: number;
+    file_count: number;
+    used_gb: number;
+    max_gb: number;
+    percent: number;
+    is_blocked: boolean;
+  }> {
+    return await fetchStrict<any>('r2-storage&action=sync', {
+      method: 'POST',
+    });
   }
 };

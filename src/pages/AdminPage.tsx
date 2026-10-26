@@ -1,5 +1,6 @@
 import { AdminConstitutionManager } from '../components/AdminConstitutionManager';
 import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
+import { AdminR2StorageManager } from '../components/AdminR2StorageManager';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
@@ -31,7 +32,8 @@ import {
   CheckCircle2,
   Award,
   Receipt,
-  FileCheck
+  FileCheck,
+  HardDrive
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -53,7 +55,7 @@ export const AdminPage: React.FC = () => {
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum' | 'storage'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
@@ -1363,6 +1365,17 @@ export const AdminPage: React.FC = () => {
           <BookOpen className="w-4 h-4 text-blue-600" />
           개설 교과목 관리
         </button>
+        <button
+          onClick={() => setActiveTab('storage')}
+          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'storage'
+              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <HardDrive className="w-4 h-4 text-cyan-600" />
+          R2 스토리지 (9.9GB 한도)
+        </button>
         {canManageBackup && (
           <button
             onClick={() => setActiveTab('backup')}
@@ -2568,6 +2581,13 @@ export const AdminPage: React.FC = () => {
       {/* ========================================== */}
       {activeTab === 'curriculum' && (
         <AdminCurriculumManager />
+      )}
+
+      {/* ========================================== */}
+      {/* TAB: R2 Storage Capacity Management (9.9GB) */}
+      {/* ========================================== */}
+      {activeTab === 'storage' && (
+        <AdminR2StorageManager />
       )}
 
       {/* ========================================== */}

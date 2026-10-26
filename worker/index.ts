@@ -760,7 +760,131 @@ async function readJson(req: Request): Promise<any> {
 }
 
 // ---------------------------------------------------------------- R2 file storage handlers
-async function handleUpload(req: Request, env: Env, session: SessionState): Promise<Response> {
+// Cloudflare R2 standard free tier is 10 decimal GB per month (10,000,000,000 bytes).
+// Hard cap at 9.9 GB (9,900,000,000 bytes) to strictly prevent any overage charges.
+const MAX_R2_BYTES = 9.9 * 1000 * 1000 * 1000; // 9,900,000,000 bytes (9.9 GB)
+
+async function getR2StorageUsage(db: D1): Promise<{ totalBytes: number; fileCount: number }> {
+  try {
+    const row: any = await db
+      .prepare('SELECT COALESCE(SUM(size), 0) AS total_bytes, COUNT(*) AS file_count FROM r2_files')
+      .first();
+    return {
+      totalBytes: Number(row?.total_bytes || 0),
+      fileCount: Number(row?.file_count || 0),
+    };
+  } catch (err) {
+    console.error('Failed to query r2_files usage:', err);
+    return { totalBytes: 0, fileCount: 0 };
+  }
+}
+
+async function syncR2BucketWithDb(env: Env, db: D1): Promise<{ totalBytes: number; fileCount: number }> {
+  if (!env.R2_BUCKET) return { totalBytes: 0, fileCount: 0 };
+
+  let cursor: string | undefined = undefined;
+  let totalBytes = 0;
+  let fileCount = 0;
+  const objectsToInsert: { key: string; name: string; size: number; category: string; uploader: string; uploadedAt: string }[] = [];
+
+  do {
+    const listResult: any = await env.R2_BUCKET.list({ limit: 1000, cursor });
+    for (const obj of listResult.objects || []) {
+      const size = Number(obj.size || 0);
+      totalBytes += size;
+      fileCount++;
+
+      const key = obj.key;
+      const category = key.includes('/') ? key.split('/')[0] : 'general';
+      const origName = obj.customMetadata?.originalName
+        ? decodeURIComponent(obj.customMetadata.originalName)
+        : key.split('/').pop() || 'file';
+      const uploader = obj.customMetadata?.uploadedBy || 'admin';
+      const uploadedAt = obj.customMetadata?.uploadedAt || (obj.uploaded ? obj.uploaded.toISOString() : new Date().toISOString());
+
+      objectsToInsert.push({ key, name: origName, size, category, uploader, uploadedAt });
+    }
+    cursor = listResult.truncated ? listResult.cursor : undefined;
+  } while (cursor);
+
+  // Clear and rewrite r2_files in batches
+  await db.prepare('DELETE FROM r2_files').run();
+  if (objectsToInsert.length > 0) {
+    const stmt = db.prepare('INSERT OR REPLACE INTO r2_files (key, file_name, size, category, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)');
+    const batches = [];
+    for (const item of objectsToInsert) {
+      batches.push(stmt.bind(item.key, item.name, item.size, item.category, item.uploader, item.uploadedAt));
+    }
+    for (let i = 0; i < batches.length; i += 80) {
+      await db.batch(batches.slice(i, i + 80));
+    }
+  }
+
+  return { totalBytes, fileCount };
+}
+
+async function handleR2Storage(req: Request, env: Env, db: D1, session: SessionState): Promise<Response> {
+  const url = new URL(req.url);
+  const action = url.searchParams.get('action');
+
+  if (action === 'sync') {
+    if (!session.admin && !isPresident(session)) {
+      throw new HttpError(403, '스토리지 동기화 권한이 없습니다.');
+    }
+    const synced = await syncR2BucketWithDb(env, db);
+    const usedGB = Number((synced.totalBytes / (1000 * 1000 * 1000)).toFixed(3));
+    const percent = Math.min(100, Number(((synced.totalBytes / MAX_R2_BYTES) * 100).toFixed(2)));
+    return json({
+      success: true,
+      message: 'R2 버킷과 데이터베이스가 성공적으로 동기화되었습니다.',
+      used_bytes: synced.totalBytes,
+      file_count: synced.fileCount,
+      used_gb: usedGB,
+      max_gb: 9.9,
+      max_bytes: MAX_R2_BYTES,
+      percent,
+      is_blocked: synced.totalBytes >= MAX_R2_BYTES,
+    });
+  }
+
+  let { totalBytes, fileCount } = await getR2StorageUsage(db);
+
+  // Auto-sync once if table is empty but bucket exists
+  if (fileCount === 0 && env.R2_BUCKET) {
+    try {
+      const initialSync = await syncR2BucketWithDb(env, db);
+      totalBytes = initialSync.totalBytes;
+      fileCount = initialSync.fileCount;
+    } catch (e) {
+      console.warn('Initial R2 sync skipped:', e);
+    }
+  }
+
+  const usedGB = Number((totalBytes / (1000 * 1000 * 1000)).toFixed(3));
+  const percent = Math.min(100, Number(((totalBytes / MAX_R2_BYTES) * 100).toFixed(2)));
+  const isBlocked = totalBytes >= MAX_R2_BYTES;
+
+  let recentFiles: any[] = [];
+  if (session.admin || isPresident(session)) {
+    const { results } = await db
+      .prepare('SELECT key, file_name, size, category, uploaded_by, uploaded_at FROM r2_files ORDER BY uploaded_at DESC LIMIT 50')
+      .all();
+    recentFiles = results || [];
+  }
+
+  return json({
+    used_bytes: totalBytes,
+    file_count: fileCount,
+    used_gb: usedGB,
+    max_gb: 9.9,
+    max_bytes: MAX_R2_BYTES,
+    percent,
+    is_blocked: isBlocked,
+    recent_files: recentFiles,
+  });
+}
+
+async function handleUpload(req: Request, env: Env, db: D1, session: SessionState): Promise<Response> {
   if (req.method !== 'POST') throw new HttpError(405, 'POST 메서드만 지원합니다.');
 
   // Require logged-in member or admin
@@ -791,7 +915,18 @@ async function handleUpload(req: Request, env: Env, session: SessionState): Prom
   const uploadFile = file as File;
   const MAX_SIZE = 50 * 1024 * 1024; // 50MB
   if (uploadFile.size > MAX_SIZE) {
-    throw new HttpError(413, '파일 크기는 최대 50MB까지 업로드 가능합니다.');
+    throw new HttpError(413, '단일 파일 크기는 최대 50MB까지 업로드 가능합니다.');
+  }
+
+  // 9.9GB storage capacity check!
+  const currentUsage = await getR2StorageUsage(db);
+  if (currentUsage.totalBytes + uploadFile.size > MAX_R2_BYTES) {
+    const currentGB = (currentUsage.totalBytes / (1000 * 1000 * 1000)).toFixed(3);
+    const newFileMB = (uploadFile.size / (1000 * 1000)).toFixed(1);
+    throw new HttpError(
+      507,
+      `Cloudflare R2 무료 저장용량 보호 한도(9.9GB)에 도달하여 추가 업로드가 불가능합니다. (현재 사용량: ${currentGB}GB / 9.9GB, 시도 파일: ${newFileMB}MB). 불필요한 기존 자료를 정리하거나 관리자에게 문의해 주세요.`
+    );
   }
 
   const origName = uploadFile.name || 'file.bin';
@@ -800,6 +935,9 @@ async function handleUpload(req: Request, env: Env, session: SessionState): Prom
   const baseName = lastDot > 0 ? origName.slice(0, lastDot) : origName;
   const safeName = baseName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_').slice(0, 40) + ext;
   const key = `${category}/${Date.now()}-${randomHex(3)}-${safeName}`;
+  const uploaderName = session.admin
+    ? '관리자'
+    : (session.member?.nickname || session.member?.name || 'unknown');
 
   await env.R2_BUCKET.put(key, uploadFile.stream(), {
     httpMetadata: {
@@ -808,10 +946,19 @@ async function handleUpload(req: Request, env: Env, session: SessionState): Prom
     customMetadata: {
       originalName: encodeURIComponent(origName),
       fileSize: String(uploadFile.size),
-      uploadedBy: session.admin ? 'admin' : (session.member?.id || 'unknown'),
+      uploadedBy: uploaderName,
       uploadedAt: new Date().toISOString(),
     },
   });
+
+  // Record in r2_files
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO r2_files (key, file_name, size, category, uploaded_by, uploaded_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .bind(key, origName, uploadFile.size, category, uploaderName, new Date().toISOString())
+    .run();
 
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -832,7 +979,7 @@ async function handleUpload(req: Request, env: Env, session: SessionState): Prom
   }, 201);
 }
 
-async function handleFiles(req: Request, env: Env, session: SessionState): Promise<Response> {
+async function handleFiles(req: Request, env: Env, db: D1, session: SessionState): Promise<Response> {
   const url = new URL(req.url);
   const prefix = '/api/files/';
   if (!url.pathname.startsWith(prefix)) throw new HttpError(404, '경로가 올바르지 않습니다.');
@@ -886,6 +1033,7 @@ async function handleFiles(req: Request, env: Env, session: SessionState): Promi
       throw new HttpError(503, 'Cloudflare R2 스토리지(R2_BUCKET)가 연결되지 않았습니다.');
     }
     await env.R2_BUCKET.delete(key);
+    await db.prepare('DELETE FROM r2_files WHERE key = ?').bind(key).run();
     return json({ success: true, message: '파일이 성공적으로 삭제되었습니다.', key });
   }
 
@@ -913,12 +1061,17 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
 
   // ---- R2 file streaming & management (/api/files/*)
   if (url.pathname.startsWith('/api/files/')) {
-    return handleFiles(req, env, session);
+    return handleFiles(req, env, db, session);
   }
 
   // ---- R2 file upload (/api/upload or /api?resource=upload)
   if (resource === 'upload' || url.pathname === '/api/upload') {
-    return handleUpload(req, env, session);
+    return handleUpload(req, env, db, session);
+  }
+
+  // ---- R2 storage status & sync (/api?resource=r2-storage)
+  if (resource === 'r2-storage') {
+    return handleR2Storage(req, env, db, session);
   }
 
   if (resource === 'auth') return handleAuth(req, db, env, session, url.searchParams.get('action'));
@@ -1167,10 +1320,14 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       if (!row) throw new HttpError(404, '자료를 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 등록한 자료만 삭제할 수 있습니다.');
       await db.prepare('DELETE FROM academic_materials WHERE id = ?').bind(id).run();
-      if (env.R2_BUCKET && row.file_url && row.file_url.startsWith('/api/files/')) {
+      if (row.file_url && row.file_url.startsWith('/api/files/')) {
         try {
           const rawKey = row.file_url.replace('/api/files/', '').split('?')[0];
-          await env.R2_BUCKET.delete(decodeURIComponent(rawKey));
+          const decodedKey = decodeURIComponent(rawKey);
+          if (env.R2_BUCKET) {
+            await env.R2_BUCKET.delete(decodedKey);
+          }
+          await db.prepare('DELETE FROM r2_files WHERE key = ?').bind(decodedKey).run();
         } catch (e) {
           console.error('R2 cleanup error:', e);
         }

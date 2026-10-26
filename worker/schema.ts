@@ -166,6 +166,11 @@ const CREATE_STATEMENTS = [
     course_type TEXT NOT NULL, course_name TEXT NOT NULL,
     sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_courses_grade_sem ON curriculum_courses (grade, semester, sort_order)`,
+  `CREATE TABLE IF NOT EXISTS r2_files (
+    key TEXT PRIMARY KEY, file_name TEXT NOT NULL, size INTEGER NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general', uploaded_by TEXT, uploaded_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_r2_files_uploaded ON r2_files (uploaded_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_r2_files_category ON r2_files (category)`,
 ];
 
 // Columns added after the first release (ownership + study approval)

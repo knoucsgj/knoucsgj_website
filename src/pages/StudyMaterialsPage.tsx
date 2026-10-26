@@ -93,6 +93,7 @@ export const StudyMaterialsPage: React.FC = () => {
   const [newMatFileDataUrl, setNewMatFileDataUrl] = useState<string>('');
   const [newMatFile, setNewMatFile] = useState<File | null>(null);
   const [isSubmittingMaterial, setIsSubmittingMaterial] = useState(false);
+  const [isStorageBlocked, setIsStorageBlocked] = useState(false);
 
   const { member, isAdmin } = useAuth();
   const requireLogin = useRequireLogin();
@@ -104,21 +105,31 @@ export const StudyMaterialsPage: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    const [studiesData, matsData, coursesData] = await Promise.all([
+    const [studiesData, matsData, coursesData, storageData] = await Promise.all([
       api.getStudies(),
       api.getMaterials(),
-      api.getCourses().catch(() => [])
+      api.getCourses().catch(() => []),
+      api.getR2StorageStats().catch(() => null)
     ]);
     setStudies(studiesData);
     setMaterials(matsData);
     if (coursesData && coursesData.length > 0) {
       setDbCourses(coursesData);
     }
+    if (storageData && storageData.is_blocked) {
+      setIsStorageBlocked(true);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (isStorageBlocked) {
+      alert('Cloudflare R2 무료 저장용량 보호 한도(9.9GB)에 도달하여 현재 새 파일 업로드가 불가능합니다. 관리자에게 문의해 주세요.');
+      e.target.value = '';
+      return;
+    }
 
     // Check size (max 50MB with Cloudflare R2 object storage)
     if (file.size > 50 * 1024 * 1024) {
@@ -1353,6 +1364,15 @@ export const StudyMaterialsPage: React.FC = () => {
                   className="w-full p-3 rounded-xl border border-slate-200"
                 />
               </div>
+
+              {isStorageBlocked && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2.5 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>
+                    R2 스토리지 용량이 안전 한도(9.9GB)에 도달하여 현재 새 파일 첨부가 일시 차단되었습니다.
+                  </span>
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-slate-800 mb-1">
