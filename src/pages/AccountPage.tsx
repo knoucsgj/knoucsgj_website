@@ -75,7 +75,7 @@ export const AccountPage: React.FC = () => {
     ['닉네임', member.nickname],
     ['성명', member.name],
     ['연락처', showSensitive ? member.phone : maskPhone(member.phone)],
-    ['소속 학습관', member.learning_center || '광주전남지역대학'],
+    ['소속 학습관', member.learning_center || (member.regional_college === '광주전남' ? '광주전남지역대학' : '해당 없음 (타 지역대학 / 준회원)')],
     ['거주지역', member.address],
     ['학번', showSensitive ? member.student_no : maskStudentNo(member.student_no)],
     ['소속 지역대학', `${member.regional_college} 지역대학`],

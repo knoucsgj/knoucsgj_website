@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
 import { LEARNING_CENTERS, KOREA_DISTRICTS, SIDO_LIST } from '../lib/koreaDistricts';
-import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin, Sparkles, Award } from 'lucide-react';
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-hidden transition-all text-sm';
@@ -25,11 +25,11 @@ export const RegisterPage: React.FC = () => {
     department: '컴퓨터과학과',
   });
 
-  // 소속 학습관 (4곳 중 선택)
+  // 소속 학습관 (광주전남 4곳 + 해당 없음/타지역 1곳)
   const [learningCenter, setLearningCenter] = useState<string>('광주전남지역대학');
 
-  // 거주지역 (시·도 및 시·군·구)
-  const [residenceSido, setResidenceSido] = useState<string>('광주광역시');
+  // 거주지역 (시·도 및 시·군·구 - 광주전남통합특별시 최우선 기본값)
+  const [residenceSido, setResidenceSido] = useState<string>('광주전남통합특별시');
   const [residenceSigungu, setResidenceSigungu] = useState<string>('북구');
 
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -66,6 +66,7 @@ export const RegisterPage: React.FC = () => {
   }, [expireSeconds]);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const val = e.target.value;
     if (key === 'username') {
       if (isEmailVerified) {
         setIsEmailVerified(false);
@@ -73,8 +74,26 @@ export const RegisterPage: React.FC = () => {
         setEmailMsg({ type: 'info', text: '이메일이 변경되었습니다. 다시 인증해 주세요.' });
       }
     }
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+    if (key === 'regional_college') {
+      if (val !== '광주전남') {
+        setLearningCenter('해당 없음 (타 지역대학 / 준회원)');
+      } else if (learningCenter === '해당 없음 (타 지역대학 / 준회원)') {
+        setLearningCenter('광주전남지역대학');
+      }
+    }
+    setForm((f) => ({ ...f, [key]: val }));
   };
+
+  const handleLearningCenterChange = (center: string) => {
+    setLearningCenter(center);
+    if (center !== '해당 없음 (타 지역대학 / 준회원)' && form.regional_college !== '광주전남') {
+      setForm((f) => ({ ...f, regional_college: '광주전남' }));
+    }
+  };
+
+  const isRegularCandidate =
+    form.regional_college === '광주전남' &&
+    (form.department.includes('컴퓨터과학') || form.department === '컴퓨터과학과');
 
   const handleSendCode = async () => {
     setEmailMsg(null);
@@ -206,7 +225,7 @@ export const RegisterPage: React.FC = () => {
           컴퓨터과학과 학생회 회원가입
         </h1>
         <p className="text-sm text-slate-600 mt-2">
-          광주전남지역대학 컴퓨터과학과 학우 여러분을 진심으로 환영합니다.
+          광주전남지역대학 컴퓨터과학과 및 전국의 방송대 학우 여러분을 진심으로 환영합니다.
         </p>
       </div>
 
@@ -396,7 +415,7 @@ export const RegisterPage: React.FC = () => {
         </section>
 
         {/* Section 2: 학사 인증 및 소속·거주 정보 */}
-        <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
+        <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-5 shadow-xs">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <span className="w-2 h-2 rounded-full bg-blue-600"></span>
             <h2 className="font-bold text-slate-900 text-base">학사 인증 및 소속·거주 정보</h2>
@@ -445,18 +464,83 @@ export const RegisterPage: React.FC = () => {
             </p>
           </div>
 
-          {/* 소속 학습관 선택 (4곳 중 선택) */}
+          {/* Regional College & Department */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label className={labelCls}>
+                소속 지역대학 <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <select className={inputCls} value={form.regional_college} onChange={set('regional_college')}>
+                {REGIONAL_COLLEGES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>
+                소속 학과 <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <input className={inputCls} required value={form.department} onChange={set('department')} maxLength={30} />
+            </div>
+          </div>
+
+          {/* Membership Role Preview Banner */}
+          {isRegularCandidate ? (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/90 text-xs text-emerald-950 flex items-start gap-2.5 shadow-2xs">
+              <div className="p-1.5 rounded-xl bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                <Award className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+                  <span>정회원 자동 승인 대상</span>
+                  <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-emerald-200 text-emerald-800 font-bold">정회원</span>
+                </div>
+                <p className="text-emerald-800 leading-relaxed">
+                  광주전남지역대학 컴퓨터과학과 학우님은 가입과 동시에 <strong>정회원</strong> 권한이 자동 부여되어 족보, 기출문제, 과제물 가이드 등 학생회의 모든 학사 자료실과 커뮤니티를 즉시 이용하실 수 있습니다.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200/90 text-xs text-indigo-950 flex items-start gap-2.5 shadow-2xs">
+              <div className="p-1.5 rounded-xl bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="font-bold text-indigo-950 text-sm flex items-center gap-1.5">
+                  <span>전국 방송대 학우 환영! 준회원 가입 안내</span>
+                  <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-indigo-200 text-indigo-800 font-bold">준회원</span>
+                </div>
+                <p className="text-indigo-800 leading-relaxed">
+                  타 지역대학 또는 타 학과 학우님은 <strong>준회원</strong>으로 안전하게 가입되어 자유게시판, Q&amp;A 등 주요 커뮤니티와 정보 교류에 자유롭게 참여하실 수 있습니다. 향후 컴퓨터과학과 입학/편입 시 정회원으로 승급 전환됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 소속 학습관 선택 */}
           <div className="space-y-2 pt-1">
-            <label className={labelCls}>
-              소속 학습관 <span className="text-rose-500 font-bold">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className={labelCls}>
+                소속 학습관 <span className="text-rose-500 font-bold">*</span>
+              </label>
+              {form.regional_college !== '광주전남' && (
+                <span className="text-[11px] text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                  타 지역대학 학우 자동 선택됨
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {LEARNING_CENTERS.map((center) => {
                 const isSelected = learningCenter === center;
+                const isNotApplicable = center === '해당 없음 (타 지역대학 / 준회원)';
                 return (
                   <label
                     key={center}
                     className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                      isNotApplicable ? 'sm:col-span-2' : ''
+                    } ${
                       isSelected
                         ? 'bg-blue-50/90 border-blue-600 text-blue-950 font-bold shadow-xs'
                         : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
@@ -467,7 +551,7 @@ export const RegisterPage: React.FC = () => {
                       name="learningCenter"
                       value={center}
                       checked={isSelected}
-                      onChange={() => setLearningCenter(center)}
+                      onChange={() => handleLearningCenterChange(center)}
                       className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <Building2 className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
@@ -477,7 +561,7 @@ export const RegisterPage: React.FC = () => {
               })}
             </div>
             <p className="text-xs text-slate-500">
-              * 출석수업, 시험 및 학생회 오프라인 모임의 주 활동 학습관을 선택해 주세요.
+              * 출석수업, 시험 및 학생회 오프라인 모임의 주 활동 학습관을 선택해 주세요. (타 지역대학/타 학과 학우는 마지막 항목 선택)
             </p>
           </div>
 
@@ -530,28 +614,6 @@ export const RegisterPage: React.FC = () => {
             <p className="text-xs text-slate-500">
               * 상세 주소(동·호수) 없이 시·도 및 시·군·구 단위만 선택하므로 개인정보가 안전하게 보호되며, 지역별 스터디 조직에 활용됩니다.
             </p>
-          </div>
-
-          {/* Regional College & Department */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label className={labelCls}>
-                소속 지역대학 <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <select className={inputCls} value={form.regional_college} onChange={set('regional_college')}>
-                {REGIONAL_COLLEGES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>
-                소속 학과 <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <input className={inputCls} required value={form.department} onChange={set('department')} maxLength={30} />
-            </div>
           </div>
         </section>
 

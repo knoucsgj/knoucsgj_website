@@ -575,7 +575,7 @@ export const AdminPage: React.FC = () => {
       m.nickname,
       m.name,
       m.phone,
-      m.learning_center || '광주전남지역대학',
+      m.learning_center || (m.regional_college === '광주전남' ? '광주전남지역대학' : '해당 없음 (타 지역대학 / 준회원)'),
       m.address,
       m.student_no,
       m.regional_college,
@@ -1810,7 +1810,7 @@ export const AdminPage: React.FC = () => {
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700 border border-blue-200 text-xs">
-                            {m.learning_center || '광주전남지역대학'}
+                            {m.learning_center || (m.regional_college === '광주전남' ? '광주전남지역대학' : '타 지역대학 / 준회원')}
                           </span>
                         </td>
                         <td className="px-3 py-2.5 min-w-[140px] text-xs text-slate-700 font-medium">{m.address}</td>

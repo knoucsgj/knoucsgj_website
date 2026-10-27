@@ -34,7 +34,7 @@ export const Footer: React.FC = () => {
             <div className="pt-2 text-sm text-slate-300 space-y-2">
               <div className="flex items-center gap-2.5">
                 <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>학생회 주소: 전남광주통합특별시 광산구 첨단내촌로 6, 103호</span>
+                <span>학생회 주소: 광주전남통합특별시 광산구 첨단내촌로 6, 103호</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-blue-400 shrink-0" />
@@ -152,10 +152,11 @@ export const Footer: React.FC = () => {
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-slate-400 gap-3">
           <p>© 2026 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회. All rights reserved.</p>
           <div className="text-slate-400 text-xs sm:text-sm">
-            전남광주통합특별시 광산구 첨단내촌로 6, 103호 | 공식 이메일: knoucsgj@gmail.com
+            광주전남통합특별시 광산구 첨단내촌로 6, 103호 | 공식 이메일: knoucsgj@gmail.com
           </div>
         </div>
       </div>
     </footer>
   );
 };
+
