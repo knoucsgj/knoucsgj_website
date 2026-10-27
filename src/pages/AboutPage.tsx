@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { councilIntro as defaultCouncilIntro } from '../data/mockCouncil';
 import { api } from '../services/api';
 import type { CouncilMember,  PastCouncilMember } from '../lib/types';
@@ -227,26 +226,18 @@ export const AboutPage: React.FC = () => {
               </div>
               <h3 className="font-bold text-slate-900 text-base sm:text-lg mb-1.5">2. 따뜻한 교류의 장</h3>
               <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                현업 IT 선배 특강, 종강총회, 소그룹 모임을 통해 같은 고민을 나누는 소중한 개발자 동료 네트워크를 구축합니다.
+                명사 초청강연, 개강총회, 컴퓨터과학인의 밤 행사 및 스터디 활동을 통해 서로 소통하고 의지할 수 있는 따뜻한 학우 교류의 장을 만들어갑니다.
               </p>
             </div>
 
-            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
-              <div>
-                <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-base sm:text-lg mb-1.5">3. 투명하고 정직한 운영</h3>
-                <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                  납부해주신 학생회비 내역을 1원 단위까지 분기별로 공개하고, 모든 학우의 의견을 경청하는 열린 학생회가 되겠습니다.
-                </p>
+            <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5 sm:p-6">
+              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3">
+                <Shield className="w-5 h-5" />
               </div>
-              <Link
-                to="/governance"
-                className="mt-4 inline-flex items-center text-sm font-bold text-emerald-700 hover:text-emerald-800 underline"
-              >
-                투명 회계 보고 & 회칙 확인 →
-              </Link>
+              <h3 className="font-bold text-slate-900 text-base sm:text-lg mb-1.5">3. 투명하고 정직한 운영</h3>
+              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                학과 학생회비 납부 제도를 새롭게 시행하며, 학우분들이 소중하게 납부해 주신 회비 내역을 1원 단위까지 투명하게 공개하고 모든 학우의 의견을 경청하는 열린 학생회가 되겠습니다.
+              </p>
             </div>
           </div>
         </div>
