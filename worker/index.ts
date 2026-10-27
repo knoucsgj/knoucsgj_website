@@ -842,7 +842,7 @@ async function handleR2Storage(req: Request, env: Env, db: D1, session: SessionS
     const percent = Math.min(100, Number(((synced.totalBytes / MAX_R2_BYTES) * 100).toFixed(2)));
     return json({
       success: true,
-      message: 'R2 버킷과 데이터베이스가 성공적으로 동기화되었습니다.',
+      message: '파일 저장소와 데이터베이스가 성공적으로 동기화되었습니다.',
       used_bytes: synced.totalBytes,
       file_count: synced.fileCount,
       used_gb: usedGB,
@@ -901,7 +901,7 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
   if (!env.R2_BUCKET) {
     throw new HttpError(
       503,
-      'Cloudflare R2 버킷(R2_BUCKET) 바인딩이 아직 연결되지 않았습니다. Cloudflare 대시보드(Settings > Bindings > R2 Bucket)에서 R2_BUCKET을 연결해 주세요.'
+      '파일 저장소(스토리지) 서비스가 아직 준비되지 않았습니다. 관리자에게 문의해 주세요.'
     );
   }
 
@@ -919,9 +919,10 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
   }
 
   const uploadFile = file as File;
-  const MAX_SIZE = 50 * 1024 * 1024; // 50MB
-  if (uploadFile.size > MAX_SIZE) {
-    throw new HttpError(413, '단일 파일 크기는 최대 50MB까지 업로드 가능합니다.');
+  const isPrivileged = session.admin || session.member?.role === 'president' || session.member?.role === 'officer';
+  const MAX_REGULAR_SIZE = 30 * 1024 * 1024; // 30MB
+  if (!isPrivileged && uploadFile.size > MAX_REGULAR_SIZE) {
+    throw new HttpError(413, '파일 1개당 크기는 최대 30MB까지 업로드 가능합니다. (학생회 임원 및 관리자는 용량 제한 없음)');
   }
 
   // 9.9GB storage capacity check!
@@ -931,7 +932,7 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
     const newFileMB = (uploadFile.size / (1000 * 1000)).toFixed(1);
     throw new HttpError(
       507,
-      `Cloudflare R2 무료 저장용량 보호 한도(9.9GB)에 도달하여 추가 업로드가 불가능합니다. (현재 사용량: ${currentGB}GB / 9.9GB, 시도 파일: ${newFileMB}MB). 불필요한 기존 자료를 정리하거나 관리자에게 문의해 주세요.`
+      `저장용량 보호 한도(9.9GB)에 도달하여 추가 업로드가 불가능합니다. (현재 사용량: ${currentGB}GB / 9.9GB, 시도 파일: ${newFileMB}MB). 불필요한 기존 자료를 정리하거나 관리자에게 문의해 주세요.`
     );
   }
 
@@ -997,7 +998,7 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
 
   if (req.method === 'GET') {
     if (!env.R2_BUCKET) {
-      throw new HttpError(503, 'Cloudflare R2 스토리지(R2_BUCKET)가 연결되지 않았습니다.');
+      throw new HttpError(503, '파일 저장소(스토리지)가 연결되지 않았습니다.');
     }
 
     // Academic materials protection: regular members only
@@ -1036,7 +1037,7 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
       throw new HttpError(401, '파일 삭제 권한이 없습니다.');
     }
     if (!env.R2_BUCKET) {
-      throw new HttpError(503, 'Cloudflare R2 스토리지(R2_BUCKET)가 연결되지 않았습니다.');
+      throw new HttpError(503, '파일 저장소(스토리지)가 연결되지 않았습니다.');
     }
     await env.R2_BUCKET.delete(key);
     await db.prepare('DELETE FROM r2_files WHERE key = ?').bind(key).run();
@@ -1271,7 +1272,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       if (!row) throw new HttpError(404, '자료를 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 등록한 자료만 수정할 수 있습니다.');
       if (b.file_url && b.file_url.startsWith('data:') && String(b.file_url).length > 2000000) {
-        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 R2 파일 업로드를 이용해 주세요.');
+        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 파일 첨부 업로드를 이용해 주세요.');
       }
       await db
         .prepare(
@@ -1290,7 +1291,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       }
       const b: any = await readJson(req);
       if (b.file_url && b.file_url.startsWith('data:') && String(b.file_url).length > 2000000) {
-        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 R2 파일 업로드를 이용해 주세요.');
+        throw new HttpError(413, 'Base64 인라인 파일은 1MB 이하만 가능합니다. 대용량 파일은 파일 첨부 업로드를 이용해 주세요.');
       }
       const m = {
         id: `mat-${Date.now()}-${randomHex(3)}`,

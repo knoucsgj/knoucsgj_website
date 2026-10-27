@@ -720,7 +720,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('사진 파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+        alert('사진 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -948,7 +948,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('영수증 파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+        alert('영수증 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -1108,7 +1108,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('첨부파일 업로드에 실패했습니다. (Cloudflare R2 버킷 연결 상태를 확인해 주세요)');
+        alert('첨부파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -1436,7 +1436,7 @@ export const AdminPage: React.FC = () => {
           }`}
         >
           <HardDrive className="w-4 h-4 text-cyan-600" />
-          R2 스토리지 (9.9GB 한도)
+          파일 저장소 (9.9GB 한도)
         </button>
         {canManageBackup && (
           <button

@@ -61,8 +61,8 @@ export const AdminR2StorageManager: React.FC = () => {
   const handleSync = async () => {
     if (
       !(await showConfirm({
-        title: 'R2 스토리지 재스캔 및 동기화',
-        message: 'Cloudflare R2 버킷의 실제 파일 목록과 용량을 재스캔하여 동기화하시겠습니까?',
+        title: '파일 저장소 재스캔 및 동기화',
+        message: '파일 저장소의 실제 파일 목록과 용량을 재스캔하여 동기화하시겠습니까?',
         subMessage: '버킷 내 모든 객체를 조회하여 D1 통계 및 파일 목록을 최신 상태로 갱신합니다.',
         confirmText: '동기화 실행',
         variant: 'info'
@@ -73,7 +73,7 @@ export const AdminR2StorageManager: React.FC = () => {
     try {
       setSyncing(true);
       const res = await api.syncR2StorageStats();
-      alert(res.message || 'R2 버킷과의 동기화가 완료되었습니다.');
+      alert(res.message || '파일 저장소와의 동기화가 완료되었습니다.');
       await loadStats();
     } catch (err: any) {
       alert(err.message || '동기화 중 오류가 발생했습니다.');
@@ -85,8 +85,8 @@ export const AdminR2StorageManager: React.FC = () => {
   const handleDeleteFile = async (key: string, fileName: string) => {
     if (
       !(await showConfirm({
-        title: 'R2 파일 영구 삭제',
-        message: `[${fileName}] 파일을 R2 스토리지에서 영구 삭제하시겠습니까?`,
+        title: '파일 영구 삭제',
+        message: `[${fileName}] 파일을 저장소에서 영구 삭제하시겠습니까?`,
         subMessage: '이 작업은 취소할 수 없으며 삭제 즉시 저장 용량이 확보됩니다.',
         confirmText: '영구 삭제',
         variant: 'danger'
@@ -157,13 +157,13 @@ export const AdminR2StorageManager: React.FC = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                Cloudflare R2 스토리지 용량 관리
+                파일 저장소 용량 관리
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">
                   9.9GB 안전 상한제
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Cloudflare R2의 무료 제공 한도(월 10GB)를 초과하여 과금되지 않도록 9.9GB 도달 시 업로드를 차단합니다.
+                무료 제공 용량(10GB)을 초과하여 과금되지 않도록 9.9GB 도달 시 추가 업로드를 자동 차단합니다.
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export const AdminR2StorageManager: React.FC = () => {
           onClick={handleSync}
           disabled={syncing || loading}
           className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 self-start sm:self-center transition-colors cursor-pointer disabled:opacity-50"
-          title="Cloudflare R2 버킷과 실제 용량 동기화"
+          title="파일 저장소와 실제 용량 동기화"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-blue-600' : ''}`} />
           <span>{syncing ? '버킷 스캔 중...' : '스토리지 용량 동기화'}</span>
@@ -239,7 +239,7 @@ export const AdminR2StorageManager: React.FC = () => {
             <div>
               <strong className="font-bold">스토리지 사용량이 9.9GB에 도달하여 신규 업로드가 차단되었습니다.</strong>
               <p className="mt-0.5 text-rose-700">
-                Cloudflare 유료 과금을 방지하기 위해 자동 차단되었습니다. 아래 파일 목록에서 더 이상 사용하지 않는 대용량 자료를 삭제하시면 즉시 용량이 확보되어 업로드가 재개됩니다.
+                유료 과금을 방지하기 위해 자동 차단되었습니다. 아래 파일 목록에서 더 이상 사용하지 않는 대용량 자료를 삭제하시면 즉시 용량이 확보되어 업로드가 재개됩니다.
               </p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export const AdminR2StorageManager: React.FC = () => {
           <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 flex items-center gap-2 text-blue-800 text-xs">
             <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
             <span>
-              Cloudflare R2 무료 티어(월 10GB) 안전 범위 내에서 정상 운영 중입니다. (9.9GB 도달 시 자동 차단 보호 활성화)
+              무료 제공 용량(10GB) 안전 범위 내에서 정상 운영 중입니다. (9.9GB 도달 시 자동 차단 보호 활성화)
             </span>
           </div>
         )}
@@ -265,7 +265,7 @@ export const AdminR2StorageManager: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-slate-800">
-              R2 저장 파일 목록 ({filteredFiles.length}건)
+              저장 파일 목록 ({filteredFiles.length}건)
             </h3>
             {loading && <span className="text-xs text-slate-400">새로고침 중...</span>}
           </div>
@@ -357,7 +357,7 @@ export const AdminR2StorageManager: React.FC = () => {
                               onClick={() => handleDeleteFile(file.key, file.file_name)}
                               disabled={deletingKey === file.key}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                              title="R2에서 삭제 (용량 확보)"
+                              title="스토리지에서 삭제 (용량 확보)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

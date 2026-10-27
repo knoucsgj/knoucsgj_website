@@ -202,8 +202,9 @@ export const NoticesPage: React.FC = () => {
   const handleActivityImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) {
-      alert('사진 파일 크기는 20MB 이하만 가능합니다.');
+    const isPrivileged = isAdmin || member?.role === 'president' || member?.role === 'officer';
+    if (!isPrivileged && file.size > 30 * 1024 * 1024) {
+      alert('사진 파일 크기는 30MB 이하만 가능합니다. (학생회 임원 및 관리자는 용량 제한 없음)');
       return;
     }
     setActImageFile(file);

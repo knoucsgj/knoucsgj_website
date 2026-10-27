@@ -127,14 +127,15 @@ export const StudyMaterialsPage: React.FC = () => {
     if (!file) return;
 
     if (isStorageBlocked) {
-      alert('Cloudflare R2 무료 저장용량 보호 한도(9.9GB)에 도달하여 현재 새 파일 업로드가 불가능합니다. 관리자에게 문의해 주세요.');
+      alert('저장용량 보호 한도(9.9GB)에 도달하여 현재 새 파일 업로드가 불가능합니다. 관리자에게 문의해 주세요.');
       e.target.value = '';
       return;
     }
 
-    // Check size (max 50MB with Cloudflare R2 object storage)
-    if (file.size > 50 * 1024 * 1024) {
-      alert('파일 크기는 최대 50MB 이하여야 합니다.');
+    // Check size (regular members max 30MB, privileged: unlimited)
+    const isPrivileged = isAdmin || member?.role === 'president' || member?.role === 'officer';
+    if (!isPrivileged && file.size > 30 * 1024 * 1024) {
+      alert('파일 크기는 최대 30MB 이하여야 합니다. (학생회 임원 및 관리자는 용량 제한 없이 업로드 가능합니다.)');
       e.target.value = '';
       return;
     }
@@ -1378,7 +1379,7 @@ export const StudyMaterialsPage: React.FC = () => {
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2.5 text-xs font-semibold">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>
-                    R2 스토리지 용량이 안전 한도(9.9GB)에 도달하여 현재 새 파일 첨부가 일시 차단되었습니다.
+                    파일 저장소 용량이 안전 한도(9.9GB)에 도달하여 현재 새 파일 첨부가 일시 차단되었습니다.
                   </span>
                 </div>
               )}
@@ -1416,7 +1417,9 @@ export const StudyMaterialsPage: React.FC = () => {
                         클릭하여 파일을 선택하거나 이곳으로 드래그하세요
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (Cloudflare R2 스토리지 · 최대 50MB)
+                        {isAdmin || member?.role === 'president' || member?.role === 'officer'
+                          ? 'PDF, HWP, Office 문서, 압축파일, 소스코드 등 (학생회 임원/관리자: 파일 용량 제한 없음)'
+                          : 'PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 30MB · 임원/관리자는 무제한)'}
                       </p>
                     </div>
                   )}
