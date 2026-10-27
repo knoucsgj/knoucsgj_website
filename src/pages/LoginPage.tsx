@@ -4,7 +4,7 @@ import { auth } from '../services/auth';
 import { LogIn, AlertCircle, KeyRound, CheckCircle2, X } from 'lucide-react';
 
 const inputCls =
-  'w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
+  'w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal focus:ring-4 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all shadow-xs';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();

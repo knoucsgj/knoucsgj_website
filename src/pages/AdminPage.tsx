@@ -47,7 +47,7 @@ export const AdminPage: React.FC = () => {
   const canManageCouncil = isAdmin || isPresident || isOfficer;
   const canManageBackup = isAdmin;
 
-  const [adminIdInput, setAdminIdInput] = useState('admin');
+  const [adminIdInput, setAdminIdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -1159,14 +1159,14 @@ export const AdminPage: React.FC = () => {
               관리자 아이디
             </label>
             <div className="relative">
-              <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Shield className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 required
                 value={adminIdInput}
                 onChange={(e) => setAdminIdInput(e.target.value)}
                 placeholder="관리자 아이디 또는 이메일 입력"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-hidden transition-all shadow-xs"
               />
             </div>
           </div>
@@ -1175,14 +1175,14 @@ export const AdminPage: React.FC = () => {
               관리자 비밀번호
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="password"
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="비밀번호 입력..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-hidden transition-all shadow-xs"
               />
             </div>
             {loginError && (
