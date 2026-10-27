@@ -72,7 +72,7 @@ export const councilMembers: CouncilMember[] = [
 
 export const regionalInfo = {
   center_name: '한국방송통신대학교 광주전남지역대학',
-  address: '광주전남통합특별시 광산구 첨단내촌로 6',
+  address: '전남광주통합특별시 광산구 첨단내촌로 6',
   tel: '062-973-5100',
   facilities: [
     { name: '전산실습실 (3층 302호)', desc: '최신 PC 60대 보유, 출석수업 및 실습 진행, 수업 외 시간 자율 학습 개방' },
@@ -83,7 +83,7 @@ export const regionalInfo = {
   sub_centers: [
     {
       name: '목포시학습관',
-      address: '광주전남통합특별시 목포시 백년대로412번길 14',
+      address: '전남광주통합특별시 목포시 백년대로412번길 14',
       tel: '061-287-9110',
       fax: '061-287-9115',
       facilities: '행정실, 도서열람실, 컴퓨터실, 강의실, 학생회실 등',
@@ -92,7 +92,7 @@ export const regionalInfo = {
     },
     {
       name: '순천시학습관',
-      address: '광주전남통합특별시 순천시 임촌동길 23',
+      address: '전남광주통합특별시 순천시 임촌동길 23',
       tel: '061-751-0801',
       fax: '061-751-0802',
       facilities: '행정실, 도서열람실, 컴퓨터실, 강의실, 학생회실 등',

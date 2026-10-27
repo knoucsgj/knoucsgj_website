@@ -28,8 +28,8 @@ export const RegisterPage: React.FC = () => {
   // 소속 학습관 (광주전남 4곳 + 해당 없음/타지역 1곳)
   const [learningCenter, setLearningCenter] = useState<string>('광주전남지역대학');
 
-  // 거주지역 (시·도 및 시·군·구 - 광주전남통합특별시 최우선 기본값)
-  const [residenceSido, setResidenceSido] = useState<string>('광주전남통합특별시');
+  // 거주지역 (시·도 및 시·군·구 - 전남광주통합특별시 최우선 기본값)
+  const [residenceSido, setResidenceSido] = useState<string>('전남광주통합특별시');
   const [residenceSigungu, setResidenceSigungu] = useState<string>('북구');
 
   const [agreePrivacy, setAgreePrivacy] = useState(false);
