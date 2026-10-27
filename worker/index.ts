@@ -939,6 +939,15 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
   const origName = uploadFile.name || 'file.bin';
   const lastDot = origName.lastIndexOf('.');
   const ext = lastDot > 0 ? origName.slice(lastDot) : '';
+  const extLower = ext.toLowerCase();
+
+  const DANGEROUS_BINARIES = new Set(['.exe', '.scr', '.bat', '.cmd', '.msi', '.dll', '.com']);
+  if (DANGEROUS_BINARIES.has(extLower)) {
+    throw new HttpError(
+      400,
+      '실행 파일(.exe, .scr, .bat 등)은 보안상 직접 업로드할 수 없습니다. 정보보안 실습 소스코드(.c, .py, .java 등)나 압축파일(.zip) 형태로 등록해 주세요.'
+    );
+  }
   const baseName = lastDot > 0 ? origName.slice(0, lastDot) : origName;
   const safeName = baseName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_').slice(0, 40) + ext;
   const key = `${category}/${Date.now()}-${randomHex(3)}-${safeName}`;
@@ -1017,13 +1026,19 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
     object.writeHttpMetadata(headers);
     headers.set('etag', object.httpEtag);
     headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    // Security headers to prevent MIME sniffing and cross-site script execution
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
 
     const isDownload = url.searchParams.get('download') === 'true' || url.searchParams.get('dl') === '1';
     const origName = object.customMetadata?.originalName
       ? decodeURIComponent(object.customMetadata.originalName)
       : key.split('/').pop() || 'download';
 
-    if (isDownload) {
+    const lowerName = origName.toLowerCase();
+    const isSafeInline = /\.(jpe?g|png|webp|gif|pdf)$/i.test(lowerName);
+
+    if (isDownload || !isSafeInline) {
       headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(origName)}`);
     } else {
       headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(origName)}`);

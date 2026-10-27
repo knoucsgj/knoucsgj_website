@@ -134,6 +134,13 @@ export const StudyMaterialsPage: React.FC = () => {
 
     // Check size (regular members max 30MB, privileged: unlimited)
     const isPrivileged = isAdmin || member?.role === 'president' || member?.role === 'officer';
+    const lowerName = file.name.toLowerCase();
+    const DANGEROUS_EXTS = ['.exe', '.scr', '.bat', '.cmd', '.msi', '.dll', '.com'];
+    if (DANGEROUS_EXTS.some((ext) => lowerName.endsWith(ext))) {
+      alert('실행 파일(.exe, .bat, .scr 등)은 보안상 직접 업로드할 수 없습니다. 정보보안 실습 소스코드(.c, .py, .java 등)나 압축파일(.zip) 형태로 등록해 주세요.');
+      e.target.value = '';
+      return;
+    }
     if (!isPrivileged && file.size > 30 * 1024 * 1024) {
       alert('파일 크기는 최대 30MB 이하여야 합니다. (학생회 임원 및 관리자는 용량 제한 없이 업로드 가능합니다.)');
       e.target.value = '';
@@ -1393,7 +1400,7 @@ export const StudyMaterialsPage: React.FC = () => {
                     type="file"
                     onChange={handleFileChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.7z,.txt,.c,.cpp,.java,.py,.sql,.html,.css,.js"
+                    accept=".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.7z,.txt,.c,.cpp,.java,.py,.sql,.sh,.json,.html,.css,.js"
                   />
                   {newMatFileName ? (
                     <div className="flex items-center justify-between px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-left">
@@ -1427,6 +1434,15 @@ export const StudyMaterialsPage: React.FC = () => {
               </div>
 
               <div>
+                <div className="mt-2.5 p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2.5 text-left mb-3">
+                  <Shield className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed space-y-0.5">
+                    <p className="font-bold text-amber-950">💡 정보보안 실습 과제 및 모의해킹 자료 등록 안내</p>
+                    <p className="text-amber-800">
+                      모의해킹·공격/방어 실습용 소스코드나 페이로드는 다운로드 시 개인 PC 백신(Windows Defender 등)에 의해 자동 삭제될 수 있으므로, <strong>압축파일(.zip)</strong> 형태로 등록하시는 것을 권장합니다.
+                    </p>
+                  </div>
+                </div>
                 <label className="block font-bold text-slate-800 mb-1">작성자</label>
                 <div className="w-full px-3 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold">{editingMaterial ? editingMaterial.author : member?.nickname}</div>
               </div>
