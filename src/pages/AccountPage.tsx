@@ -88,7 +88,7 @@ export const AccountPage: React.FC = () => {
     ['거주지역', member.address],
     ['학번 (앞 8자리)', showSensitive ? member.student_no : maskStudentNo(member.student_no)],
     ...(parsedSn.isValid
-      ? ([['입학 정보', `${parsedSn.admissionYear}년 입학 (${parsedSn.admissionGrade}학년${parsedSn.departmentName ? ` · ${parsedSn.departmentName}` : ''})`]] as [string, string][])
+      ? ([['입학 정보', `${parsedSn.admissionYear}년 입학 (${parsedSn.admissionGrade}학년)${parsedSn.collegeName ? ` · ${parsedSn.collegeName}` : ''}${parsedSn.departmentName ? ` ${parsedSn.departmentName}` : ''}`]] as [string, string][])
       : []),
     ['소속 지역대학', `${member.regional_college} 지역대학`],
     ['소속 학과', member.department],

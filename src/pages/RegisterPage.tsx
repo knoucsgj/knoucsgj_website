@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
 import { LEARNING_CENTERS, KOREA_DISTRICTS, SIDO_LIST } from '../lib/koreaDistricts';
-import { formatStudentNoInput, parseStudentNo } from '../lib/knouDepartments';
+import { formatStudentNoInput, parseStudentNo, KNOU_DEPARTMENT_LIST } from '../lib/knouDepartments';
 import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin, Sparkles, Award } from 'lucide-react';
 
 const inputCls =
@@ -469,7 +469,7 @@ export const RegisterPage: React.FC = () => {
               </label>
               {parsedStudentNo.isValid && (
                 <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                  {parsedStudentNo.admissionYear}년 입학 · {parsedStudentNo.admissionGrade}학년{parsedStudentNo.departmentName ? ` · ${parsedStudentNo.departmentName}` : ''}
+                  {parsedStudentNo.collegeName ? `${parsedStudentNo.collegeName} · ` : ''}{parsedStudentNo.departmentName || `학과코드 ${parsedStudentNo.deptCode}`} · {parsedStudentNo.admissionYear}년 입학 ({parsedStudentNo.admissionGrade}학년)
                 </span>
               )}
             </div>
@@ -506,10 +506,32 @@ export const RegisterPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>
-                소속 학과 <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <input className={inputCls} required value={form.department} onChange={set('department')} maxLength={30} />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-bold text-slate-800 text-sm">
+                  소속 학과 <span className="text-rose-500 font-bold">*</span>
+                </label>
+                {parsedStudentNo.collegeName && (
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                    {parsedStudentNo.collegeName}
+                  </span>
+                )}
+              </div>
+              <input
+                className={inputCls}
+                required
+                value={form.department}
+                onChange={set('department')}
+                list="knou-departments-list"
+                placeholder="예: 컴퓨터과학과"
+                maxLength={30}
+              />
+              <datalist id="knou-departments-list">
+                {KNOU_DEPARTMENT_LIST.map((d) => (
+                  <option key={d.code} value={d.name}>
+                    {d.college} - {d.name} (코드: {d.code})
+                  </option>
+                ))}
+              </datalist>
             </div>
           </div>
 

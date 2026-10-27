@@ -568,7 +568,7 @@ export const AdminPage: React.FC = () => {
       regular: '정회원',
       associate: '준회원',
     };
-    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '소속학습관', '거주지역', '학번', '입학연도', '입학학년', '지역대학', '학과'];
+    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '소속학습관', '거주지역', '학번', '입학연도', '입학학년', '단과대학', '지역대학', '학과'];
     const rows = members.map((m) => {
       const parsedSn = parseStudentNo(m.student_no);
       return [
@@ -583,6 +583,7 @@ export const AdminPage: React.FC = () => {
         m.student_no,
         parsedSn.admissionYear ? `${parsedSn.admissionYear}년` : '',
         parsedSn.admissionGrade ? `${parsedSn.admissionGrade}학년` : '',
+        parsedSn.collegeName || '',
         m.regional_college,
         m.department
       ];
