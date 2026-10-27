@@ -162,6 +162,11 @@ const requireMember = (s: Session) => {
   if (!s.member) throw new HttpError(401, '회원 로그인이 필요합니다.');
   return s.member;
 };
+const requireSignedIn = (s: Session): { id: string | null; nickname: string } => {
+  if (s.member) return { id: s.member.id, nickname: s.member.nickname };
+  if (s.admin) return { id: 'admin', nickname: '관리자' };
+  throw new HttpError(401, '회원 로그인이 필요합니다. 회원가입 또는 로그인 후 이용해 주세요.');
+};
 
 const isMasterAdmin = (s: Session) => s.admin;
 const isPresident = (s: Session) => s.member?.role === 'president';
@@ -1337,7 +1342,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // ---- free posts (read: public / write: member)
+  // ---- free posts (read: public / write & reply: any signed-up member or admin)
   if (resource === 'freeposts') {
     if (method === 'GET') {
       const { results: posts } = await db.prepare('SELECT * FROM free_posts ORDER BY created_at DESC').all();
@@ -1345,17 +1350,14 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(posts.map((p: any) => ({ ...p, replies: replies.filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
-      const member = requireMember(session);
-      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
-        throw new HttpError(403, '준회원 등급은 글 및 댓글 작성이 불가능합니다. (열람 전용)');
-      }
+      const writer = requireSignedIn(session);
       const b: any = await readJson(req);
       if (b.type === 'reply') {
         const r = {
           id: `reply-${Date.now()}-${randomHex(3)}`,
           post_id: str(b.post_id, 80),
-          author: member.nickname,
-          author_id: member.id,
+          author: writer.nickname,
+          author_id: writer.id,
           content: str(b.content, 2000),
           created_at: nowMinute(),
         };
@@ -1371,8 +1373,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         title: str(b.title, 200),
         content: str(b.content, 20000),
         category: str(b.category, 20) || '자유',
-        author: member.nickname,
-        author_id: member.id,
+        author: writer.nickname,
+        author_id: writer.id,
         created_at: nowMinute(),
         views: 1,
         replies: [],
@@ -1385,6 +1387,14 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(p);
     }
     if (method === 'DELETE' && id) {
+      const replyId = url.searchParams.get('reply_id');
+      if (replyId) {
+        const rRow: any = await db.prepare('SELECT author_id FROM free_post_replies WHERE id = ?').bind(replyId).first();
+        if (!rRow) throw new HttpError(404, '댓글을 찾을 수 없습니다.');
+        if (!canModify(session, rRow.author_id)) throw new HttpError(403, '본인이 작성한 댓글만 삭제할 수 있습니다.');
+        await db.prepare('DELETE FROM free_post_replies WHERE id = ?').bind(replyId).run();
+        return json({ success: true });
+      }
       const row: any = await db.prepare('SELECT author_id FROM free_posts WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '게시글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
@@ -1394,7 +1404,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
   }
 
-  // ---- feedbacks (read: public / write: member, replies: member or admin)
+  // ---- feedbacks (학생회에 바란다: read: public / write post: any signed-up member / replies: officer, president, admin only)
   if (resource === 'feedbacks') {
     if (method === 'GET') {
       const { results: items } = await db.prepare('SELECT * FROM feedbacks ORDER BY created_at DESC').all();
@@ -1405,11 +1415,11 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const b: any = await readJson(req);
       if (b.type === 'reply') {
         if (!isCouncil(session)) {
-          throw new HttpError(403, '건의함 답변 댓글은 학생회 임원진, 학생회장 및 관리자만 작성할 수 있습니다.');
+          throw new HttpError(403, '학생회에 바란다 댓글은 학생회 임원, 학생회장 및 관리자 등급만 작성할 수 있습니다.');
         }
         const authorName = session.admin
           ? (str(b.author, 50) || '학생회')
-          : session.member!.nickname;
+          : (str(b.author, 50) || session.member!.nickname);
         const r = {
           id: `fb-reply-${Date.now()}-${randomHex(3)}`,
           feedback_id: str(b.feedback_id, 80),
@@ -1426,17 +1436,14 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         await db.prepare("UPDATE feedbacks SET status = '답변완료' WHERE id = ?").bind(r.feedback_id).run();
         return json(r);
       }
-      const member = requireMember(session);
-      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
-        throw new HttpError(403, '준회원 등급은 건의사항 작성이 불가능합니다. (열람 전용)');
-      }
+      const writer = requireSignedIn(session);
       const f = {
         id: `fb-${Date.now()}-${randomHex(3)}`,
         title: str(b.title, 200),
         content: str(b.content, 20000),
         category: str(b.category, 20) || '기타',
-        author: member.nickname,
-        author_id: member.id,
+        author: writer.nickname,
+        author_id: writer.id,
         created_at: today(),
         status: '접수완료',
         replies: [],
@@ -1449,11 +1456,299 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json(f);
     }
     if (method === 'DELETE' && id) {
+      const replyId = url.searchParams.get('reply_id');
+      if (replyId) {
+        if (!isCouncil(session)) throw new HttpError(403, '학생회 임원진 또는 관리자만 답변 댓글을 삭제할 수 있습니다.');
+        await db.prepare('DELETE FROM feedback_replies WHERE id = ?').bind(replyId).run();
+        return json({ success: true });
+      }
       const row: any = await db.prepare('SELECT author_id FROM feedbacks WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '건의글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
       await db.prepare('DELETE FROM feedback_replies WHERE feedback_id = ?').bind(id).run();
       await db.prepare('DELETE FROM feedbacks WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
+  // ---- market (벼룩시장: read: public / write & reply: any signed-up member or admin)
+  if (resource === 'market') {
+    if (method === 'GET') {
+      let { results: posts } = await db.prepare('SELECT * FROM market_posts ORDER BY created_at DESC, rowid DESC').all();
+      if (!posts || posts.length === 0) {
+        const initRow = await db.prepare("SELECT value FROM settings WHERE key = 'market_posts_init'").first();
+        if (!initRow) {
+          const initialMarketPosts = [
+            {
+              id: 'mk-1',
+              title: '[무료나눔] C프로그래밍, 이산수학 방송대 기본서 및 워크북 나눔합니다',
+              content: '이번 학기 수강을 마쳐서 C프로그래밍과 이산수학 교재 무료로 나눔합니다. 밑줄 조금 있지만 상태 깨끗합니다! 광주지역대학 출석수업 날 직접 전달드리거나 택배(착불) 가능합니다. 댓글 남겨주세요!',
+              category: '무료나눔',
+              price: '무료나눔',
+              status: '거래가능',
+              author: '컴과선배',
+              author_id: null,
+              created_at: '2026-10-20 14:30',
+              views: 24,
+            },
+            {
+              id: 'mk-2',
+              title: '자료구조, 운영체제, 데이터베이스 교재 일괄 판매합니다',
+              content: '2~3학년 주요 전공 기본서 3권 일괄 양도합니다. 필기 거의 없는 깨끗한 상태이며 기출 요약 프린트물도 함께 챙겨드립니다.',
+              category: '팝니다',
+              price: '15,000원',
+              status: '거래가능',
+              author: '열공모드',
+              author_id: null,
+              created_at: '2026-10-22 19:15',
+              views: 18,
+            },
+            {
+              id: 'mk-3',
+              title: '1학년 2학기 파이썬프로그래밍, 컴퓨터의이해 교재 구합니다',
+              content: '신입생인데 파이썬프로그래밍과 컴퓨터의이해 중고 교재 있으신 선배님 계시면 구매하고 싶습니다. 댓글 부탁드립니다!',
+              category: '삽니다',
+              price: '협의',
+              status: '거래가능',
+              author: '새내기학우',
+              author_id: null,
+              created_at: '2026-10-24 10:05',
+              views: 15,
+            },
+          ];
+          const stmts = initialMarketPosts.map((m) =>
+            db
+              .prepare(
+                'INSERT INTO market_posts (id, title, content, category, price, status, author, author_id, created_at, views) VALUES (?,?,?,?,?,?,?,?,?,?)'
+              )
+              .bind(m.id, m.title, m.content, m.category, m.price, m.status, m.author, m.author_id, m.created_at, m.views)
+          );
+          stmts.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('market_posts_init', '1')"));
+          await db.batch(stmts);
+          posts = initialMarketPosts as any;
+        }
+      }
+      const { results: replies } = await db.prepare('SELECT * FROM market_post_replies ORDER BY created_at ASC, rowid ASC').all();
+      return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
+    }
+    if (method === 'POST') {
+      const writer = requireSignedIn(session);
+      const b: any = await readJson(req);
+      if (b.type === 'reply') {
+        const r = {
+          id: `mk-reply-${Date.now()}-${randomHex(3)}`,
+          post_id: str(b.post_id, 80),
+          author: writer.nickname,
+          author_id: writer.id,
+          content: str(b.content, 2000),
+          created_at: nowMinute(),
+        };
+        if (!r.content) throw new HttpError(400, '댓글 내용을 입력해 주세요.');
+        await db
+          .prepare('INSERT INTO market_post_replies (id, post_id, author, author_id, content, created_at) VALUES (?,?,?,?,?,?)')
+          .bind(r.id, r.post_id, r.author, r.author_id, r.content, r.created_at)
+          .run();
+        return json(r);
+      }
+      const p = {
+        id: `mk-${Date.now()}-${randomHex(3)}`,
+        title: str(b.title, 200),
+        content: str(b.content, 20000),
+        category: str(b.category, 20) || '팝니다',
+        price: str(b.price, 50) || (b.category === '무료나눔' ? '무료나눔' : '협의'),
+        status: str(b.status, 20) || '거래가능',
+        author: writer.nickname,
+        author_id: writer.id,
+        created_at: nowMinute(),
+        views: 1,
+        replies: [],
+      };
+      if (!p.title || !p.content) throw new HttpError(400, '제목과 내용을 입력해 주세요.');
+      await db
+        .prepare(
+          'INSERT INTO market_posts (id, title, content, category, price, status, author, author_id, created_at, views) VALUES (?,?,?,?,?,?,?,?,?,?)'
+        )
+        .bind(p.id, p.title, p.content, p.category, p.price, p.status, p.author, p.author_id, p.created_at, p.views)
+        .run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('market_posts_init', '1')").run();
+      return json(p);
+    }
+    if (method === 'PUT' && id) {
+      const row: any = await db.prepare('SELECT author_id FROM market_posts WHERE id = ?').bind(id).first();
+      if (!row) throw new HttpError(404, '게시글을 찾을 수 없습니다.');
+      if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 상태를 변경할 수 있습니다.');
+      const b: any = await readJson(req);
+      if (b.status) {
+        await db.prepare('UPDATE market_posts SET status = ? WHERE id = ?').bind(str(b.status, 20), id).run();
+      }
+      return json({ success: true });
+    }
+    if (method === 'DELETE' && id) {
+      const replyId = url.searchParams.get('reply_id');
+      if (replyId) {
+        const rRow: any = await db.prepare('SELECT author_id FROM market_post_replies WHERE id = ?').bind(replyId).first();
+        if (!rRow) throw new HttpError(404, '댓글을 찾을 수 없습니다.');
+        if (!canModify(session, rRow.author_id)) throw new HttpError(403, '본인이 작성한 댓글만 삭제할 수 있습니다.');
+        await db.prepare('DELETE FROM market_post_replies WHERE id = ?').bind(replyId).run();
+        return json({ success: true });
+      }
+      const row: any = await db.prepare('SELECT author_id FROM market_posts WHERE id = ?').bind(id).first();
+      if (!row) throw new HttpError(404, '게시글을 찾을 수 없습니다.');
+      if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
+      await db.prepare('DELETE FROM market_post_replies WHERE post_id = ?').bind(id).run();
+      await db.prepare('DELETE FROM market_posts WHERE id = ?').bind(id).run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('market_posts_init', '1')").run();
+      return json({ success: true });
+    }
+  }
+
+  // ---- qna (Q&A 코너: read: public / write & reply: any signed-up member or admin)
+  if (resource === 'qna') {
+    if (method === 'GET') {
+      let { results: posts } = await db.prepare('SELECT * FROM qna_posts ORDER BY created_at DESC, rowid DESC').all();
+      if (!posts || posts.length === 0) {
+        const initRow = await db.prepare("SELECT value FROM settings WHERE key = 'qna_posts_init'").first();
+        if (!initRow) {
+          const initialQnaPosts = [
+            {
+              id: 'qna-1',
+              title: '직장인이라 출석수업 참여가 어려운데 대체시험은 어떻게 신청하나요?',
+              content: '평일 및 주말 출석수업 일정에 직장 근무가 겹쳐 참석이 어렵습니다. 출석수업을 대체시험으로 변경하는 절차와 신청 기간이 궁금합니다!',
+              category: '출석/과제/시험',
+              status: '답변완료',
+              author: '직장인학우',
+              author_id: null,
+              created_at: '2026-10-18 11:20',
+              views: 42,
+            },
+            {
+              id: 'qna-2',
+              title: '중간과제물 작성 시 카피킬러(표절 검사)는 어디서 확인하나요?',
+              content: '중간과제물을 제출하기 전에 표절률을 미리 점검해보고 싶은데 학교에서 무료로 제공하는 사이트가 있나요? 권장 기준도 알려주시면 감사하겠습니다.',
+              category: '출석/과제/시험',
+              status: '답변완료',
+              author: '열정새내기',
+              author_id: null,
+              created_at: '2026-10-21 16:40',
+              views: 35,
+            },
+            {
+              id: 'qna-3',
+              title: '비전공자 신·편입생인데 1학기/2학기 전공 과목 공부 순서 조언 부탁드려요!',
+              content: 'IT 비전공자로 입학했습니다. 코딩 기초가 부족한 상태에서 어떤 과목부터 집중해서 듣고 학습자료실을 어떻게 활용하면 좋을지 선배님들의 팁이 궁금합니다.',
+              category: '전공/학습',
+              status: '답변완료',
+              author: '비전공도전자',
+              author_id: null,
+              created_at: '2026-10-23 20:10',
+              views: 29,
+            },
+          ];
+          const initialQnaReplies = [
+            {
+              id: 'qna-r-1',
+              post_id: 'qna-1',
+              author: '학생회 학술부',
+              author_id: null,
+              content: '출석수업 과목은 지정된 기간에 U-KNOU 홈페이지 [학사정보 > 수업/시험 > 출석수업유형변경] 메뉴에서 "대체시험"으로 변경하실 수 있습니다. 대체시험으로 변경하시면 기말시험 기간에 객관식 또는 온라인 시험으로 평가를 대체하게 됩니다.',
+              created_at: '2026-10-18 13:05',
+            },
+            {
+              id: 'qna-r-2',
+              post_id: 'qna-2',
+              author: '컴과선배',
+              author_id: null,
+              content: '한국방송통신대학교 중앙도서관 홈페이지 로그인 후 [연구·학습지원 > 카피킬러 캠퍼스]를 통해 무료로 표절 검사를 받아보실 수 있습니다. 통상 15%~20% 이하의 표절률을 권장하며, 인용 코드나 레퍼런스는 주석과 참고문헌으로 명확히 출처를 기재하시면 됩니다!',
+              created_at: '2026-10-21 18:12',
+            },
+            {
+              id: 'qna-r-3',
+              post_id: 'qna-3',
+              author: '3학년멘토',
+              author_id: null,
+              content: '반갑습니다! 1학년 과목인 [컴퓨터의이해], [파이썬프로그래밍], [C프로그래밍]부터 차근차근 시작하시는 것을 추천드립니다. 상단 [학술·스터디 > 학습자료] 게시판에서 학년·학기별로 선배들이 올려둔 요약본과 기출 해설을 먼저 훑어보시면 훨씬 수월하실 거예요!',
+              created_at: '2026-10-23 21:30',
+            },
+          ];
+          const stmts = [
+            ...initialQnaPosts.map((q) =>
+              db
+                .prepare(
+                  'INSERT INTO qna_posts (id, title, content, category, status, author, author_id, created_at, views) VALUES (?,?,?,?,?,?,?,?,?)'
+                )
+                .bind(q.id, q.title, q.content, q.category, q.status, q.author, q.author_id, q.created_at, q.views)
+            ),
+            ...initialQnaReplies.map((r) =>
+              db
+                .prepare('INSERT INTO qna_post_replies (id, post_id, author, author_id, content, created_at) VALUES (?,?,?,?,?,?)')
+                .bind(r.id, r.post_id, r.author, r.author_id, r.content, r.created_at)
+            ),
+            db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('qna_posts_init', '1')"),
+          ];
+          await db.batch(stmts);
+          posts = initialQnaPosts as any;
+        }
+      }
+      const { results: replies } = await db.prepare('SELECT * FROM qna_post_replies ORDER BY created_at ASC, rowid ASC').all();
+      return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
+    }
+    if (method === 'POST') {
+      const writer = requireSignedIn(session);
+      const b: any = await readJson(req);
+      if (b.type === 'reply') {
+        const r = {
+          id: `qna-reply-${Date.now()}-${randomHex(3)}`,
+          post_id: str(b.post_id, 80),
+          author: writer.nickname,
+          author_id: writer.id,
+          content: str(b.content, 2000),
+          created_at: nowMinute(),
+        };
+        if (!r.content) throw new HttpError(400, '답변/댓글 내용을 입력해 주세요.');
+        await db
+          .prepare('INSERT INTO qna_post_replies (id, post_id, author, author_id, content, created_at) VALUES (?,?,?,?,?,?)')
+          .bind(r.id, r.post_id, r.author, r.author_id, r.content, r.created_at)
+          .run();
+        await db.prepare("UPDATE qna_posts SET status = '답변완료' WHERE id = ?").bind(r.post_id).run();
+        return json(r);
+      }
+      const p = {
+        id: `qna-${Date.now()}-${randomHex(3)}`,
+        title: str(b.title, 200),
+        content: str(b.content, 20000),
+        category: str(b.category, 20) || '전공/학습',
+        status: '답변대기',
+        author: writer.nickname,
+        author_id: writer.id,
+        created_at: nowMinute(),
+        views: 1,
+        replies: [],
+      };
+      if (!p.title || !p.content) throw new HttpError(400, '질문 제목과 내용을 입력해 주세요.');
+      await db
+        .prepare(
+          'INSERT INTO qna_posts (id, title, content, category, status, author, author_id, created_at, views) VALUES (?,?,?,?,?,?,?,?,?)'
+        )
+        .bind(p.id, p.title, p.content, p.category, p.status, p.author, p.author_id, p.created_at, p.views)
+        .run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('qna_posts_init', '1')").run();
+      return json(p);
+    }
+    if (method === 'DELETE' && id) {
+      const replyId = url.searchParams.get('reply_id');
+      if (replyId) {
+        const rRow: any = await db.prepare('SELECT author_id FROM qna_post_replies WHERE id = ?').bind(replyId).first();
+        if (!rRow) throw new HttpError(404, '댓글을 찾을 수 없습니다.');
+        if (!canModify(session, rRow.author_id)) throw new HttpError(403, '본인이 작성한 댓글만 삭제할 수 있습니다.');
+        await db.prepare('DELETE FROM qna_post_replies WHERE id = ?').bind(replyId).run();
+        return json({ success: true });
+      }
+      const row: any = await db.prepare('SELECT author_id FROM qna_posts WHERE id = ?').bind(id).first();
+      if (!row) throw new HttpError(404, '질문글을 찾을 수 없습니다.');
+      if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
+      await db.prepare('DELETE FROM qna_post_replies WHERE post_id = ?').bind(id).run();
+      await db.prepare('DELETE FROM qna_posts WHERE id = ?').bind(id).run();
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('qna_posts_init', '1')").run();
       return json({ success: true });
     }
   }

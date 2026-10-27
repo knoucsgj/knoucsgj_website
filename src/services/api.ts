@@ -13,6 +13,10 @@ import type {
   FeedbackReply,
   FreePost,
   FreePostReply,
+  MarketPost,
+  MarketReply,
+  QnaPost,
+  QnaReply,
   AcademicMaterial,
   AdminMember,
   ConstitutionVersion,
@@ -576,6 +580,11 @@ export const api = {
     return true;
   },
 
+  async deleteFeedbackReply(feedbackId: string, replyId: string): Promise<boolean> {
+    await fetchStrict<any>(`feedbacks&id=${encodeURIComponent(feedbackId)}&reply_id=${encodeURIComponent(replyId)}`, { method: 'DELETE' });
+    return true;
+  },
+
   // ==========================================
   // 10. 커뮤니티 자유게시판 (Free Posts) CRUD - D1 전용
   // ==========================================
@@ -603,6 +612,97 @@ export const api = {
 
   async deleteFreePost(id: string): Promise<boolean> {
     await fetchStrict<any>(`freeposts&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  async deleteFreePostReply(postId: string, replyId: string): Promise<boolean> {
+    await fetchStrict<any>(`freeposts&id=${encodeURIComponent(postId)}&reply_id=${encodeURIComponent(replyId)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  // ==========================================
+  // 10-1. 커뮤니티 벼룩시장 (Market Posts) CRUD - D1 전용
+  // ==========================================
+  async getMarketPosts(): Promise<MarketPost[]> {
+    const cloudPosts = await fetchD1<MarketPost[]>('market');
+    if (Array.isArray(cloudPosts)) {
+      return cloudPosts;
+    }
+    return [];
+  },
+
+  async createMarketPost(post: {
+    title: string;
+    content: string;
+    category: MarketPost['category'];
+    price: string;
+  }): Promise<MarketPost> {
+    return fetchStrict<MarketPost>('market', {
+      method: 'POST',
+      body: JSON.stringify(post),
+    });
+  },
+
+  async addMarketReply(postId: string, reply: Pick<MarketReply, 'content'>): Promise<void> {
+    await fetchStrict<any>('market', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'reply', post_id: postId, ...reply }),
+    });
+  },
+
+  async updateMarketStatus(id: string, status: MarketPost['status']): Promise<void> {
+    await fetchStrict<any>(`market&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async deleteMarketPost(id: string): Promise<boolean> {
+    await fetchStrict<any>(`market&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  async deleteMarketReply(postId: string, replyId: string): Promise<boolean> {
+    await fetchStrict<any>(`market&id=${encodeURIComponent(postId)}&reply_id=${encodeURIComponent(replyId)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  // ==========================================
+  // 10-2. 커뮤니티 Q&A 코너 (QnA Posts) CRUD - D1 전용
+  // ==========================================
+  async getQnaPosts(): Promise<QnaPost[]> {
+    const cloudPosts = await fetchD1<QnaPost[]>('qna');
+    if (Array.isArray(cloudPosts)) {
+      return cloudPosts;
+    }
+    return [];
+  },
+
+  async createQnaPost(post: {
+    title: string;
+    content: string;
+    category: QnaPost['category'];
+  }): Promise<QnaPost> {
+    return fetchStrict<QnaPost>('qna', {
+      method: 'POST',
+      body: JSON.stringify(post),
+    });
+  },
+
+  async addQnaReply(postId: string, reply: Pick<QnaReply, 'content'>): Promise<void> {
+    await fetchStrict<any>('qna', {
+      method: 'POST',
+      body: JSON.stringify({ type: 'reply', post_id: postId, ...reply }),
+    });
+  },
+
+  async deleteQnaPost(id: string): Promise<boolean> {
+    await fetchStrict<any>(`qna&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
+  },
+
+  async deleteQnaReply(postId: string, replyId: string): Promise<boolean> {
+    await fetchStrict<any>(`qna&id=${encodeURIComponent(postId)}&reply_id=${encodeURIComponent(replyId)}`, { method: 'DELETE' });
     return true;
   },
 

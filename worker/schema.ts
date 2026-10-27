@@ -171,6 +171,23 @@ const CREATE_STATEMENTS = [
     category TEXT NOT NULL DEFAULT 'general', uploaded_by TEXT, uploaded_at TEXT NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_r2_files_uploaded ON r2_files (uploaded_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_r2_files_category ON r2_files (category)`,
+  `CREATE TABLE IF NOT EXISTS market_posts (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT '팝니다', price TEXT NOT NULL DEFAULT '협의',
+    status TEXT NOT NULL DEFAULT '거래가능', author TEXT NOT NULL, author_id TEXT,
+    created_at TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 1)`,
+  `CREATE INDEX IF NOT EXISTS idx_market_created ON market_posts (created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS market_post_replies (
+    id TEXT PRIMARY KEY, post_id TEXT NOT NULL, author TEXT NOT NULL, author_id TEXT,
+    content TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS qna_posts (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT '전공/학습', status TEXT NOT NULL DEFAULT '답변대기',
+    author TEXT NOT NULL, author_id TEXT, created_at TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 1)`,
+  `CREATE INDEX IF NOT EXISTS idx_qna_created ON qna_posts (created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS qna_post_replies (
+    id TEXT PRIMARY KEY, post_id TEXT NOT NULL, author TEXT NOT NULL, author_id TEXT,
+    content TEXT NOT NULL, created_at TEXT NOT NULL)`,
 ];
 
 // Columns added after the first release (ownership + study approval)

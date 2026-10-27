@@ -245,6 +245,51 @@ export interface FreePost {
   replies: FreePostReply[];
 }
 
+// 벼룩시장 (중고 교재·학용품·물품 거래 및 나눔) 모델
+export interface MarketReply {
+  id: string;
+  author_id?: string | null;
+  author: string;
+  content: string;
+  created_at: string;
+}
+
+export interface MarketPost {
+  id: string;
+  title: string;
+  content: string;
+  category: '팝니다' | '삽니다' | '무료나눔' | '교재교환';
+  price: string;
+  status: '거래가능' | '예약중' | '거래완료';
+  author: string;
+  author_id?: string | null;
+  created_at: string;
+  views: number;
+  replies: MarketReply[];
+}
+
+// Q&A 코너 (학우 질의응답) 모델
+export interface QnaReply {
+  id: string;
+  author_id?: string | null;
+  author: string;
+  content: string;
+  created_at: string;
+}
+
+export interface QnaPost {
+  id: string;
+  title: string;
+  content: string;
+  category: '전공/학습' | '학사/행정' | '출석/과제/시험' | '진로/자격증' | '기타질문';
+  status: '답변대기' | '답변완료';
+  author: string;
+  author_id?: string | null;
+  created_at: string;
+  views: number;
+  replies: QnaReply[];
+}
+
 // 학습자료 및 기타자료 모델
 export interface AcademicMaterial {
   id: string;
