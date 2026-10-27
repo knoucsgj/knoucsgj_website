@@ -236,7 +236,10 @@ function validateRegistration(b: any) {
   const name = str(b.name, 30);
   const phone = str(b.phone, 20).replace(/[^0-9]/g, '');
   const address = str(b.address, 200);
-  const student_no = str(b.student_no, 20).replace(/[^0-9]/g, '');
+  let student_no = str(b.student_no, 20).trim();
+  if (/^\d{7}$/.test(student_no)) {
+    student_no = `${student_no.slice(0, 6)}-${student_no.slice(6)}`;
+  }
   const regional_college = str(b.regional_college, 20);
   const department = str(b.department, 30);
   const learning_center = str(b.learning_center, 50) || '광주전남지역대학';
@@ -261,7 +264,9 @@ function validateRegistration(b: any) {
   if (name.length < 2) throw new HttpError(400, '성명을 입력해 주세요.');
   if (!/^0\d{8,10}$/.test(phone)) throw new HttpError(400, '연락처를 올바르게 입력해 주세요.');
   if (address.length < 2) throw new HttpError(400, '거주지역(시/도, 시/군/구)을 선택해 주세요.');
-  if (!/^\d{12}$/.test(student_no)) throw new HttpError(400, '학번은 하이픈(-)을 제외한 숫자 12자리로 입력해 주세요.');
+  if (!/^\d{6}-\d$/.test(student_no) && !/^\d{12}$/.test(student_no)) {
+    throw new HttpError(400, '학번은 하이픈(-) 포함 앞 8자리(예: 202134-3)로 입력해 주세요.');
+  }
   if (!REGIONAL_COLLEGES.includes(regional_college)) throw new HttpError(400, '소속 지역대학을 선택해 주세요.');
   if (department.length < 2) throw new HttpError(400, '소속 학과를 입력해 주세요.');
   if (b.consent_privacy !== true) throw new HttpError(400, '개인정보 수집·이용에 동의해 주세요.');
@@ -623,7 +628,10 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     const b: any = await readJson(req);
     const username = str(b.username || b.email, 80).toLowerCase();
     const name = str(b.name, 30);
-    const student_no = str(b.student_no, 12).replace(/[^0-9]/g, '');
+    let student_no = str(b.student_no, 20).trim();
+    if (/^\d{7}$/.test(student_no)) {
+      student_no = `${student_no.slice(0, 6)}-${student_no.slice(6)}`;
+    }
     const phone = str(b.phone, 20).replace(/[^0-9]/g, '');
     const new_password = String(b.new_password || '');
 
@@ -635,17 +643,22 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     await checkThrottle(db, key);
 
     // Verify member identity matching email, name, student_no
-    let query = 'SELECT id FROM members WHERE username = ? AND name = ? AND student_no = ?';
-    const params = [username, name, student_no];
-    if (phone) {
-      query += ' AND phone = ?';
-      params.push(phone);
-    }
-
-    const row: any = await db.prepare(query).bind(...params).first();
+    const row: any = await db.prepare('SELECT id, student_no, phone FROM members WHERE username = ? AND name = ?').bind(username, name).first();
     if (!row) {
       await recordFailure(db, key);
       throw new HttpError(404, '일치하는 회원 정보를 찾을 수 없습니다. 입력하신 정보를 다시 확인해 주세요.');
+    }
+    const dbSn = String(row.student_no || '');
+    const inputClean = student_no.replace(/[^0-9]/g, '');
+    const dbSnClean = dbSn.replace(/[^0-9]/g, '');
+    const matchesSn = dbSn === student_no || dbSnClean === inputClean || (dbSnClean.length === 12 && inputClean.length === 7 && dbSnClean.startsWith(inputClean.slice(0, 6)) && dbSnClean.endsWith(inputClean.slice(6)));
+    if (!matchesSn) {
+      await recordFailure(db, key);
+      throw new HttpError(400, '학번 정보가 일치하지 않습니다. 입력하신 정보를 다시 확인해 주세요.');
+    }
+    if (phone && row.phone !== phone) {
+      await recordFailure(db, key);
+      throw new HttpError(400, '휴대전화 번호 정보가 일치하지 않습니다.');
     }
 
     if (new_password.length < 8 || !/[A-Za-z]/.test(new_password) || !/[0-9]/.test(new_password)) {

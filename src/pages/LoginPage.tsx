@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '../services/auth';
+import { formatStudentNoInput } from '../lib/knouDepartments';
 import { LogIn, AlertCircle, KeyRound, CheckCircle2, X } from 'lucide-react';
 
 const inputCls =
@@ -218,14 +219,14 @@ export const LoginPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">학번 (숫자 12자리)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">학번 (앞 8자리)</label>
                   <input
                     type="text"
                     required
                     value={resetStudentNo}
-                    onChange={(e) => setResetStudentNo(e.target.value.replace(/[^0-9]/g, '').slice(0, 12))}
-                    placeholder="12자리 숫자 (- 제외)"
-                    maxLength={12}
+                    onChange={(e) => setResetStudentNo(formatStudentNoInput(e.target.value))}
+                    placeholder="예: 202134-3"
+                    maxLength={8}
                     className={inputCls}
                   />
                 </div>

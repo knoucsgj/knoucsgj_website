@@ -3,12 +3,19 @@ import { showConfirm } from '../components/ui/GlobalDialog';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, useAuth } from '../services/auth';
 import { UserCircle, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
+import { parseStudentNo } from '../lib/knouDepartments';
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none';
 
 const maskPhone = (p: string) => (p.length >= 8 ? `${p.slice(0, 3)}-****-${p.slice(-4)}` : p);
-const maskStudentNo = (sn: string) => (sn.length > 5 ? `${sn.slice(0, -5)}*****` : '*****');
+const maskStudentNo = (sn: string) => {
+  if (sn.includes('-')) {
+    const parts = sn.split('-');
+    return `${parts[0]}-*`;
+  }
+  return sn.length > 5 ? `${sn.slice(0, -5)}*****` : '*****';
+};
 
 export const AccountPage: React.FC = () => {
   const navigate = useNavigate();
@@ -69,6 +76,8 @@ export const AccountPage: React.FC = () => {
       ? '정회원'
       : '준회원';
 
+  const parsedSn = parseStudentNo(member.student_no);
+
   const rows: [string, string][] = [
     ['회원 등급', roleLabel],
     ['아이디', member.username],
@@ -77,7 +86,10 @@ export const AccountPage: React.FC = () => {
     ['연락처', showSensitive ? member.phone : maskPhone(member.phone)],
     ['소속 학습관', member.learning_center || (member.regional_college === '광주전남' ? '광주전남지역대학' : '해당 없음 (타 지역대학 / 준회원)')],
     ['거주지역', member.address],
-    ['학번', showSensitive ? member.student_no : maskStudentNo(member.student_no)],
+    ['학번 (앞 8자리)', showSensitive ? member.student_no : maskStudentNo(member.student_no)],
+    ...(parsedSn.isValid
+      ? ([['입학 정보', `${parsedSn.admissionYear}년 입학 (${parsedSn.admissionGrade}학년${parsedSn.departmentName ? ` · ${parsedSn.departmentName}` : ''})`]] as [string, string][])
+      : []),
     ['소속 지역대학', `${member.regional_college} 지역대학`],
     ['소속 학과', member.department],
     ['가입일', member.created_at.split('T')[0]],

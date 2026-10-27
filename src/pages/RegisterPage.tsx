@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
 import { LEARNING_CENTERS, KOREA_DISTRICTS, SIDO_LIST } from '../lib/koreaDistricts';
+import { formatStudentNoInput, parseStudentNo } from '../lib/knouDepartments';
 import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin, Sparkles, Award } from 'lucide-react';
 
 const inputCls =
@@ -91,6 +92,20 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  const parsedStudentNo = parseStudentNo(form.student_no);
+
+  const handleStudentNoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatStudentNoInput(e.target.value);
+    const parsed = parseStudentNo(formatted);
+    setForm((f) => {
+      const updated = { ...f, student_no: formatted };
+      if (parsed.departmentName) {
+        updated.department = parsed.departmentName;
+      }
+      return updated;
+    });
+  };
+
   const isRegularCandidate =
     form.regional_college === '광주전남' &&
     (form.department.includes('컴퓨터과학') || form.department === '컴퓨터과학과');
@@ -170,8 +185,8 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (!/^\d{12}$/.test(form.student_no.trim())) {
-      setError('학번은 하이픈(-)을 제외한 숫자 12자리로 정확히 입력해 주세요.');
+    if (!/^\d{6}-\d$/.test(form.student_no.trim())) {
+      setError('학번은 하이픈(-) 포함 앞 8자리(예: 202134-3)로 정확히 입력해 주세요.');
       window.scrollTo({ top: 350, behavior: 'smooth' });
       return;
     }
@@ -448,20 +463,32 @@ export const RegisterPage: React.FC = () => {
 
           {/* Student No */}
           <div>
-            <label className={labelCls}>
-              학번 (12자리 숫자) <span className="text-rose-500 font-bold">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="font-bold text-slate-800 text-sm">
+                학번 (앞 8자리) <span className="text-rose-500 font-bold">*</span>
+              </label>
+              {parsedStudentNo.isValid && (
+                <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                  {parsedStudentNo.admissionYear}년 입학 · {parsedStudentNo.admissionGrade}학년{parsedStudentNo.departmentName ? ` · ${parsedStudentNo.departmentName}` : ''}
+                </span>
+              )}
+            </div>
             <input
-              className={`${inputCls} font-mono`}
+              className={`${inputCls} font-mono tracking-wider font-bold text-base`}
               required
               value={form.student_no}
-              onChange={(e) => setForm((f) => ({ ...f, student_no: e.target.value.replace(/[^0-9]/g, '') }))}
-              placeholder="202634123456"
-              maxLength={12}
+              onChange={handleStudentNoChange}
+              placeholder="예: 202134-3"
+              maxLength={8}
             />
-            <p className="text-xs text-slate-500 mt-1">
-              하이픈(-)을 제외한 숫자 12자리를 입력해 주세요. (정회원 등급 심사 및 재학생 확인에 활용)
-            </p>
+            <div className="space-y-0.5 mt-1 text-xs text-slate-500">
+              <p>
+                * 하이픈(-) 포함 앞 8자리를 입력해 주세요. (앞 4자리: 입학연도, 5~6자리: 학과코드, 8번째 자리: 입학학년)
+              </p>
+              <p className="text-emerald-700 font-medium">
+                🔒 개인정보 보호를 위해 학번 뒷자리(개인 일련번호 5자리)는 일체 수집하지 않습니다.
+              </p>
+            </div>
           </div>
 
           {/* Regional College & Department */}

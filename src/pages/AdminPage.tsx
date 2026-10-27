@@ -9,6 +9,7 @@ import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
 import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
+import { parseStudentNo } from '../lib/knouDepartments';
 import {
   Shield,
   Scale,
@@ -567,20 +568,25 @@ export const AdminPage: React.FC = () => {
       regular: '정회원',
       associate: '준회원',
     };
-    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '소속학습관', '거주지역', '학번', '지역대학', '학과'];
-    const rows = members.map((m) => [
-      m.created_at.split('T')[0],
-      roleNames[m.role] || m.role || '준회원',
-      m.username,
-      m.nickname,
-      m.name,
-      m.phone,
-      m.learning_center || (m.regional_college === '광주전남' ? '광주전남지역대학' : '해당 없음 (타 지역대학 / 준회원)'),
-      m.address,
-      m.student_no,
-      m.regional_college,
-      m.department
-    ]);
+    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '소속학습관', '거주지역', '학번', '입학연도', '입학학년', '지역대학', '학과'];
+    const rows = members.map((m) => {
+      const parsedSn = parseStudentNo(m.student_no);
+      return [
+        m.created_at.split('T')[0],
+        roleNames[m.role] || m.role || '준회원',
+        m.username,
+        m.nickname,
+        m.name,
+        m.phone,
+        m.learning_center || (m.regional_college === '광주전남' ? '광주전남지역대학' : '해당 없음 (타 지역대학 / 준회원)'),
+        m.address,
+        m.student_no,
+        parsedSn.admissionYear ? `${parsedSn.admissionYear}년` : '',
+        parsedSn.admissionGrade ? `${parsedSn.admissionGrade}학년` : '',
+        m.regional_college,
+        m.department
+      ];
+    });
     const csv = '\uFEFF' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
@@ -1780,7 +1786,7 @@ export const AdminPage: React.FC = () => {
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    {['가입일', '등급', '닉네임(아이디)', '성명', '연락처', '학번', '소속 학습관', '거주지역', '지역대학 / 학과', '관리'].map((h) => (
+                    {['가입일', '등급', '닉네임(아이디)', '성명', '연락처', '학번 (입학구분)', '소속 학습관', '거주지역', '지역대학 / 학과', '관리'].map((h) => (
                       <th key={h} className="px-3 py-2 font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1797,6 +1803,7 @@ export const AdminPage: React.FC = () => {
                       <span className="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">준회원</span>
                     );
 
+                    const parsedSn = parseStudentNo(m.student_no);
                     return (
                       <tr key={m.id} className="align-top">
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.created_at.split('T')[0]}</td>
@@ -1807,7 +1814,19 @@ export const AdminPage: React.FC = () => {
                         </td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.name}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.phone}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="font-mono font-bold text-slate-800 text-xs sm:text-sm">{m.student_no}</div>
+                          {parsedSn.isValid ? (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                {parsedSn.admissionYear}년
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {parsedSn.admissionGrade}학년
+                              </span>
+                            </div>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700 border border-blue-200 text-xs">
                             {m.learning_center || (m.regional_college === '광주전남' ? '광주전남지역대학' : '타 지역대학 / 준회원')}
@@ -3349,7 +3368,17 @@ export const AdminPage: React.FC = () => {
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
               <div><span className="text-slate-400 font-medium">대상 학우:</span> <strong className="text-slate-800">{editingRoleMember.name}</strong> ({editingRoleMember.username})</div>
               <div><span className="text-slate-400 font-medium">닉네임:</span> <span className="text-slate-700 font-bold">{editingRoleMember.nickname}</span></div>
-              <div><span className="text-slate-400 font-medium">학번 / 소속:</span> <span className="text-slate-700">{editingRoleMember.student_no} / {editingRoleMember.regional_college} {editingRoleMember.department}</span></div>
+              <div>
+                <span className="text-slate-400 font-medium">학번 / 소속:</span>{' '}
+                <span className="font-mono font-bold text-slate-800">{editingRoleMember.student_no}</span>
+                {(() => {
+                  const ps = parseStudentNo(editingRoleMember.student_no);
+                  return ps.isValid ? (
+                    <span className="ml-1 text-blue-600 font-semibold">({ps.admissionYear}년 입학 · {ps.admissionGrade}학년)</span>
+                  ) : null;
+                })()}{' '}
+                <span className="text-slate-500">/ {editingRoleMember.regional_college} {editingRoleMember.department}</span>
+              </div>
               <div><span className="text-slate-400 font-medium">현재 등급:</span> <span className="font-bold text-indigo-600">{editingRoleMember.role === 'president' ? '학생회장' : editingRoleMember.role === 'officer' ? '임원진' : editingRoleMember.role === 'regular' ? '정회원' : '준회원'}</span></div>
             </div>
 
@@ -3434,7 +3463,17 @@ export const AdminPage: React.FC = () => {
 
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
               <div><span className="text-slate-400 font-medium">대상 학우:</span> <strong className="text-slate-800">{editingNicknameMember.name}</strong> ({editingNicknameMember.username})</div>
-              <div><span className="text-slate-400 font-medium">학번 / 소속:</span> <span className="text-slate-700">{editingNicknameMember.student_no} / {editingNicknameMember.regional_college} {editingNicknameMember.department}</span></div>
+              <div>
+                <span className="text-slate-400 font-medium">학번 / 소속:</span>{' '}
+                <span className="font-mono font-bold text-slate-800">{editingNicknameMember.student_no}</span>
+                {(() => {
+                  const ps = parseStudentNo(editingNicknameMember.student_no);
+                  return ps.isValid ? (
+                    <span className="ml-1 text-blue-600 font-semibold">({ps.admissionYear}년 입학 · {ps.admissionGrade}학년)</span>
+                  ) : null;
+                })()}{' '}
+                <span className="text-slate-500">/ {editingNicknameMember.regional_college} {editingNicknameMember.department}</span>
+              </div>
               <div><span className="text-slate-400 font-medium">현재 닉네임:</span> <span className="text-slate-700 font-bold">{editingNicknameMember.nickname}</span></div>
             </div>
 
