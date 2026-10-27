@@ -567,7 +567,7 @@ export const AdminPage: React.FC = () => {
       regular: '정회원',
       associate: '준회원',
     };
-    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '주소', '학번', '지역대학', '학과'];
+    const header = ['가입일', '회원등급', '아이디', '닉네임', '성명', '연락처', '소속학습관', '거주지역', '학번', '지역대학', '학과'];
     const rows = members.map((m) => [
       m.created_at.split('T')[0],
       roleNames[m.role] || m.role || '준회원',
@@ -575,6 +575,7 @@ export const AdminPage: React.FC = () => {
       m.nickname,
       m.name,
       m.phone,
+      m.learning_center || '광주전남지역대학',
       m.address,
       m.student_no,
       m.regional_college,
@@ -1779,7 +1780,7 @@ export const AdminPage: React.FC = () => {
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    {['가입일', '등급', '닉네임(아이디)', '성명', '연락처', '학번', '지역대학 / 학과', '주소', '관리'].map((h) => (
+                    {['가입일', '등급', '닉네임(아이디)', '성명', '연락처', '학번', '소속 학습관', '거주지역', '지역대학 / 학과', '관리'].map((h) => (
                       <th key={h} className="px-3 py-2 font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -1807,8 +1808,13 @@ export const AdminPage: React.FC = () => {
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.name}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.phone}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.student_no}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full font-bold bg-blue-50 text-blue-700 border border-blue-200 text-xs">
+                            {m.learning_center || '광주전남지역대학'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 min-w-[140px] text-xs text-slate-700 font-medium">{m.address}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.regional_college} / {m.department}</td>
-                        <td className="px-3 py-2.5 min-w-[200px]">{m.address}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap space-x-1.5">
                           <button
                             onClick={() => handleOpenRoleModal(m)}

@@ -239,6 +239,7 @@ function validateRegistration(b: any) {
   const student_no = str(b.student_no, 20).replace(/[^0-9]/g, '');
   const regional_college = str(b.regional_college, 20);
   const department = str(b.department, 30);
+  const learning_center = str(b.learning_center, 50) || '광주전남지역대학';
 
   // Email format validation for username
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -259,13 +260,13 @@ function validateRegistration(b: any) {
   }
   if (name.length < 2) throw new HttpError(400, '성명을 입력해 주세요.');
   if (!/^0\d{8,10}$/.test(phone)) throw new HttpError(400, '연락처를 올바르게 입력해 주세요.');
-  if (address.length < 5) throw new HttpError(400, '주소를 입력해 주세요.');
+  if (address.length < 2) throw new HttpError(400, '거주지역(시/도, 시/군/구)을 선택해 주세요.');
   if (!/^\d{12}$/.test(student_no)) throw new HttpError(400, '학번은 하이픈(-)을 제외한 숫자 12자리로 입력해 주세요.');
   if (!REGIONAL_COLLEGES.includes(regional_college)) throw new HttpError(400, '소속 지역대학을 선택해 주세요.');
   if (department.length < 2) throw new HttpError(400, '소속 학과를 입력해 주세요.');
   if (b.consent_privacy !== true) throw new HttpError(400, '개인정보 수집·이용에 동의해 주세요.');
   if (b.consent_terms !== true) throw new HttpError(400, '이용약관에 동의해 주세요.');
-  return { username, password, nickname, name, phone, address, student_no, regional_college, department };
+  return { username, password, nickname, name, phone, address, student_no, regional_college, department, learning_center };
 }
 
 // ---------------------------------------------------------------- email service
@@ -491,17 +492,17 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     await db
       .prepare(
         `INSERT INTO members (id, username, password_hash, password_salt, nickname, name, phone, address,
-                              student_no, regional_college, department, role, consent_version, consented_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                              student_no, regional_college, department, role, consent_version, consented_at, created_at, learning_center)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(id, v.username, hash, salt, v.nickname, v.name, v.phone, v.address, v.student_no,
-        v.regional_college, v.department, defaultRole, PRIVACY_VERSION, new Date().toISOString(), new Date().toISOString())
+        v.regional_college, v.department, defaultRole, PRIVACY_VERSION, new Date().toISOString(), new Date().toISOString(), v.learning_center)
       .run();
     await db.prepare('DELETE FROM email_verifications WHERE email = ?').bind(v.username).run();
     const token = await createSession(db, 'member', id, MEMBER_TTL);
     const h = new Headers();
     h.append('Set-Cookie', cookieHeader(MEMBER_COOKIE, token, MEMBER_TTL));
-    const member = await db.prepare('SELECT id, username, nickname, name, phone, address, student_no, regional_college, department, role, created_at FROM members WHERE id = ?').bind(id).first();
+    const member = await db.prepare('SELECT id, username, nickname, name, phone, address, student_no, regional_college, department, role, created_at, learning_center FROM members WHERE id = ?').bind(id).first();
     return json({ member }, 201, h);
   }
 

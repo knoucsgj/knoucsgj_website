@@ -1,33 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
-import { PrivacyConsentText, TermsText } from '../components/auth/PrivacyConsent';
-import { UserPlus, AlertCircle, Mail, CheckCircle2, Clock, Send, RefreshCw, Search, MapPin } from 'lucide-react';
+import { LEARNING_CENTERS, KOREA_DISTRICTS, SIDO_LIST } from '../lib/koreaDistricts';
+import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin } from 'lucide-react';
 
 const inputCls =
-  'w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
+  'w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-hidden transition-all text-sm';
 const labelCls = 'block font-bold text-slate-800 mb-1.5 text-sm';
-
-// Daum Postcode dynamic script loader fallback
-const loadDaumPostcodeScript = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if ((window as any).daum && (window as any).daum.Postcode) {
-      return resolve();
-    }
-    const existing = document.getElementById('daum-postcode-script');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('우편번호 검색 스크립트 로드 실패')));
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'daum-postcode-script';
-    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('우편번호 검색 서비스를 불러오지 못했습니다. 네트워크 상태를 확인해 주세요.'));
-    document.head.appendChild(script);
-  });
-};
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -46,11 +25,12 @@ export const RegisterPage: React.FC = () => {
     department: '컴퓨터과학과',
   });
 
-  // Standardized Address states
-  const [zonecode, setZonecode] = useState('');
-  const [baseAddress, setBaseAddress] = useState('');
-  const [detailAddress, setDetailAddress] = useState('');
-  const detailAddressRef = useRef<HTMLInputElement>(null);
+  // 소속 학습관 (4곳 중 선택)
+  const [learningCenter, setLearningCenter] = useState<string>('광주전남지역대학');
+
+  // 거주지역 (시·도 및 시·군·구)
+  const [residenceSido, setResidenceSido] = useState<string>('광주광역시');
+  const [residenceSigungu, setResidenceSigungu] = useState<string>('북구');
 
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -66,6 +46,10 @@ export const RegisterPage: React.FC = () => {
   const [cooldown, setCooldown] = useState(0); // in seconds
   const [expireSeconds, setExpireSeconds] = useState(0); // 10 minutes (600s)
   const [emailMsg, setEmailMsg] = useState<{ type: 'info' | 'error' | 'success'; text: string } | null>(null);
+
+  // Password visibility toggle
+  const [showPw, setShowPw] = useState(false);
+  const [showPwC, setShowPwC] = useState(false);
 
   // Cooldown timer
   useEffect(() => {
@@ -110,7 +94,7 @@ export const RegisterPage: React.FC = () => {
       setExpireSeconds(600); // 10 minutes
       setEmailMsg({
         type: 'info',
-        text: res.message || '인증번호가 발송되었습니다. 메일함을 확인해 주세요.',
+        text: res.message || '인증번호(6자리)가 발송되었습니다. 메일함을 확인해 주세요.',
       });
     } catch (err: any) {
       setEmailMsg({ type: 'error', text: err.message || '인증번호 발송에 실패했습니다.' });
@@ -121,8 +105,9 @@ export const RegisterPage: React.FC = () => {
 
   const handleVerifyCode = async () => {
     setEmailMsg(null);
-    if (!code.trim()) {
-      setEmailMsg({ type: 'error', text: '6자리 인증번호를 입력해 주세요.' });
+    setError('');
+    if (!code || code.trim().length !== 6) {
+      setEmailMsg({ type: 'error', text: '숫자 6자리 인증번호를 정확히 입력해 주세요.' });
       return;
     }
 
@@ -135,47 +120,6 @@ export const RegisterPage: React.FC = () => {
       setEmailMsg({ type: 'error', text: err.message || '인증번호가 일치하지 않습니다.' });
     } finally {
       setIsVerifyingCode(false);
-    }
-  };
-
-  // Address search with Daum Postcode API
-  const handleSearchAddress = async () => {
-    try {
-      await loadDaumPostcodeScript();
-      new (window as any).daum.Postcode({
-        oncomplete: (data: any) => {
-          // Standardized address: 도로명 또는 지번
-          let addr = '';
-          let extraAddr = '';
-
-          if (data.userSelectedType === 'R') {
-            addr = data.roadAddress;
-            if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-              extraAddr += data.bname;
-            }
-            if (data.buildingName !== '' && data.apartment === 'Y') {
-              extraAddr += extraAddr !== '' ? `, ${data.buildingName}` : data.buildingName;
-            }
-            if (extraAddr !== '') {
-              extraAddr = ` (${extraAddr})`;
-            }
-          } else {
-            // 지번 주소 선택 시
-            addr = data.jibunAddress || data.address;
-          }
-
-          setZonecode(data.zonecode); // 5자리 우편번호
-          setBaseAddress(`${addr}${extraAddr}`);
-          setError('');
-
-          // Auto-focus detail address field
-          setTimeout(() => {
-            detailAddressRef.current?.focus();
-          }, 100);
-        },
-      }).open();
-    } catch (err: any) {
-      alert(err.message || '주소 검색 서비스를 불러올 수 없습니다.');
     }
   };
 
@@ -213,9 +157,9 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (!zonecode || !baseAddress.trim()) {
-      setError('주소 검색을 통해 우편번호와 기본 주소를 입력해 주세요.');
-      window.scrollTo({ top: 350, behavior: 'smooth' });
+    if (!residenceSido || !residenceSigungu) {
+      setError('거주지역(시·도 및 시·군·구)을 선택해 주세요.');
+      window.scrollTo({ top: 400, behavior: 'smooth' });
       return;
     }
 
@@ -224,7 +168,7 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    const fullAddress = `(${zonecode}) ${baseAddress} ${detailAddress}`.trim();
+    const fullAddress = `${residenceSido} ${residenceSigungu}`.trim();
 
     try {
       setSubmitting(true);
@@ -235,6 +179,7 @@ export const RegisterPage: React.FC = () => {
         name: form.name.trim(),
         phone: form.phone.trim(),
         address: fullAddress,
+        learning_center: learningCenter,
         student_no: form.student_no.trim(),
         regional_college: form.regional_college,
         department: form.department,
@@ -251,105 +196,90 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="border-b border-slate-200 pb-6">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-blue-700 tracking-wider uppercase mb-1">
-          <UserPlus className="w-4 h-4" /> Member Registration
+    <div className="max-w-2xl mx-auto py-8 sm:py-12 px-4">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-3 border border-blue-100 shadow-xs">
+          <Shield className="w-7 h-7" />
         </div>
-        <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <h1 className="font-knou text-2xl sm:text-3xl font-bold text-slate-950">회원가입</h1>
-          <span className="text-xs text-slate-500 font-medium">
-            <span className="text-rose-500 font-bold">*</span> 표시는 필수 입력 항목입니다.
-          </span>
-        </div>
-        <p className="text-sm sm:text-base text-slate-600 mt-1.5">
-          외부 이메일 인증 후 가입하시면 자유게시판·열린 건의함·학습자료 등록과 스터디 개설 신청을 이용하실 수 있습니다.
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-knou">
+          컴퓨터과학과 학생회 회원가입
+        </h1>
+        <p className="text-sm text-slate-600 mt-2">
+          광주전남지역대학 컴퓨터과학과 학우 여러분을 진심으로 환영합니다.
         </p>
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 p-4 rounded-2xl bg-red-50 border border-red-200 text-sm text-red-800 font-medium">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span>{error}</span>
+        <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600" />
+          <div className="leading-relaxed font-medium">{error}</div>
         </div>
       )}
 
       <form onSubmit={submit} className="space-y-6">
-        {/* Section 1: Account & Email Verification */}
+        {/* Section 1: 계정 정보 (이메일 인증) */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <Mail className="w-5 h-5 text-blue-600" />
-            계정 정보 (이메일 인증)
-          </h2>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            <h2 className="font-bold text-slate-900 text-base">로그인 및 계정 정보</h2>
+          </div>
 
+          {/* Email / Username with Real-time Verification */}
           <div>
             <label className={labelCls}>
-              아이디 (외부 이메일 주소) <span className="text-rose-500 font-bold">*</span>
+              아이디 (실제 수신 가능한 이메일 주소) <span className="text-rose-500 font-bold">*</span>
             </label>
             <div className="flex gap-2">
               <input
-                type="email"
                 className={`${inputCls} ${isEmailVerified ? 'bg-slate-50 text-slate-600 font-semibold cursor-not-allowed' : ''}`}
+                type="email"
                 required
                 readOnly={isEmailVerified}
                 value={form.username}
                 onChange={set('username')}
+                placeholder="예: knoucs@gmail.com"
                 autoComplete="email"
-                placeholder="예: user@naver.com, user@gmail.com"
-                maxLength={80}
               />
-              {!isEmailVerified ? (
-                <button
-                  type="button"
-                  onClick={handleSendCode}
-                  disabled={isSendingCode || cooldown > 0}
-                  className="shrink-0 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-xs"
-                >
-                  {isSendingCode ? (
-                    '발송 중...'
-                  ) : cooldown > 0 ? (
-                    `${cooldown}초 후 재발송`
-                  ) : isCodeSent ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5" /> 재발송
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5" /> 인증번호 발송
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEmailVerified(false);
-                    setIsCodeSent(false);
-                    setCode('');
-                    setEmailMsg({ type: 'info', text: '이메일을 변경하려면 다시 인증번호를 발송해 주세요.' });
-                  }}
-                  className="shrink-0 px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold"
-                >
-                  변경
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={isSendingCode || cooldown > 0 || isEmailVerified}
+                className="shrink-0 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold text-xs sm:text-sm transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isSendingCode ? (
+                  <span>발송 중...</span>
+                ) : cooldown > 0 ? (
+                  <span>{cooldown}초 후 재요청</span>
+                ) : isEmailVerified ? (
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" /> 인증완료
+                  </span>
+                ) : isCodeSent ? (
+                  <span>인증번호 재발송</span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Send className="w-3.5 h-3.5" /> 인증번호 발송
+                  </span>
+                )}
+              </button>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              네이버, 구글, 다음 등 실제 사용 중인 외부 이메일을 입력해 주세요.
+              비밀번호 재설정 및 주요 학사 알림 수신을 위해 본인이 소유한 실제 이메일을 입력해 주세요.
             </p>
           </div>
 
           {/* Verification Code Input */}
           {isCodeSent && !isEmailVerified && (
-            <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 animate-in fade-in duration-200">
+            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-2 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-blue-950">
-                  인증번호 6자리 입력 <span className="text-rose-500 font-bold">*</span>
+                <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>이메일로 전송된 숫자 6자리 인증번호</span>
                 </label>
                 {expireSeconds > 0 && (
-                  <span className="text-xs font-semibold text-rose-600 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    남은 시간 {formatTimer(expireSeconds)}
+                  <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    유효시간 {formatTimer(expireSeconds)}
                   </span>
                 )}
               </div>
@@ -359,201 +289,250 @@ export const RegisterPage: React.FC = () => {
                   maxLength={6}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="6자리 숫자"
-                  className="w-full px-4 py-2.5 bg-white rounded-xl border border-blue-200 text-center text-lg font-mono tracking-widest font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="인증번호 6자리 입력"
+                  className="w-full px-4 py-2 rounded-xl border border-blue-300 bg-white font-mono tracking-widest text-base font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   type="button"
                   onClick={handleVerifyCode}
-                  disabled={isVerifyingCode || !code.trim() || expireSeconds <= 0}
-                  className="shrink-0 px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 text-white font-bold text-xs transition-colors shadow-xs"
+                  disabled={isVerifyingCode || !code || expireSeconds <= 0}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs sm:text-sm disabled:bg-slate-300 transition-colors shadow-xs cursor-pointer"
                 >
                   {isVerifyingCode ? '확인 중...' : '인증 확인'}
                 </button>
               </div>
-              <p className="text-[11px] text-blue-800/80">
-                메일이 오지 않은 경우 스팸메일함을 확인하시거나 60초 후 [재발송]을 눌러주세요.
-              </p>
             </div>
           )}
 
-          {/* Verification status feedback */}
+          {/* Email Msg Alert */}
           {emailMsg && (
             <div
-              className={`p-3 rounded-xl text-xs flex items-start gap-2 ${
-                emailMsg.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold'
-                  : emailMsg.type === 'error'
-                  ? 'bg-rose-50 text-rose-800 border border-rose-200 font-medium'
+              className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+                emailMsg.type === 'error'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                  : emailMsg.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                   : 'bg-blue-50 text-blue-800 border border-blue-200'
               }`}
             >
               {emailMsg.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
               )}
               <span>{emailMsg.text}</span>
             </div>
           )}
 
-          {isEmailVerified && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              이메일 소유권이 확인되었습니다. 아래 필수 정보를 마저 입력해 주세요.
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          {/* Passwords */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>
                 비밀번호 <span className="text-rose-500 font-bold">*</span>
               </label>
-              <input
-                className={inputCls}
-                type="password"
-                required
-                value={form.password}
-                onChange={set('password')}
-                autoComplete="new-password"
-                placeholder="영문+숫자 8자 이상"
-                maxLength={64}
-              />
+              <div className="relative">
+                <input
+                  className={inputCls}
+                  type={showPw ? 'text' : 'password'}
+                  required
+                  value={form.password}
+                  onChange={set('password')}
+                  placeholder="영문, 숫자 포함 8자 이상"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
+
             <div>
               <label className={labelCls}>
                 비밀번호 확인 <span className="text-rose-500 font-bold">*</span>
               </label>
-              <input
-                className={inputCls}
-                type="password"
-                required
-                value={form.passwordConfirm}
-                onChange={set('passwordConfirm')}
-                autoComplete="new-password"
-                placeholder="비밀번호 다시 입력"
-                maxLength={64}
-              />
+              <div className="relative">
+                <input
+                  className={inputCls}
+                  type={showPwC ? 'text' : 'password'}
+                  required
+                  value={form.passwordConfirm}
+                  onChange={set('passwordConfirm')}
+                  placeholder="비밀번호 재입력"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwC(!showPwC)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPwC ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
             <label className={labelCls}>
-              닉네임 (게시물에 표시되는 이름) <span className="text-rose-500 font-bold">*</span>
+              커뮤니티 활동 닉네임 <span className="text-rose-500 font-bold">*</span>
             </label>
             <input
               className={inputCls}
               required
               value={form.nickname}
               onChange={set('nickname')}
-              placeholder="예: 3학년 불꽃코너"
               maxLength={12}
+              placeholder="게시판에서 사용할 2~12자 닉네임"
             />
-            <p className="text-xs text-slate-500 mt-1">실명은 공개되지 않으며 닉네임만 표시됩니다. (2~12자, 임원 직함 제외)</p>
+            <p className="text-xs text-slate-500 mt-1">
+              * 임원 직함(회장, 부장 등)이 들어간 닉네임은 가입 시 제한되며, 승인 후 별도 부여됩니다.
+            </p>
           </div>
         </section>
 
-        {/* Section 2: Student & Address Information */}
+        {/* Section 2: 학사 인증 및 소속·거주 정보 */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-indigo-600" />
-            학우 정보 및 주소
-          </h2>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            <h2 className="font-bold text-slate-900 text-base">학사 인증 및 소속·거주 정보</h2>
+          </div>
 
+          {/* Name & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>
-                성명 <span className="text-rose-500 font-bold">*</span>
+                성명 (실명) <span className="text-rose-500 font-bold">*</span>
               </label>
-              <input className={inputCls} required value={form.name} onChange={set('name')} autoComplete="name" maxLength={30} />
+              <input className={inputCls} required value={form.name} onChange={set('name')} autoComplete="name" placeholder="홍길동" />
             </div>
             <div>
               <label className={labelCls}>
-                연락처 (휴대전화) <span className="text-rose-500 font-bold">*</span>
+                휴대전화 번호 <span className="text-rose-500 font-bold">*</span>
               </label>
               <input
                 className={inputCls}
                 type="tel"
                 required
                 value={form.phone}
-                onChange={set('phone')}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/[^0-9]/g, '') }))}
+                placeholder="01012345678 (숫자만)"
                 autoComplete="tel"
-                placeholder="010-0000-0000"
-                maxLength={20}
+                maxLength={11}
               />
             </div>
           </div>
 
+          {/* Student No */}
           <div>
             <label className={labelCls}>
-              학번 (숫자 12자리, - 제외) <span className="text-rose-500 font-bold">*</span>
+              학번 (12자리 숫자) <span className="text-rose-500 font-bold">*</span>
             </label>
             <input
-              className={inputCls}
+              className={`${inputCls} font-mono`}
               required
               value={form.student_no}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 12);
-                setForm((f) => ({ ...f, student_no: val }));
-              }}
-              placeholder="예: 202634123456 (12자리 숫자)"
+              onChange={(e) => setForm((f) => ({ ...f, student_no: e.target.value.replace(/[^0-9]/g, '') }))}
+              placeholder="202634123456"
               maxLength={12}
             />
             <p className="text-xs text-slate-500 mt-1">
-              하이픈(-)을 제외한 숫자 12자리를 입력해 주세요. (숫자 외 자동 제거)
+              하이픈(-)을 제외한 숫자 12자리를 입력해 주세요. (정회원 등급 심사 및 재학생 확인에 활용)
             </p>
           </div>
 
-          {/* Standardized Address with Daum Postcode Search */}
+          {/* 소속 학습관 선택 (4곳 중 선택) */}
           <div className="space-y-2 pt-1">
             <label className={labelCls}>
-              자택 주소 <span className="text-rose-500 font-bold">*</span>
+              소속 학습관 <span className="text-rose-500 font-bold">*</span>
             </label>
-
-            {/* Postal Code + Search Button */}
-            <div className="flex gap-2 max-w-xs">
-              <input
-                type="text"
-                readOnly
-                value={zonecode}
-                placeholder="우편번호 (5자리)"
-                className={`${inputCls} bg-slate-50 font-mono font-bold text-slate-800 cursor-pointer`}
-                onClick={handleSearchAddress}
-              />
-              <button
-                type="button"
-                onClick={handleSearchAddress}
-                className="shrink-0 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-1.5"
-              >
-                <Search className="w-3.5 h-3.5" /> 우편번호 검색
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {LEARNING_CENTERS.map((center) => {
+                const isSelected = learningCenter === center;
+                return (
+                  <label
+                    key={center}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-blue-50/90 border-blue-600 text-blue-950 font-bold shadow-xs'
+                        : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="learningCenter"
+                      value={center}
+                      checked={isSelected}
+                      onChange={() => setLearningCenter(center)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <Building2 className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="text-xs sm:text-sm">{center}</span>
+                  </label>
+                );
+              })}
             </div>
-
-            {/* Base Address (Readonly) */}
-            <input
-              type="text"
-              readOnly
-              value={baseAddress}
-              placeholder="기본 주소 (우편번호 검색 시 자동 입력)"
-              className={`${inputCls} bg-slate-50 cursor-pointer text-slate-800 font-medium`}
-              onClick={handleSearchAddress}
-            />
-
-            {/* Detail Address */}
-            <input
-              ref={detailAddressRef}
-              type="text"
-              value={detailAddress}
-              onChange={(e) => setDetailAddress(e.target.value)}
-              placeholder="상세 주소 입력 (동·호수 등)"
-              maxLength={100}
-              className={inputCls}
-            />
             <p className="text-xs text-slate-500">
-              우편번호 검색 버튼을 눌러 표준화된 도로명 주소 또는 지번 주소를 검색하실 수 있습니다.
+              * 출석수업, 시험 및 학생회 오프라인 모임의 주 활동 학습관을 선택해 주세요.
             </p>
           </div>
 
+          {/* 거주지역 선택 (시·도 및 시·군·구 연동 드롭다운) */}
+          <div className="space-y-2 pt-1">
+            <label className={labelCls}>
+              거주 지역 <span className="text-rose-500 font-bold">*</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                  <span>시 · 도 선택</span>
+                </label>
+                <select
+                  className={inputCls}
+                  value={residenceSido}
+                  onChange={(e) => {
+                    const nextSido = e.target.value;
+                    setResidenceSido(nextSido);
+                    const subList = KOREA_DISTRICTS[nextSido] || [];
+                    setResidenceSigungu(subList[0] || '');
+                  }}
+                >
+                  {SIDO_LIST.map((sido) => (
+                    <option key={sido} value={sido}>
+                      {sido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  시 · 군 · 구 선택
+                </label>
+                <select
+                  className={inputCls}
+                  value={residenceSigungu}
+                  onChange={(e) => setResidenceSigungu(e.target.value)}
+                >
+                  {(KOREA_DISTRICTS[residenceSido] || []).map((sigungu) => (
+                    <option key={sigungu} value={sigungu}>
+                      {sigungu}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">
+              * 상세 주소(동·호수) 없이 시·도 및 시·군·구 단위만 선택하므로 개인정보가 안전하게 보호되며, 지역별 스터디 조직에 활용됩니다.
+            </p>
+          </div>
+
+          {/* Regional College & Department */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             <div>
               <label className={labelCls}>
@@ -578,68 +557,71 @@ export const RegisterPage: React.FC = () => {
 
         {/* Section 3: Terms & Consents */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
-          <h2 className="font-bold text-slate-900 text-lg">약관 및 개인정보 동의</h2>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+            <h2 className="font-bold text-slate-900 text-base">이용약관 및 개인정보 동의</h2>
+          </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label className="flex items-center gap-2.5 font-bold text-slate-900 text-sm cursor-pointer">
               <input
                 type="checkbox"
+                required
                 checked={agreePrivacy}
                 onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="w-4.5 h-4.5 accent-blue-600"
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
-              [필수] 개인정보 수집 및 이용에 동의합니다. <span className="text-rose-500 font-bold">*</span>
+              <span>[필수] 개인정보 수집 및 이용 동의</span>
             </label>
-            <div className="max-h-40 overflow-y-auto p-3 rounded-2xl border border-slate-200 bg-slate-50/60">
-              <PrivacyConsentText compact />
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-1">
+              <p>• <strong>수집 항목</strong>: 이메일(아이디), 성명, 연락처, 학번, 소속 학습관, 거주지역(시/군/구), 소속 학과</p>
+              <p>• <strong>수집 목적</strong>: 학생회 회원 관리, 재학생 등급 부여, 공지사항 알림 및 지역 스터디 그룹 매칭</p>
+              <p>• <strong>보유 기간</strong>: 회원 탈퇴 시 또는 졸업·학적 변동 시까지 안전하게 보관 후 파기</p>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="flex items-center gap-2.5 font-bold text-slate-900 text-sm cursor-pointer">
+            <label className="flex items-center gap-2.5 font-bold text-slate-900 text-sm cursor-pointer pt-2">
               <input
                 type="checkbox"
+                required
                 checked={agreeTerms}
                 onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="w-4.5 h-4.5 accent-blue-600"
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
-              [필수] 이용약관에 동의합니다. <span className="text-rose-500 font-bold">*</span>
+              <span>[필수] 학생회 홈페이지 이용약관 동의</span>
             </label>
-            <div className="max-h-40 overflow-y-auto p-3 rounded-2xl border border-slate-200 bg-slate-50/60">
-              <TermsText compact />
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+              건전한 학술 교류 및 학우 간 상호 존중 문화를 위해 비방, 욕설, 상업적 광고 게시물은 통보 없이 제재될 수 있음에 동의합니다.
             </div>
           </div>
 
-          <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 cursor-pointer pt-1 border-t border-slate-100">
+          <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 cursor-pointer pt-2 border-t border-slate-100">
             <input
               type="checkbox"
               checked={agreePrivacy && agreeTerms}
               onChange={(e) => {
-                setAgreePrivacy(e.target.checked);
-                setAgreeTerms(e.target.checked);
+                const checked = e.target.checked;
+                setAgreePrivacy(checked);
+                setAgreeTerms(checked);
               }}
-              className="w-4.5 h-4.5 accent-blue-600"
+              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
-            전체 동의
+            <span className="text-slate-900 font-bold">약관 전체 동의하기</span>
           </label>
         </section>
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={submitting || !isEmailVerified}
-          className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-base transition-colors shadow-sm"
+          className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-extrabold text-base transition-all shadow-md active:scale-98 cursor-pointer disabled:cursor-not-allowed"
         >
-          {submitting
-            ? '가입 처리 중...'
-            : !isEmailVerified
-            ? '이메일 인증을 먼저 완료해 주세요'
-            : '가입하기'}
+          {submitting ? '가입 처리 중...' : '회원가입 완료하기'}
         </button>
 
-        <p className="text-center text-sm text-slate-600">
-          이미 회원이신가요?{' '}
-          <Link to={`/login?next=${encodeURIComponent(next)}`} className="font-bold text-blue-700 hover:underline">
-            로그인
+        <p className="text-center text-xs text-slate-500">
+          이미 계정이 있으신가요?{' '}
+          <Link to="/login" className="text-blue-600 font-bold hover:underline">
+            로그인하기
           </Link>
         </p>
       </form>

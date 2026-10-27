@@ -14,6 +14,7 @@ export interface MemberProfile {
   student_no: string;
   regional_college: string;
   department: string;
+  learning_center?: string;
   role: MemberRole;
   created_at: string;
 }
@@ -28,6 +29,7 @@ export interface RegisterPayload {
   student_no: string;
   regional_college: string;
   department: string;
+  learning_center?: string;
   consent_privacy: boolean;
   consent_terms: boolean;
 }

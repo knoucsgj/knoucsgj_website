@@ -320,6 +320,7 @@ export interface AdminMember {
   student_no: string;
   regional_college: string;
   department: string;
+  learning_center?: string;
   role: 'president' | 'officer' | 'regular' | 'associate';
   consent_version: string;
   consented_at: string;
