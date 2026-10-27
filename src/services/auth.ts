@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { MemberCustomPermissions } from '../lib/types';
 
 const ADMIN_FLAG_KEY = 'knoucs_admin_session'; // UI hint only. The server session cookie is the source of truth.
 
@@ -16,6 +17,7 @@ export interface MemberProfile {
   department: string;
   learning_center?: string;
   role: MemberRole;
+  permissions?: string | MemberCustomPermissions | null;
   created_at: string;
 }
 

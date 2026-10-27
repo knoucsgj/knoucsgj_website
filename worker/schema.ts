@@ -209,6 +209,7 @@ const ADD_COLUMNS: [string, string, string][] = [
   ['studies', 'approval', "TEXT NOT NULL DEFAULT 'approved'"],
   ['members', 'role', "TEXT NOT NULL DEFAULT 'associate'"],
   ['members', 'learning_center', "TEXT DEFAULT '광주전남지역대학'"],
+  ['members', 'permissions', 'TEXT DEFAULT NULL'],
   ['budget_reports', 'receipt_url', 'TEXT'],
   ['budget_reports', 'receipt_name', 'TEXT'],
   ['budget_reports', 'created_by', 'TEXT'],

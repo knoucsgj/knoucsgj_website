@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
-import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem } from '../lib/types';
+import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem, MemberCustomPermissions } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import { parseStudentNo } from '../lib/knouDepartments';
 import {
@@ -38,7 +38,10 @@ import {
   FileCheck,
   HardDrive,
   Layers,
-  GraduationCap
+  GraduationCap,
+  Sliders,
+  Sparkles,
+  Ban
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -59,6 +62,11 @@ export const AdminPage: React.FC = () => {
   const [editingRoleMember, setEditingRoleMember] = useState<AdminMember | null>(null);
   const [newMemberRole, setNewMemberRole] = useState<AdminMember['role']>('regular');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+
+  // Member Permissions Edit state
+  const [editingPermsMember, setEditingPermsMember] = useState<AdminMember | null>(null);
+  const [permsForm, setPermsForm] = useState<MemberCustomPermissions>({});
+  const [isUpdatingPerms, setIsUpdatingPerms] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
   const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum' | 'storage' | 'popups'>('notices');
@@ -557,6 +565,48 @@ export const AdminPage: React.FC = () => {
       alert(err.message || '등급 변경에 실패했습니다.');
     } finally {
       setIsUpdatingRole(false);
+    }
+  };
+
+  const handleOpenPermsModal = (m: AdminMember) => {
+    setEditingPermsMember(m);
+    let currentPerms: MemberCustomPermissions = {};
+    if (m.permissions) {
+      if (typeof m.permissions === 'object') {
+        currentPerms = { ...m.permissions };
+      } else {
+        try {
+          currentPerms = JSON.parse(m.permissions) || {};
+        } catch {
+          currentPerms = {};
+        }
+      }
+    }
+    setPermsForm(currentPerms);
+  };
+
+  const handleSaveMemberPerms = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPermsMember) return;
+    try {
+      setIsUpdatingPerms(true);
+      const cleaned: MemberCustomPermissions = {};
+      (Object.keys(permsForm) as (keyof MemberCustomPermissions)[]).forEach((k) => {
+        if (permsForm[k]) {
+          cleaned[k] = true;
+        }
+      });
+      const toSend = Object.keys(cleaned).length > 0 ? cleaned : null;
+      await api.updateMemberPermissions(editingPermsMember.id, toSend);
+      setMembers((prev) =>
+        prev.map((m) => (m.id === editingPermsMember.id ? { ...m, permissions: toSend } : m))
+      );
+      alert(`[${editingPermsMember.name}] 학우의 개별 맞춤 권한이 성공적으로 저장되었습니다.`);
+      setEditingPermsMember(null);
+    } catch (err: any) {
+      alert(err.message || '권한 저장에 실패했습니다.');
+    } finally {
+      setIsUpdatingPerms(false);
     }
   };
 
@@ -1804,11 +1854,43 @@ export const AdminPage: React.FC = () => {
                       <span className="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">준회원</span>
                     );
 
+                    let customPerms: MemberCustomPermissions = {};
+                    if (m.permissions) {
+                      customPerms = typeof m.permissions === 'object' ? m.permissions : (JSON.parse(m.permissions || '{}') || {});
+                    }
+                    const grants: string[] = [];
+                    if (customPerms.can_manage_notices) grants.push('공지');
+                    if (customPerms.can_manage_materials) grants.push('자료');
+                    if (customPerms.can_manage_studies) grants.push('스터디');
+                    if (customPerms.can_manage_feedbacks) grants.push('답변');
+                    if (customPerms.can_manage_popups) grants.push('팝업');
+
+                    const blocks: string[] = [];
+                    if (customPerms.block_admin_console) blocks.push('콘솔차단');
+                    if (customPerms.block_writing_materials) blocks.push('자료차단');
+                    if (customPerms.block_community_posts) blocks.push('글차단');
+
                     const parsedSn = parseStudentNo(m.student_no);
                     return (
                       <tr key={m.id} className="align-top">
                         <td className="px-3 py-2.5 whitespace-nowrap">{m.created_at.split('T')[0]}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap">{roleBadge}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div>{roleBadge}</div>
+                          {grants.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 block whitespace-nowrap">
+                                ✨ 봉사 ({grants.join(',')})
+                              </span>
+                            </div>
+                          )}
+                          {blocks.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-rose-50 text-rose-700 border border-rose-200 block whitespace-nowrap">
+                                ⛔ 제한 ({blocks.join(',')})
+                              </span>
+                            </div>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5">
                           <span className="font-bold text-slate-900">{m.nickname}</span>
                           <span className="block text-slate-400">{m.username}</span>
@@ -1851,6 +1933,14 @@ export const AdminPage: React.FC = () => {
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             닉네임 변경
+                          </button>
+                          <button
+                            onClick={() => handleOpenPermsModal(m)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold"
+                            title="개별 맞춤 권한 부여 및 활동 제한 설정"
+                          >
+                            <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                            권한 설정
                           </button>
                           <button
                             onClick={() => handleDeleteSiteMember(m)}
@@ -3527,6 +3617,222 @@ export const AdminPage: React.FC = () => {
                 >
                   {isUpdatingNickname ? '저장 중...' : '닉네임 변경 적용'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Member Custom Permissions Modal */}
+      {editingPermsMember && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                개별 맞춤 권한 및 활동 제한 설정
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPermsMember(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Member Info */}
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1">
+              <div>
+                <span className="text-slate-400 font-medium">대상 학우:</span>{' '}
+                <strong className="text-slate-800">{editingPermsMember.name}</strong> ({editingPermsMember.username})
+              </div>
+              <div>
+                <span className="text-slate-400 font-medium">닉네임 / 등급:</span>{' '}
+                <span className="text-slate-700 font-bold">{editingPermsMember.nickname}</span>
+                <span className="ml-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {editingPermsMember.role === 'president'
+                    ? '학생회장'
+                    : editingPermsMember.role === 'officer'
+                    ? '임원진'
+                    : editingPermsMember.role === 'regular'
+                    ? '정회원'
+                    : '준회원'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-medium">학번 / 소속:</span>{' '}
+                <span className="font-mono font-bold text-slate-800">{editingPermsMember.student_no}</span>
+                {(() => {
+                  const ps = parseStudentNo(editingPermsMember.student_no);
+                  return ps.isValid ? (
+                    <span className="ml-1 text-blue-600 font-semibold">
+                      ({ps.admissionYear}년 입학 · {ps.admissionGrade}학년{ps.collegeName ? ` · ${ps.collegeName}` : ''})
+                    </span>
+                  ) : null;
+                })()}{' '}
+                <span className="text-slate-500">/ {editingPermsMember.regional_college} {editingPermsMember.department}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveMemberPerms} className="space-y-4 text-xs">
+              {/* Section 1: 특별 봉사 권한 (추가 부여) */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-xs">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>특별 봉사 권한 부여 (정회원/준회원에게 학생회 기능 위임)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  직함은 일반 학우(정회원/준회원)를 유지하면서도 행사 도우미, 멘토, 스터디 팀장 등으로 봉사할 수 있도록 개별 관리 권한을 추가 부여합니다.
+                </p>
+
+                <div className="space-y-2.5 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.can_manage_notices}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, can_manage_notices: e.target.checked }))}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900">공지사항 및 학사일정 등록 권한</div>
+                      <div className="text-[11px] text-slate-500">학생회 행사 및 학사 공지사항, 캘린더 일정을 등록·수정할 수 있습니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-emerald-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.can_manage_materials}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, can_manage_materials: e.target.checked }))}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900">학술 자료실(족보/기출) 업로드 권한</div>
+                      <div className="text-[11px] text-slate-500">과제물 도우미로서 기출문제, 요약노트 등 학술 자료를 등록하고 관리할 수 있습니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-emerald-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.can_manage_studies}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, can_manage_studies: e.target.checked }))}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900">스터디 개설 및 승인 관리 권한</div>
+                      <div className="text-[11px] text-slate-500">스터디 총괄 멘토로서 학우들의 소모임 및 스터디 신청을 심사·승인할 수 있습니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-emerald-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.can_manage_feedbacks}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, can_manage_feedbacks: e.target.checked }))}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900">'학생회에 바란다' 공식 답변 권한</div>
+                      <div className="text-[11px] text-slate-500">학우들의 건의사항에 학생회 명의로 공식 답변을 남길 수 있습니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-emerald-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.can_manage_popups}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, can_manage_popups: e.target.checked }))}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-slate-900">메인 팝업 관리 권한</div>
+                      <div className="text-[11px] text-slate-500">홈페이지 메인 화면 팝업 배너를 등록하고 노출을 관리할 수 있습니다.</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Section 2: 개별 활동 제한 (비위 행위자 제재) */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-rose-800 font-bold text-xs">
+                  <Ban className="w-4 h-4 text-rose-600" />
+                  <span>개별 활동 및 기능 제한 (비위 행위자 제재)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  임원 등급이라도 문제가 발생한 특정 인원에 한해 콘솔 진입을 차단하거나 글쓰기 기능을 제한합니다.
+                </p>
+
+                <div className="space-y-2.5 bg-rose-50/50 p-3 rounded-2xl border border-rose-100">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.block_admin_console}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, block_admin_console: e.target.checked }))}
+                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-rose-950">관리자 / 임원진 콘솔 진입 전면 차단</div>
+                      <div className="text-[11px] text-slate-500">임원 등급이라도 학생회 관리자 모드 진입 및 API 호출이 즉시 차단(403)됩니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-rose-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.block_writing_materials}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, block_writing_materials: e.target.checked }))}
+                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-rose-950">학술 자료실 파일 업로드 및 다운로드 차단</div>
+                      <div className="text-[11px] text-slate-500">정회원이라도 자료실 파일 업로드 및 다운로드가 제한됩니다.</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1.5 border-t border-rose-100/60">
+                    <input
+                      type="checkbox"
+                      checked={!!permsForm.block_community_posts}
+                      onChange={(e) => setPermsForm((f) => ({ ...f, block_community_posts: e.target.checked }))}
+                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 mt-0.5 cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-rose-950">커뮤니티(자유/질문/장터) 글쓰기 및 댓글 차단</div>
+                      <div className="text-[11px] text-slate-500">비방, 분란, 상업 광고 등 게시글 작성 및 댓글 등록이 전면 차단됩니다.</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPermsForm({})}
+                  className="px-3 py-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  기본 등급 규칙으로 초기화
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPermsMember(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 cursor-pointer"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingPerms}
+                    className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-xs cursor-pointer"
+                  >
+                    {isUpdatingPerms ? '저장 중...' : '맞춤 권한 저장'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

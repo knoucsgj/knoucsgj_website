@@ -22,7 +22,8 @@ import type {
   ConstitutionVersion,
   ActivityReport,
   CurriculumCourse,
-  PopupItem
+  PopupItem,
+  MemberCustomPermissions
 } from '../lib/types';
 import { KNOU_COURSES_2026 } from '../data/mockMaterials';
 import { councilIntro as mockCouncilIntro } from '../data/mockCouncil';
@@ -757,6 +758,14 @@ export const api = {
     await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify({ role }),
+    });
+    return true;
+  },
+
+  async updateMemberPermissions(id: string, permissions: MemberCustomPermissions | null): Promise<boolean> {
+    await fetchStrict<any>(`members&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions }),
     });
     return true;
   },

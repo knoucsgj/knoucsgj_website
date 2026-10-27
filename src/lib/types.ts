@@ -309,6 +309,21 @@ export interface AcademicMaterial {
   has_file?: boolean; // 목록 조회 시 첨부 파일 존재 여부 (파일 데이터는 다운로드 시 개별 조회)
 }
 
+// 회원 개별 맞춤 권한 (특별 봉사 권한 및 개별 제한 설정)
+export interface MemberCustomPermissions {
+  // 특별 봉사 권한 (Grant extra permissions to regulars/associates)
+  can_manage_notices?: boolean;      // 공지사항/학사일정 등록 및 관리
+  can_manage_materials?: boolean;    // 학술 자료실(족보/기출) 업로드 및 관리
+  can_manage_studies?: boolean;      // 스터디 승인 및 관리
+  can_manage_feedbacks?: boolean;    // 학생회에 바란다 공식 답변 작성
+  can_manage_popups?: boolean;       // 메인 팝업 관리
+
+  // 개별 기능 제한 (Restricted actions for specific misbehaving members)
+  block_admin_console?: boolean;     // 관리자/임원 콘솔 접근 차단
+  block_writing_materials?: boolean; // 학술 자료실 업로드 차단
+  block_community_posts?: boolean;   // 커뮤니티(자유/질문/장터) 글쓰기 및 댓글 차단
+}
+
 // 관리자 회원 관리용 (개인정보 포함, 관리자 세션에서만 조회 가능)
 export interface AdminMember {
   id: string;
@@ -322,6 +337,7 @@ export interface AdminMember {
   department: string;
   learning_center?: string;
   role: 'president' | 'officer' | 'regular' | 'associate';
+  permissions?: string | MemberCustomPermissions | null;
   consent_version: string;
   consented_at: string;
   created_at: string;

@@ -114,6 +114,8 @@ interface Member {
   department: string;
   role: 'president' | 'officer' | 'regular' | 'associate';
   created_at: string;
+  learning_center?: string;
+  permissions?: string | null;
 }
 interface Session {
   member: Member | null;
@@ -137,7 +139,7 @@ async function loadSession(req: Request, db: D1): Promise<Session> {
     const row = await db
       .prepare(
         `SELECT m.id, m.username, m.nickname, m.name, m.phone, m.address, m.student_no,
-                m.regional_college, m.department, m.role, m.created_at
+                m.regional_college, m.department, m.role, m.created_at, m.learning_center, m.permissions
            FROM sessions s JOIN members m ON m.id = s.member_id
           WHERE s.token_hash = ? AND s.kind = 'member' AND s.expires_at > ?`
       )
@@ -162,8 +164,35 @@ const requireMember = (s: Session) => {
   if (!s.member) throw new HttpError(401, '회원 로그인이 필요합니다.');
   return s.member;
 };
+function getMemberPermissions(m: any): Record<string, boolean> {
+  if (!m || !m.permissions) return {};
+  if (typeof m.permissions === 'object') return m.permissions;
+  try {
+    return JSON.parse(m.permissions) || {};
+  } catch {
+    return {};
+  }
+}
+
+function hasPermission(s: Session, perm: string): boolean {
+  if (s.admin) return true;
+  const p = getMemberPermissions(s.member);
+  return !!p[perm];
+}
+
+function isRestricted(s: Session, perm: string): boolean {
+  if (s.admin) return false;
+  const p = getMemberPermissions(s.member);
+  return !!p[perm];
+}
+
 const requireSignedIn = (s: Session): { id: string | null; nickname: string } => {
-  if (s.member) return { id: s.member.id, nickname: s.member.nickname };
+  if (s.member) {
+    if (isRestricted(s, 'block_community_posts')) {
+      throw new HttpError(403, '커뮤니티 글쓰기 및 댓글 이용이 제한된 계정입니다. 학생회에 문의해 주세요.');
+    }
+    return { id: s.member.id, nickname: s.member.nickname };
+  }
   if (s.admin) return { id: 'admin', nickname: '관리자' };
   throw new HttpError(401, '회원 로그인이 필요합니다. 회원가입 또는 로그인 후 이용해 주세요.');
 };
@@ -171,7 +200,13 @@ const requireSignedIn = (s: Session): { id: string | null; nickname: string } =>
 const isMasterAdmin = (s: Session) => s.admin;
 const isPresident = (s: Session) => s.member?.role === 'president';
 const isOfficer = (s: Session) => s.member?.role === 'officer';
-const isCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
+const isCouncil = (s: Session) => {
+  if (s.admin) return true;
+  if (isRestricted(s, 'block_admin_console')) return false;
+  if (isPresident(s) || isOfficer(s)) return true;
+  const p = getMemberPermissions(s.member);
+  return !!(p.can_manage_notices || p.can_manage_materials || p.can_manage_studies || p.can_manage_feedbacks || p.can_manage_popups);
+};
 const isRegularOrAbove = (s: Session) => {
   if (s.member && s.member.role === 'associate') return false; // 준회원은 절대 글쓰기/다운로드 불가
   if (s.admin) return true;
@@ -181,7 +216,7 @@ const canManageMembers = (s: Session) => s.admin || isPresident(s);
 const canManageCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
 
 const requireCouncil = (s: Session) => {
-  if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 관리자만 접근할 수 있습니다.');
+  if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 권한이 부여된 관리자만 접근할 수 있습니다.');
 };
 
 const requireMemberManager = (s: Session) => {
@@ -190,10 +225,14 @@ const requireMemberManager = (s: Session) => {
   throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
 };
 
-const canManagePopups = (s: Session) => s.admin || isPresident(s);
+const canManagePopups = (s: Session) => {
+  if (s.admin || isPresident(s)) return true;
+  if (isRestricted(s, 'block_admin_console')) return false;
+  return hasPermission(s, 'can_manage_popups');
+};
 const requirePopupManager = (s: Session) => {
-  if (s.admin || isPresident(s)) return;
-  throw new HttpError(403, '관리자 또는 학생회장 등급만 팝업을 설정할 수 있습니다.');
+  if (canManagePopups(s)) return;
+  throw new HttpError(403, '관리자 또는 팝업 관리 권한이 있는 학우만 팝업을 설정할 수 있습니다.');
 };
 
 const requireCouncilManager = (s: Session) => {
@@ -1125,7 +1164,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const { results } = await db
         .prepare(
           `SELECT id, username, nickname, name, phone, address, student_no, regional_college, department,
-                  role, consent_version, consented_at, created_at FROM members ORDER BY created_at DESC`
+                  role, consent_version, consented_at, created_at, learning_center, permissions FROM members ORDER BY created_at DESC`
         )
         .all();
       return json(results);
@@ -1136,6 +1175,10 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         const validRoles = ['president', 'officer', 'regular', 'associate'];
         if (!validRoles.includes(b.role)) throw new HttpError(400, '올바르지 않은 등급입니다.');
         await db.prepare('UPDATE members SET role = ? WHERE id = ?').bind(b.role, id).run();
+      }
+      if (b.permissions !== undefined) {
+        const permJson = b.permissions ? (typeof b.permissions === 'string' ? b.permissions : JSON.stringify(b.permissions)) : null;
+        await db.prepare('UPDATE members SET permissions = ? WHERE id = ?').bind(permJson, id).run();
       }
       if (b.nickname !== undefined) {
         const nickname = str(b.nickname, 20);
@@ -1281,7 +1324,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   if (resource === 'materials') {
     if (method === 'GET' && id) {
       // single item incl. file data (used for download)
-      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+      const canDownload = (isRegularOrAbove(session) || hasPermission(session, 'can_manage_materials')) && !isRestricted(session, 'block_writing_materials');
+      if (!canDownload) {
         throw new HttpError(403, '준회원 등급은 학습자료 다운로드가 불가능합니다. (열람 전용)');
       }
       const row = await db.prepare('SELECT * FROM academic_materials WHERE id = ?').bind(id).first();
@@ -1321,7 +1365,11 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
     if (method === 'POST') {
       const member = requireMember(session);
-      if (session.member?.role === 'associate' || !isRegularOrAbove(session)) {
+      if (isRestricted(session, 'block_writing_materials')) {
+        throw new HttpError(403, '학습자료 업로드 권한이 제한된 계정입니다. 학생회에 문의해 주세요.');
+      }
+      const canUpload = isRegularOrAbove(session) || hasPermission(session, 'can_manage_materials');
+      if (!canUpload) {
         throw new HttpError(403, '준회원 등급은 자료 등록이 불가능합니다. (열람 전용)');
       }
       const b: any = await readJson(req);
