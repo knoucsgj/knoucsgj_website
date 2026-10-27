@@ -206,7 +206,7 @@ export const Navbar: React.FC = () => {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xs"
             >
-              U-KNOU 원격수강
+              U-KNOU 캠퍼스
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -315,7 +315,7 @@ export const Navbar: React.FC = () => {
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-xs"
               >
-                U-KNOU 원격수강 바로가기
+                U-KNOU 캠퍼스 바로가기
                 <ExternalLink className="w-4 h-4" />
               </a>
               <Link
