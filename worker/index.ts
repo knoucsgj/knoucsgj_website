@@ -190,6 +190,12 @@ const requireMemberManager = (s: Session) => {
   throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
 };
 
+const canManagePopups = (s: Session) => s.admin || isPresident(s);
+const requirePopupManager = (s: Session) => {
+  if (s.admin || isPresident(s)) return;
+  throw new HttpError(403, '관리자 또는 학생회장 등급만 팝업을 설정할 수 있습니다.');
+};
+
 const requireCouncilManager = (s: Session) => {
   if (s.admin || isPresident(s) || isOfficer(s)) return;
   throw new HttpError(403, '학생회 임원진 또는 최고 관리자만 인사말 및 임원진을 관리할 수 있습니다.');
@@ -2633,6 +2639,147 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       }
 
       await db.prepare('DELETE FROM constitution_versions WHERE id = ?').bind(id).run();
+      return json({ success: true });
+    }
+  }
+
+  // ---- popups (관리자/학생회장 전용 팝업 관리 기능)
+  if (resource === 'popups') {
+    if (method === 'GET') {
+      const showAll = url.searchParams.get('all') === 'true';
+      if (showAll) {
+        requirePopupManager(session);
+        const { results } = await db.prepare('SELECT * FROM popups ORDER BY created_at DESC').all();
+        return json((results || []).map((r: any) => ({ ...r, is_active: Boolean(r.is_active) })));
+      }
+
+      // Public: active popups within valid dates (KST)
+      const nowKst = new Date(Date.now() + 9 * 3600 * 1000).toISOString().split('T')[0];
+      const { results } = await db.prepare(
+        `SELECT * FROM popups
+         WHERE is_active = 1
+           AND (start_date IS NULL OR start_date = '' OR start_date <= ?)
+           AND (end_date IS NULL OR end_date = '' OR end_date >= ?)
+         ORDER BY created_at DESC`
+      ).bind(nowKst, nowKst).all();
+
+      return json((results || []).map((r: any) => ({ ...r, is_active: Boolean(r.is_active) })));
+    }
+
+    if (method === 'POST') {
+      requirePopupManager(session);
+      const b: any = await readJson(req);
+      const title = str(b.title, 200);
+      const contentText = str(b.content, 20000);
+      const targetType = str(b.target_type, 30) || 'notice';
+      const targetId = b.target_id ? str(b.target_id, 100) : null;
+      const targetUrl = str(b.target_url, 500);
+      const linkText = str(b.link_text, 50) || '자세히 보기';
+      const imageUrl = b.image_url ? str(b.image_url, 1000) : null;
+      const isActive = b.is_active !== undefined ? (b.is_active ? 1 : 0) : 1;
+      const startDate = b.start_date ? str(b.start_date, 20) : null;
+      const endDate = b.end_date ? str(b.end_date, 20) : null;
+
+      if (!title) throw new HttpError(400, '팝업 제목을 입력해 주세요.');
+      if (!targetUrl) throw new HttpError(400, '이동할 게시물 링크(URL)를 입력해 주세요.');
+
+      const newId = `popup-${Date.now()}-${randomHex(3)}`;
+      const now = new Date().toISOString();
+      const creatorName = session.admin
+        ? '최고 관리자'
+        : (session.member ? `${session.member.name}(${session.member.nickname})` : '학생회장');
+
+      await db.prepare(
+        `INSERT INTO popups (id, title, content, target_type, target_id, target_url, link_text, image_url, is_active, start_date, end_date, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        newId, title, contentText, targetType, targetId, targetUrl, linkText, imageUrl, isActive, startDate, endDate, creatorName, now, now
+      ).run();
+
+      return json({
+        id: newId,
+        title,
+        content: contentText,
+        target_type: targetType,
+        target_id: targetId,
+        target_url: targetUrl,
+        link_text: linkText,
+        image_url: imageUrl,
+        is_active: Boolean(isActive),
+        start_date: startDate,
+        end_date: endDate,
+        created_by: creatorName,
+        created_at: now,
+        updated_at: now
+      });
+    }
+
+    if (method === 'PUT' && id) {
+      requirePopupManager(session);
+      const row: any = await db.prepare('SELECT id FROM popups WHERE id = ?').bind(id).first();
+      if (!row) throw new HttpError(404, '팝업을 찾을 수 없습니다.');
+
+      const b: any = await readJson(req);
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      if (b.title !== undefined) {
+        updates.push('title = ?');
+        values.push(str(b.title, 200));
+      }
+      if (b.content !== undefined) {
+        updates.push('content = ?');
+        values.push(str(b.content, 20000));
+      }
+      if (b.target_type !== undefined) {
+        updates.push('target_type = ?');
+        values.push(str(b.target_type, 30));
+      }
+      if (b.target_id !== undefined) {
+        updates.push('target_id = ?');
+        values.push(b.target_id ? str(b.target_id, 100) : null);
+      }
+      if (b.target_url !== undefined) {
+        updates.push('target_url = ?');
+        values.push(str(b.target_url, 500));
+      }
+      if (b.link_text !== undefined) {
+        updates.push('link_text = ?');
+        values.push(str(b.link_text, 50) || '자세히 보기');
+      }
+      if (b.image_url !== undefined) {
+        updates.push('image_url = ?');
+        values.push(b.image_url ? str(b.image_url, 1000) : null);
+      }
+      if (b.is_active !== undefined) {
+        updates.push('is_active = ?');
+        values.push(b.is_active ? 1 : 0);
+      }
+      if (b.start_date !== undefined) {
+        updates.push('start_date = ?');
+        values.push(b.start_date ? str(b.start_date, 20) : null);
+      }
+      if (b.end_date !== undefined) {
+        updates.push('end_date = ?');
+        values.push(b.end_date ? str(b.end_date, 20) : null);
+      }
+
+      updates.push('updated_at = ?');
+      values.push(new Date().toISOString());
+
+      values.push(id);
+      await db.prepare(`UPDATE popups SET ${updates.join(', ')} WHERE id = ?`).bind(...values).run();
+
+      const updated = await db.prepare('SELECT * FROM popups WHERE id = ?').bind(id).first();
+      return json({ ...(updated as any), is_active: Boolean((updated as any).is_active) });
+    }
+
+    if (method === 'DELETE' && id) {
+      requirePopupManager(session);
+      const row: any = await db.prepare('SELECT id FROM popups WHERE id = ?').bind(id).first();
+      if (!row) throw new HttpError(404, '팝업을 찾을 수 없습니다.');
+
+      await db.prepare('DELETE FROM popups WHERE id = ?').bind(id).run();
       return json({ success: true });
     }
   }

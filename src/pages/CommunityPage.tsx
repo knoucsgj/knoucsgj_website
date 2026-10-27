@@ -127,6 +127,23 @@ export const CommunityPage: React.FC = () => {
     setFreePosts(freePostsData);
     setMarketPosts(marketData);
     setQnaPosts(qnaData);
+
+    const targetId = searchParams.get('id');
+    if (targetId) {
+      if (freePostsData.some((p) => p.id === targetId)) {
+        setActiveTab('free');
+        setOpenFreePostId(targetId);
+      } else if (feedbacksData.some((f) => f.id === targetId)) {
+        setActiveTab('feedback');
+        setOpenFeedbackId(targetId);
+      } else if (marketData.some((m) => m.id === targetId)) {
+        setActiveTab('market');
+        setOpenMarketPostId(targetId);
+      } else if (qnaData.some((q) => q.id === targetId)) {
+        setActiveTab('qna');
+        setOpenQnaPostId(targetId);
+      }
+    }
   };
 
   // ==========================================

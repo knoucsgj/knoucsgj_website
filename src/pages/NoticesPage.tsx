@@ -119,6 +119,11 @@ export const NoticesPage: React.FC = () => {
       setLoadingActivities(true);
       const data = await api.getActivities();
       setActivities(data);
+      const targetId = searchParams.get('id');
+      if (targetId) {
+        const found = data.find((a) => a.id === targetId);
+        if (found) setSelectedActivity(found);
+      }
     } catch (e) {
       console.error(e);
     } finally {

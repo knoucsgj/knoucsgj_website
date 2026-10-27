@@ -188,6 +188,14 @@ const CREATE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS qna_post_replies (
     id TEXT PRIMARY KEY, post_id TEXT NOT NULL, author TEXT NOT NULL, author_id TEXT,
     content TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS popups (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL,
+    target_type TEXT NOT NULL DEFAULT 'notice', target_id TEXT,
+    target_url TEXT NOT NULL, link_text TEXT NOT NULL DEFAULT '자세히 보기',
+    image_url TEXT, is_active INTEGER NOT NULL DEFAULT 1,
+    start_date TEXT, end_date TEXT, created_by TEXT,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS idx_popups_active ON popups (is_active, start_date, end_date)`,
 ];
 
 // Columns added after the first release (ownership + study approval)

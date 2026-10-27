@@ -360,3 +360,21 @@ export interface CurriculumCourse {
   updated_at?: string;
 }
 
+
+// 공지 및 게시물 팝업(Pop-up) 관리 모델
+export interface PopupItem {
+  id: string;
+  title: string;
+  content: string;
+  target_type: 'notice' | 'activity' | 'event' | 'material' | 'free' | 'feedback' | 'market' | 'qna' | 'direct';
+  target_id?: string | null;
+  target_url: string;
+  link_text?: string;
+  image_url?: string | null;
+  is_active: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}

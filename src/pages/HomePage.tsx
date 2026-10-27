@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CampusLifeCarousel } from '../components/home/CampusLifeCarousel';
 import { RecentNoticesSection } from '../components/home/RecentNoticesSection';
 import { UpcomingEventsSection } from '../components/home/UpcomingEventsSection';
+import { GlobalPopupModal } from '../components/common/GlobalPopupModal';
 import { api } from '../services/api';
 import type { Notice, AcademicEvent, ActivityReport } from '../lib/types';
 
@@ -33,7 +34,9 @@ export const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-2xl overflow-hidden divide-y divide-slate-800/80">
+    <>
+      <GlobalPopupModal />
+      <div className="rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-2xl overflow-hidden divide-y divide-slate-800/80">
       
       {/* ======================================================== */}
       {/* 1. 최상단: 우리들의 생생한 학과 캠퍼스 라이프 (자동 롤링)  */}
@@ -78,5 +81,6 @@ export const HomePage: React.FC = () => {
       </section>
 
     </div>
+    </>
   );
 };

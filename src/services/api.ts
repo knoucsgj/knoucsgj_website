@@ -21,7 +21,8 @@ import type {
   AdminMember,
   ConstitutionVersion,
   ActivityReport,
-  CurriculumCourse
+  CurriculumCourse,
+  PopupItem
 } from '../lib/types';
 import { KNOU_COURSES_2026 } from '../data/mockMaterials';
 import { councilIntro as mockCouncilIntro } from '../data/mockCouncil';
@@ -1036,5 +1037,41 @@ export const api = {
     return await fetchStrict<any>('r2-storage&action=sync', {
       method: 'POST',
     });
+  },
+
+  // ==========================================
+  // 17. 팝업 공지 관리 (Popups) CRUD - D1 전용
+  // ==========================================
+  async getActivePopups(): Promise<PopupItem[]> {
+    const cloud = await fetchD1<PopupItem[]>('popups');
+    if (Array.isArray(cloud)) return cloud;
+    return [];
+  },
+
+  async getAllPopups(): Promise<PopupItem[]> {
+    const cloud = await fetchStrict<PopupItem[]>('popups&all=true');
+    if (Array.isArray(cloud)) return cloud;
+    return [];
+  },
+
+  async createPopup(popup: Omit<PopupItem, 'id' | 'created_at' | 'updated_at' | 'created_by'>): Promise<PopupItem> {
+    return await fetchStrict<PopupItem>('popups', {
+      method: 'POST',
+      body: JSON.stringify(popup),
+    });
+  },
+
+  async updatePopup(id: string, popup: Partial<PopupItem>): Promise<PopupItem> {
+    return await fetchStrict<PopupItem>(`popups&id=${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(popup),
+    });
+  },
+
+  async deletePopup(id: string): Promise<boolean> {
+    await fetchStrict<any>(`popups&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return true;
   }
 };

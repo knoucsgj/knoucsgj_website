@@ -1,6 +1,7 @@
 import { AdminConstitutionManager } from '../components/AdminConstitutionManager';
 import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
 import { AdminR2StorageManager } from '../components/AdminR2StorageManager';
+import { AdminPopupManager } from '../components/AdminPopupManager';
 import { showConfirm } from '../components/ui/GlobalDialog';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -34,7 +35,8 @@ import {
   Award,
   Receipt,
   FileCheck,
-  HardDrive
+  HardDrive,
+  Layers
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -45,6 +47,7 @@ export const AdminPage: React.FC = () => {
   const canManageMembers = isAdmin || isPresident;
   const canManageCouncil = isAdmin || isPresident || isOfficer;
   const canManageBackup = isAdmin;
+  const canManagePopups = isAdmin || isPresident;
 
   const [adminIdInput, setAdminIdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -56,7 +59,7 @@ export const AdminPage: React.FC = () => {
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // Active Tab: 'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'minutes' | 'backup'
-  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum' | 'storage'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'events' | 'studies' | 'members' | 'council' | 'alumni' | 'rules' | 'finance' | 'minutes' | 'audits' | 'backup' | 'curriculum' | 'storage' | 'popups'>('notices');
 
   // Reset activeTab if user does not have permission
   useEffect(() => {
@@ -65,7 +68,8 @@ export const AdminPage: React.FC = () => {
     if (activeTab === 'alumni' && !canManageCouncil) setActiveTab('notices');
     if (activeTab === 'rules' && !isAdmin) setActiveTab('notices');
     if (activeTab === 'backup' && !canManageBackup) setActiveTab('notices');
-  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup, isAdmin]);
+    if (activeTab === 'popups' && !canManagePopups) setActiveTab('notices');
+  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup, canManagePopups, isAdmin]);
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -1414,6 +1418,19 @@ export const AdminPage: React.FC = () => {
           <BookOpen className="w-4 h-4 text-blue-600" />
           개설 교과목 관리
         </button>
+        {canManagePopups && (
+          <button
+            onClick={() => setActiveTab('popups')}
+            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'popups'
+                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-pink-600" />
+            팝업 공지 관리
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('storage')}
           className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -2637,6 +2654,13 @@ export const AdminPage: React.FC = () => {
       {/* ========================================== */}
       {activeTab === 'storage' && (
         <AdminR2StorageManager />
+      )}
+
+      {/* ========================================== */}
+      {/* TAB: Popup Notices Management              */}
+      {/* ========================================== */}
+      {canManagePopups && activeTab === 'popups' && (
+        <AdminPopupManager canManage={canManagePopups} />
       )}
 
       {/* ========================================== */}
