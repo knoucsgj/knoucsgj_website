@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { showConfirm } from './ui/GlobalDialog';
 import type { CurriculumCourse } from '../lib/types';
 import {
   BookOpen,
@@ -110,9 +111,13 @@ export const AdminCurriculumManager: React.FC = () => {
 
   const handleDelete = async (course: CurriculumCourse) => {
     if (
-      !window.confirm(
-        `[${course.grade}학년 ${course.semester}학기] ${course.course_name} (${course.course_type}) 교과목을 삭제하시겠습니까?\n\n※ 삭제 시 학습자료실의 과목 필터 및 드롭다운 목록에서도 제외됩니다.`
-      )
+      !(await showConfirm({
+        title: '교과목 삭제 확인',
+        message: `[${course.grade}학년 ${course.semester}학기] ${course.course_name} (${course.course_type}) 교과목을 삭제하시겠습니까?`,
+        subMessage: '삭제 시 학습자료실의 과목 필터 및 드롭다운 목록에서도 제외됩니다.',
+        confirmText: '삭제하기',
+        variant: 'danger'
+      }))
     ) {
       return;
     }
@@ -128,9 +133,13 @@ export const AdminCurriculumManager: React.FC = () => {
 
   const handleReset = async () => {
     if (
-      !window.confirm(
-        '⚠️ 2026년 정규 교육과정 52개 교과목으로 전체 복원하시겠습니까?\n\n현재 수동으로 추가/변경하신 교과목 목록이 초기화되고 공식 교육과정 목록으로 덮어씌워집니다.'
-      )
+      !(await showConfirm({
+        title: '2026 정규 교육과정 복원',
+        message: '2026년 정규 교육과정 52개 교과목으로 전체 복원하시겠습니까?',
+        subMessage: '현재 수동으로 추가/변경하신 교과목 목록이 초기화되고 공식 교육과정 목록으로 덮어씌워집니다.',
+        confirmText: '복원 진행',
+        variant: 'warning'
+      }))
     ) {
       return;
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { showConfirm } from '../components/ui/GlobalDialog';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
 import { useRequireLogin } from '../lib/useRequireLogin';
@@ -289,7 +290,15 @@ export const StudyMaterialsPage: React.FC = () => {
   };
 
   const handleDeleteMaterial = async (mat: AcademicMaterial) => {
-    if (!window.confirm(`[${mat.title}] 자료를 정말 삭제하시겠습니까?`)) {
+    if (
+      !(await showConfirm({
+        title: '학습자료 삭제',
+        message: `[${mat.title}] 자료를 정말 삭제하시겠습니까?`,
+        subMessage: '삭제된 학습자료는 복구할 수 없습니다.',
+        confirmText: '삭제하기',
+        variant: 'danger'
+      }))
+    ) {
       return;
     }
     try {

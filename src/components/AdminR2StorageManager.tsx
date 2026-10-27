@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { showConfirm } from './ui/GlobalDialog';
 import {
   HardDrive,
   RefreshCw,
@@ -58,7 +59,15 @@ export const AdminR2StorageManager: React.FC = () => {
   }, []);
 
   const handleSync = async () => {
-    if (!window.confirm('Cloudflare R2 버킷의 실제 파일 목록과 용량을 재스캔하여 동기화하시겠습니까?')) {
+    if (
+      !(await showConfirm({
+        title: 'R2 스토리지 재스캔 및 동기화',
+        message: 'Cloudflare R2 버킷의 실제 파일 목록과 용량을 재스캔하여 동기화하시겠습니까?',
+        subMessage: '버킷 내 모든 객체를 조회하여 D1 통계 및 파일 목록을 최신 상태로 갱신합니다.',
+        confirmText: '동기화 실행',
+        variant: 'info'
+      }))
+    ) {
       return;
     }
     try {
@@ -74,7 +83,15 @@ export const AdminR2StorageManager: React.FC = () => {
   };
 
   const handleDeleteFile = async (key: string, fileName: string) => {
-    if (!window.confirm(`[${fileName}] 파일을 R2 스토리지에서 영구 삭제하시겠습니까?\n이 작업은 취소할 수 없으며 저장 용량이 즉시 확보됩니다.`)) {
+    if (
+      !(await showConfirm({
+        title: 'R2 파일 영구 삭제',
+        message: `[${fileName}] 파일을 R2 스토리지에서 영구 삭제하시겠습니까?`,
+        subMessage: '이 작업은 취소할 수 없으며 삭제 즉시 저장 용량이 확보됩니다.',
+        confirmText: '영구 삭제',
+        variant: 'danger'
+      }))
+    ) {
       return;
     }
     try {

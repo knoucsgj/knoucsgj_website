@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { showConfirm } from '../components/ui/GlobalDialog';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, useAuth } from '../services/auth';
 import { UserCircle, AlertCircle, CheckCircle2, Shield } from 'lucide-react';
@@ -49,7 +50,7 @@ export const AccountPage: React.FC = () => {
   const withdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     setWithdrawErr('');
-    if (!window.confirm('정말 탈퇴하시겠습니까? 개인정보가 즉시 삭제되며 복구할 수 없습니다.')) return;
+    if (!(await showConfirm({ title: '회원 탈퇴 확인', message: '정말 탈퇴하시겠습니까?', subMessage: '탈퇴 시 모든 개인정보가 즉시 파기되며 복구할 수 없습니다.', confirmText: '탈퇴하기', variant: 'danger' }))) return;
     try {
       await auth.withdraw(withdrawPw);
       alert('회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.');

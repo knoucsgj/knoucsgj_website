@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showConfirm } from '../components/ui/GlobalDialog';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
@@ -133,7 +134,7 @@ export const CommunityPage: React.FC = () => {
   };
 
   const handleDeleteFreePost = async (id: string) => {
-    if (!window.confirm('이 게시글을 삭제하시겠습니까?')) return;
+    if (!(await showConfirm({ title: '게시글 삭제', message: '이 게시글을 정말 삭제하시겠습니까?', confirmText: '삭제하기', variant: 'danger' }))) return;
     try {
       await api.deleteFreePost(id);
     } catch (err) {
@@ -204,7 +205,7 @@ export const CommunityPage: React.FC = () => {
   };
 
   const handleDeleteFeedback = async (id: string) => {
-    if (!window.confirm('이 건의글을 삭제하시겠습니까?')) return;
+    if (!(await showConfirm({ title: '건의글 삭제', message: '이 건의글을 정말 삭제하시겠습니까?', confirmText: '삭제하기', variant: 'danger' }))) return;
     try {
       await api.deleteFeedback(id);
     } catch (err) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { showConfirm } from './ui/GlobalDialog';
 import { api } from '../services/api';
 import type {
   ConstitutionVersion,
@@ -207,7 +208,12 @@ export const AdminConstitutionManager: React.FC = () => {
   };
 
   const handleDeleteArticle = async (chapterNumber: number | string, articleNumber: number | string, articleTitle: string) => {
-    if (!confirm(`제${articleNumber}조 (${articleTitle}) 조항을 삭제하시겠습니까?`)) {
+    if (!(await showConfirm({
+      title: '회칙 조항 삭제',
+      message: `제${articleNumber}조 (${articleTitle}) 조항을 삭제하시겠습니까?`,
+      confirmText: '삭제하기',
+      variant: 'danger'
+    }))) {
       return;
     }
 
@@ -304,7 +310,12 @@ export const AdminConstitutionManager: React.FC = () => {
   };
 
   const handleSetAsCurrent = async (versionId: string, versionTitle: string) => {
-    if (!confirm(`"${versionTitle}" 버전을 현재 공식 효력이 적용되는 [현행 회칙]으로 지정하시겠습니까?`)) {
+    if (!(await showConfirm({
+      title: '현행 회칙 지정 확인',
+      message: `"${versionTitle}" 버전을 현재 공식 효력이 적용되는 [현행 회칙]으로 지정하시겠습니까?`,
+      confirmText: '현행 회칙으로 지정',
+      variant: 'info'
+    }))) {
       return;
     }
 
@@ -318,7 +329,13 @@ export const AdminConstitutionManager: React.FC = () => {
   };
 
   const handleDeleteVersion = async (versionId: string, versionTitle: string) => {
-    if (!confirm(`"${versionTitle}" 회칙 버전을 영구 삭제하시겠습니까?\n과거 기록 보존을 위해 특별한 사유가 없는 한 삭제는 권장되지 않습니다.`)) {
+    if (!(await showConfirm({
+      title: '회칙 버전 삭제 확인',
+      message: `"${versionTitle}" 회칙 버전을 영구 삭제하시겠습니까?`,
+      subMessage: '과거 기록 보존을 위해 특별한 사유가 없는 한 삭제는 권장되지 않습니다.',
+      confirmText: '영구 삭제',
+      variant: 'danger'
+    }))) {
       return;
     }
 

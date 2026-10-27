@@ -14,6 +14,7 @@ import { AccountPage } from './pages/AccountPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { api } from './services/api';
 import { ScrollToTop } from './components/ScrollToTop';
+import { GlobalDialog } from './components/ui/GlobalDialog';
 
 export function App() {
   useEffect(() => {
@@ -24,6 +25,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <GlobalDialog />
       <Layout>
         <Routes>
           <Route path="/" element={<HomePage />} />

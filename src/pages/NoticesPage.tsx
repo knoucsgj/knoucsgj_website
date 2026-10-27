@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showPrompt } from '../components/ui/GlobalDialog';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
@@ -174,7 +175,15 @@ export const NoticesPage: React.FC = () => {
   };
 
   const handleDeleteActivity = async (id: string) => {
-    const reason = prompt('활동보고 게시물을 삭제하시는 사유를 입력해 주세요:');
+    const reason = await showPrompt({
+      title: '활동보고 게시물 삭제',
+      message: '활동보고 게시물을 삭제하시는 사유를 입력해 주세요.',
+      subMessage: '삭제 내역 및 사유는 감사 로그에 안전하게 기록됩니다.',
+      placeholder: '예: 사진 재업로드, 오타 수정 후 재등록 등',
+      confirmText: '삭제하기',
+      required: true,
+      variant: 'danger'
+    });
     if (reason === null) return;
     if (!reason.trim()) {
       alert('삭제 사유를 반드시 입력해야 합니다.');

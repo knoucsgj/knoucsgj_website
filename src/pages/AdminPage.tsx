@@ -1,6 +1,7 @@
 import { AdminConstitutionManager } from '../components/AdminConstitutionManager';
 import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
 import { AdminR2StorageManager } from '../components/AdminR2StorageManager';
+import { showConfirm } from '../components/ui/GlobalDialog';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
@@ -355,7 +356,13 @@ export const AdminPage: React.FC = () => {
       alert('결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다.');
       return;
     }
-    if (confirm(`"${title}" 공지사항을 정말 삭제하시겠습니까?`)) {
+    if (await showConfirm({
+      title: '공지사항 삭제',
+      message: `"${title}" 공지사항을 정말 삭제하시겠습니까?`,
+      subMessage: '삭제된 공지사항은 목록에서 즉시 제거됩니다.',
+      confirmText: '삭제하기',
+      variant: 'danger'
+    })) {
       await api.deleteNotice(id);
       loadAllData();
     }
@@ -410,7 +417,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteEvent = async (id: string, title: string) => {
-    if (confirm(`"${title}" 일정을 정말 삭제하시겠습니까?`)) {
+    if (await showConfirm({
+      title: '학사 일정 삭제',
+      message: `"${title}" 일정을 정말 삭제하시겠습니까?`,
+      subMessage: '삭제된 일정은 캘린더에서 즉시 제거됩니다.',
+      confirmText: '삭제하기',
+      variant: 'danger'
+    })) {
       await api.deleteEvent(id);
       loadAllData();
     }
@@ -476,7 +489,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteSiteMember = async (m: AdminMember) => {
-    if (!confirm(`'${m.nickname}'(${m.name}) 회원을 강제 탈퇴(개인정보 삭제) 처리하시겠습니까?`)) return;
+    if (!(await showConfirm({
+      title: '회원 강제 탈퇴 처리',
+      message: `'${m.nickname}'(${m.name}) 회원을 강제 탈퇴 처리하시겠습니까?`,
+      subMessage: '탈퇴 처리 시 해당 회원의 개인정보 및 계정 정보가 즉시 삭제됩니다.',
+      confirmText: '강제 탈퇴 처리',
+      variant: 'danger'
+    }))) return;
     await api.deleteMember(m.id);
     loadAllData();
   };
@@ -569,7 +588,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteStudy = async (id: string, title: string) => {
-    if (confirm(`"${title}" 스터디 그룹을 정말 삭제(해체)하시겠습니까?\n홈페이지에서 즉시 내려갑니다.`)) {
+    if (await showConfirm({
+      title: '스터디 그룹 삭제',
+      message: `"${title}" 스터디 그룹을 정말 삭제(해체)하시겠습니까?`,
+      subMessage: '삭제 시 홈페이지 목록에서 즉시 내려갑니다.',
+      confirmText: '삭제(해체)하기',
+      variant: 'danger'
+    })) {
       await api.deleteStudy(id);
       loadAllData();
     }
@@ -632,7 +657,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleDeleteMember = async (id: string, name: string) => {
-    if (!confirm(`"${name}" 임원 정보를 정말 삭제하시겠습니까?`)) return;
+    if (!(await showConfirm({
+      title: '임원 정보 삭제',
+      message: `"${name}" 임원 정보를 정말 삭제하시겠습니까?`,
+      subMessage: '삭제된 임원 정보는 학생회 소개 및 임원진 목록에서 즉시 제거됩니다.',
+      confirmText: '삭제하기',
+      variant: 'danger'
+    }))) return;
     try {
       await api.deleteCouncilMember(id);
       alert(`"${name}" 임원 정보가 성공적으로 삭제되었습니다.`);
@@ -720,7 +751,13 @@ export const AdminPage: React.FC = () => {
       alert('역대 임원 관리는 학생회 또는 최고 관리자만 가능합니다.');
       return;
     }
-    if (!confirm(`"${name}" 역대 임원 정보를 정말 삭제하시겠습니까?`)) return;
+    if (!(await showConfirm({
+      title: '역대 임원 정보 삭제',
+      message: `"${name}" 역대 임원 정보를 정말 삭제하시겠습니까?`,
+      subMessage: '삭제된 역대 임원 정보는 기수별 명단에서 즉시 제거됩니다.',
+      confirmText: '삭제하기',
+      variant: 'danger'
+    }))) return;
     try {
       await api.deletePastCouncilMember(id);
       alert(`"${name}" 역대 임원 정보가 성공적으로 삭제되었습니다.`);
@@ -764,7 +801,13 @@ export const AdminPage: React.FC = () => {
   };
 
   const handleResetDefaults = async () => {
-    if (confirm('모든 데이터를 초기 기본값으로 리셋하시겠습니까? (직접 추가한 데이터가 삭제됩니다)')) {
+    if (await showConfirm({
+      title: '초기 기본값 리셋',
+      message: '모든 데이터를 초기 기본값으로 리셋하시겠습니까?',
+      subMessage: '직접 추가한 데이터가 초기화될 수 있으므로 주의해 주세요.',
+      confirmText: '초기화 진행',
+      variant: 'warning'
+    })) {
       await api.resetToDefaults();
       alert('기본 데이터로 리셋되었습니다.');
       loadAllData();
