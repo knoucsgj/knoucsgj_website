@@ -545,7 +545,7 @@ export const api = {
   async getFeedbacks(): Promise<FeedbackItem[]> {
     const cloudFeedbacks = await fetchD1<FeedbackItem[]>('feedbacks');
     if (Array.isArray(cloudFeedbacks)) {
-      return cloudFeedbacks;
+      return cloudFeedbacks.filter((f) => !['fb-1', 'fb-2', 'fb-3'].includes(f.id));
     }
     return [];
   },
@@ -580,7 +580,7 @@ export const api = {
   async getFreePosts(): Promise<FreePost[]> {
     const cloudPosts = await fetchD1<FreePost[]>('freeposts');
     if (Array.isArray(cloudPosts)) {
-      return cloudPosts;
+      return cloudPosts.filter((p) => !['fp-1', 'fp-2', 'fp-3'].includes(p.id));
     }
     return [];
   },
@@ -615,7 +615,7 @@ export const api = {
   async getMarketPosts(): Promise<MarketPost[]> {
     const cloudPosts = await fetchD1<MarketPost[]>('market');
     if (Array.isArray(cloudPosts)) {
-      return cloudPosts;
+      return cloudPosts.filter((p) => !['mk-1', 'mk-2', 'mk-3'].includes(p.id));
     }
     return [];
   },
@@ -662,7 +662,7 @@ export const api = {
   async getQnaPosts(): Promise<QnaPost[]> {
     const cloudPosts = await fetchD1<QnaPost[]>('qna');
     if (Array.isArray(cloudPosts)) {
-      return cloudPosts;
+      return cloudPosts.filter((p) => !['qna-1', 'qna-2', 'qna-3'].includes(p.id));
     }
     return [];
   },

@@ -1361,8 +1361,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- free posts (read: public / write & reply: any signed-up member or admin)
   if (resource === 'freeposts') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare('SELECT * FROM free_posts ORDER BY created_at DESC').all();
-      const { results: replies } = await db.prepare('SELECT * FROM free_post_replies ORDER BY created_at ASC').all();
+      const { results: posts } = await db.prepare("SELECT * FROM free_posts WHERE id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at DESC").all();
+      const { results: replies } = await db.prepare("SELECT * FROM free_post_replies WHERE post_id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at ASC").all();
       return json(posts.map((p: any) => ({ ...p, replies: replies.filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
@@ -1423,8 +1423,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- feedbacks (학생회에 바란다: read: public / write post: any signed-up member / replies: officer, president, admin only)
   if (resource === 'feedbacks') {
     if (method === 'GET') {
-      const { results: items } = await db.prepare('SELECT * FROM feedbacks ORDER BY created_at DESC').all();
-      const { results: replies } = await db.prepare('SELECT * FROM feedback_replies ORDER BY created_at ASC').all();
+      const { results: items } = await db.prepare("SELECT * FROM feedbacks WHERE id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at DESC").all();
+      const { results: replies } = await db.prepare("SELECT * FROM feedback_replies WHERE feedback_id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at ASC").all();
       return json(items.map((f: any) => ({ ...f, replies: replies.filter((r: any) => r.feedback_id === f.id) })));
     }
     if (method === 'POST') {
@@ -1490,8 +1490,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- market (벼룩시장: read: public / write & reply: any signed-up member or admin)
   if (resource === 'market') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare('SELECT * FROM market_posts ORDER BY created_at DESC, rowid DESC').all();
-      const { results: replies } = await db.prepare('SELECT * FROM market_post_replies ORDER BY created_at ASC, rowid ASC').all();
+      const { results: posts } = await db.prepare("SELECT * FROM market_posts WHERE id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at DESC, rowid DESC").all();
+      const { results: replies } = await db.prepare("SELECT * FROM market_post_replies WHERE post_id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at ASC, rowid ASC").all();
       return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
@@ -1568,8 +1568,8 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- qna (Q&A 코너: read: public / write & reply: any signed-up member or admin)
   if (resource === 'qna') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare('SELECT * FROM qna_posts ORDER BY created_at DESC, rowid DESC').all();
-      const { results: replies } = await db.prepare('SELECT * FROM qna_post_replies ORDER BY created_at ASC, rowid ASC').all();
+      const { results: posts } = await db.prepare("SELECT * FROM qna_posts WHERE id NOT IN ('qna-1', 'qna-2', 'qna-3') ORDER BY created_at DESC, rowid DESC").all();
+      const { results: replies } = await db.prepare("SELECT * FROM qna_post_replies WHERE post_id NOT IN ('qna-1', 'qna-2', 'qna-3') AND id NOT IN ('qna-r-1', 'qna-r-2', 'qna-r-3') ORDER BY created_at ASC, rowid ASC").all();
       return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {

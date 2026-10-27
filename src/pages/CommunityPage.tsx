@@ -49,7 +49,7 @@ export const CommunityPage: React.FC = () => {
   // ==========================================
   const [freePosts, setFreePosts] = useState<FreePost[]>([]);
   const [freeCategoryFilter, setFreeCategoryFilter] = useState<string>('전체');
-  const [openFreePostId, setOpenFreePostId] = useState<string | null>('fp-1');
+  const [openFreePostId, setOpenFreePostId] = useState<string | null>(null);
   const [isWriteFreeModalOpen, setIsWriteFreeModalOpen] = useState(false);
   const [freeTitle, setFreeTitle] = useState('');
   const [freeCategory, setFreeCategory] = useState<'자유' | '질문' | '취업·이직' | '정보공유'>('자유');
@@ -62,7 +62,7 @@ export const CommunityPage: React.FC = () => {
   // ==========================================
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
   const [feedbackCategoryFilter, setFeedbackCategoryFilter] = useState<string>('전체');
-  const [openFeedbackId, setOpenFeedbackId] = useState<string | null>('fb-1');
+  const [openFeedbackId, setOpenFeedbackId] = useState<string | null>(null);
   const [isWriteFeedbackModalOpen, setIsWriteFeedbackModalOpen] = useState(false);
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState<'학사/수업' | '행사/스터디' | '학생회운영' | '기타'>('학사/수업');
@@ -76,7 +76,7 @@ export const CommunityPage: React.FC = () => {
   // ==========================================
   const [marketPosts, setMarketPosts] = useState<MarketPost[]>([]);
   const [marketCategoryFilter, setMarketCategoryFilter] = useState<string>('전체');
-  const [openMarketPostId, setOpenMarketPostId] = useState<string | null>('mk-1');
+  const [openMarketPostId, setOpenMarketPostId] = useState<string | null>(null);
   const [isWriteMarketModalOpen, setIsWriteMarketModalOpen] = useState(false);
   const [marketTitle, setMarketTitle] = useState('');
   const [marketCategory, setMarketCategory] = useState<MarketPost['category']>('팝니다');
@@ -90,7 +90,7 @@ export const CommunityPage: React.FC = () => {
   // ==========================================
   const [qnaPosts, setQnaPosts] = useState<QnaPost[]>([]);
   const [qnaCategoryFilter, setQnaCategoryFilter] = useState<string>('전체');
-  const [openQnaPostId, setOpenQnaPostId] = useState<string | null>('qna-1');
+  const [openQnaPostId, setOpenQnaPostId] = useState<string | null>(null);
   const [isWriteQnaModalOpen, setIsWriteQnaModalOpen] = useState(false);
   const [qnaTitle, setQnaTitle] = useState('');
   const [qnaCategory, setQnaCategory] = useState<QnaPost['category']>('전공/학습');
@@ -617,7 +617,12 @@ export const CommunityPage: React.FC = () => {
 
           {/* Free Posts List */}
           <div className="space-y-4">
-            {freePosts
+            {freePosts.filter((p) => freeCategoryFilter === '전체' || p.category === freeCategoryFilter).length === 0 ? (
+              <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/90 shadow-xs">
+                <p className="font-semibold text-slate-700 text-base mb-1">등록된 자유게시글이 없습니다.</p>
+                <p className="text-xs sm:text-sm text-slate-400">학우들과 나누고 싶은 일상 이야기나 꿀팁을 남겨보세요!</p>
+              </div>
+            ) : freePosts
               .filter((p) => freeCategoryFilter === '전체' || p.category === freeCategoryFilter)
               .map((post) => {
                 const isOpen = openFreePostId === post.id;
@@ -812,7 +817,12 @@ export const CommunityPage: React.FC = () => {
 
           {/* Feedback Board List */}
           <div className="space-y-4">
-            {feedbacks
+            {feedbacks.filter((fb) => feedbackCategoryFilter === '전체' || fb.category === feedbackCategoryFilter).length === 0 ? (
+              <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/90 shadow-xs">
+                <p className="font-semibold text-slate-700 text-base mb-1">등록된 건의사항이 없습니다.</p>
+                <p className="text-xs sm:text-sm text-slate-400">학생회에 바라는 점이나 학과 발전을 위한 의견을 언제든 남겨주세요.</p>
+              </div>
+            ) : feedbacks
               .filter((fb) => feedbackCategoryFilter === '전체' || fb.category === feedbackCategoryFilter)
               .map((fb) => {
                 const isOpen = openFeedbackId === fb.id;
@@ -1058,7 +1068,12 @@ export const CommunityPage: React.FC = () => {
 
           {/* Market Posts List */}
           <div className="space-y-4">
-            {marketPosts
+            {marketPosts.filter((p) => marketCategoryFilter === '전체' || p.category === marketCategoryFilter).length === 0 ? (
+              <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/90 shadow-xs">
+                <p className="font-semibold text-slate-700 text-base mb-1">등록된 벼룩시장 물품이 없습니다.</p>
+                <p className="text-xs sm:text-sm text-slate-400">다 본 교재나 나눔할 물품이 있다면 첫 번째 글을 등록해 보세요!</p>
+              </div>
+            ) : marketPosts
               .filter((p) => marketCategoryFilter === '전체' || p.category === marketCategoryFilter)
               .map((post) => {
                 const isOpen = openMarketPostId === post.id;
@@ -1287,7 +1302,12 @@ export const CommunityPage: React.FC = () => {
 
           {/* Q&A Posts List */}
           <div className="space-y-4">
-            {qnaPosts
+            {qnaPosts.filter((q) => qnaCategoryFilter === '전체' || q.category === qnaCategoryFilter).length === 0 ? (
+              <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/90 shadow-xs">
+                <p className="font-semibold text-slate-700 text-base mb-1">등록된 질문이 없습니다.</p>
+                <p className="text-xs sm:text-sm text-slate-400">전공 과목, 출석수업, 시험 팁 등 궁금한 점을 첫 번째로 질문해 보세요!</p>
+              </div>
+            ) : qnaPosts
               .filter((q) => qnaCategoryFilter === '전체' || q.category === qnaCategoryFilter)
               .map((qna) => {
                 const isOpen = openQnaPostId === qna.id;

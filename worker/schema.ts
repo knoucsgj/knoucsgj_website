@@ -308,6 +308,26 @@ async function run(db: D1) {
     }
   }
 
+  // Clean out any legacy mock community posts (flea market, qna, free posts, feedbacks)
+  const cleanedCommunity = await db.prepare("SELECT value FROM settings WHERE key = 'cleaned_community_mocks_v3'").first();
+  if (!cleanedCommunity) {
+    try {
+      await db.batch([
+        db.prepare("DELETE FROM market_post_replies WHERE post_id IN ('mk-1', 'mk-2', 'mk-3')"),
+        db.prepare("DELETE FROM market_posts WHERE id IN ('mk-1', 'mk-2', 'mk-3')"),
+        db.prepare("DELETE FROM qna_post_replies WHERE post_id IN ('qna-1', 'qna-2', 'qna-3') OR id IN ('qna-r-1', 'qna-r-2', 'qna-r-3')"),
+        db.prepare("DELETE FROM qna_posts WHERE id IN ('qna-1', 'qna-2', 'qna-3')"),
+        db.prepare("DELETE FROM free_post_replies WHERE post_id IN ('fp-1', 'fp-2', 'fp-3') OR id IN ('fpr-1', 'fpr-2', 'fpr-3', 'fpr-4')"),
+        db.prepare("DELETE FROM free_posts WHERE id IN ('fp-1', 'fp-2', 'fp-3')"),
+        db.prepare("DELETE FROM feedback_replies WHERE feedback_id IN ('fb-1', 'fb-2', 'fb-3')"),
+        db.prepare("DELETE FROM feedbacks WHERE id IN ('fb-1', 'fb-2', 'fb-3')"),
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cleaned_community_mocks_v3', '1')"),
+      ]);
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Seed constitution versions (v4)
   const seededV4 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v4'").first();
   if (!seededV4) {
