@@ -26,6 +26,7 @@ import {
   Video,
   Camera,
   Trash2,
+  Edit3,
   ExternalLink
 } from 'lucide-react';
 
@@ -82,6 +83,36 @@ export const NoticesPage: React.FC = () => {
   const [actDesc, setActDesc] = useState('');
   const [actIsPinned, setActIsPinned] = useState(false);
   const [isSubmittingActivity, setIsSubmittingActivity] = useState(false);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+
+  const openNewActivityModal = () => {
+    setEditingActivityId(null);
+    setActTitle('');
+    setActDesc('');
+    setActCategory('행사');
+    setActDate(new Date().toISOString().split('T')[0]);
+    setActMediaType('image');
+    setActMediaUrl('');
+    setActImageFile(null);
+    setActYoutubeUrl('');
+    setActIsPinned(false);
+    setIsActivityModalOpen(true);
+  };
+
+  const openEditActivityModal = (act: ActivityReport) => {
+    setEditingActivityId(act.id);
+    setActTitle(act.title);
+    setActDesc(act.description || '');
+    setActCategory((act.category as any) || '행사');
+    setActDate(act.activity_date || new Date().toISOString().split('T')[0]);
+    setActMediaType(act.media_type || 'image');
+    setActMediaUrl(act.media_url || '');
+    setActImageFile(null);
+    setActYoutubeUrl(act.youtube_id ? `https://www.youtube.com/watch?v=${act.youtube_id}` : (act.media_type === 'video' ? act.media_url : ''));
+    setActIsPinned(!!act.is_pinned);
+    setSelectedActivity(null);
+    setIsActivityModalOpen(true);
+  };
 
   const loadActivities = async () => {
     try {
@@ -146,7 +177,21 @@ export const NoticesPage: React.FC = () => {
         }
       }
 
-      await api.createActivity({
+      if (editingActivityId) {
+        await api.updateActivity(editingActivityId, {
+          title: actTitle.trim(),
+          category: actCategory,
+          activity_date: actDate,
+          description: actDesc.trim(),
+          media_type: actMediaType,
+          media_url: finalMediaUrl,
+          youtube_id: finalYoutubeId || undefined,
+          thumbnail_url: finalThumbUrl || undefined,
+          is_pinned: actIsPinned,
+        });
+        alert('활동보고가 성공적으로 수정되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
+      } else {
+        await api.createActivity({
         title: actTitle.trim(),
         category: actCategory,
         activity_date: actDate,
@@ -158,7 +203,9 @@ export const NoticesPage: React.FC = () => {
         is_pinned: actIsPinned,
         author: member?.name || member?.nickname || '학생회 미디어부',
       });
-      alert('활동보고가 성공적으로 등록되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
+        alert('활동보고가 성공적으로 등록되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
+      }
+      setEditingActivityId(null);
       setIsActivityModalOpen(false);
       setActTitle('');
       setActDesc('');
@@ -409,7 +456,7 @@ export const NoticesPage: React.FC = () => {
         )}
         {currentTab === 'activities' && canWriteNotice && (
           <button
-            onClick={() => setIsActivityModalOpen(true)}
+            onClick={openNewActivityModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition-all self-start sm:self-auto cursor-pointer"
           >
             <Camera className="w-4 h-4" />
@@ -1409,6 +1456,15 @@ export const NoticesPage: React.FC = () => {
                 <div className="flex items-center gap-2 ml-auto">
                   {canDeleteActivity(selectedActivity) && (
                     <button
+                      onClick={() => openEditActivityModal(selectedActivity)}
+                      className="px-3.5 py-2 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 font-bold flex items-center gap-1.5 cursor-pointer text-xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>게시물 수정</span>
+                    </button>
+                  )}
+                  {canDeleteActivity(selectedActivity) && (
+                    <button
                       onClick={() => handleDeleteActivity(selectedActivity.id)}
                       className="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-1.5 cursor-pointer text-xs"
                     >
@@ -1438,7 +1494,7 @@ export const NoticesPage: React.FC = () => {
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Camera className="w-5 h-5 text-blue-400" />
-                <h3 className="font-bold text-base">새 활동보고 (사진 및 영상) 등록</h3>
+                <h3 className="font-bold text-base">{editingActivityId ? '활동보고 수정' : '새 활동보고 (사진 및 영상) 등록'}</h3>
               </div>
               <button
                 onClick={() => setIsActivityModalOpen(false)}
@@ -1595,7 +1651,7 @@ export const NoticesPage: React.FC = () => {
                   disabled={isSubmittingActivity}
                   className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
-                  {isSubmittingActivity ? '등록 중...' : '활동보고 등록하기'}
+                  {isSubmittingActivity ? '저장 중...' : editingActivityId ? '수정 내용 저장' : '활동보고 등록하기'}
                 </button>
               </div>
             </form>
