@@ -27,7 +27,6 @@ import {
   X,
   Pin,
   Save,
-  RotateCcw,
   BookOpen,
   FileText,
   Mail,
@@ -803,19 +802,7 @@ export const AdminPage: React.FC = () => {
     reader.readAsText(file);
   };
 
-  const handleResetDefaults = async () => {
-    if (await showConfirm({
-      title: '초기 기본값 리셋',
-      message: '모든 데이터를 초기 기본값으로 리셋하시겠습니까?',
-      subMessage: '직접 추가한 데이터가 초기화될 수 있으므로 주의해 주세요.',
-      confirmText: '초기화 진행',
-      variant: 'warning'
-    })) {
-      await api.resetToDefaults();
-      alert('기본 데이터로 리셋되었습니다.');
-      loadAllData();
-    }
-  };
+
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1942,15 +1929,7 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                onClick={handleResetDefaults}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                초기 샘플 데이터로 리셋
-              </button>
-            </div>
+
           </div>
 
           {/* Email Settings Card */}

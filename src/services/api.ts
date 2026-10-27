@@ -24,24 +24,13 @@ import type {
   CurriculumCourse
 } from '../lib/types';
 import { KNOU_COURSES_2026 } from '../data/mockMaterials';
-import { initialNotices } from '../data/mockNotices';
-import { initialEvents } from '../data/mockEvents';
-import {
-  councilMembers as mockCouncilMembers,
-  councilIntro as mockCouncilIntro,
-  mockStudies as mockInitialStudies
-} from '../data/mockCouncil';
-import { initialBudgetReports } from '../data/mockFinance';
-import { initialActivities } from '../data/mockActivities';
-import { initialMeetingMinutes, councilRules as mockCouncilRules } from '../data/mockGovernance';
+import { councilIntro as mockCouncilIntro } from '../data/mockCouncil';
+import { councilRules as mockCouncilRules } from '../data/mockGovernance';
 import {
   officialConstitutionDocuments,
   type ConstitutionDocument
 } from '../data/officialConstitution';
-import { initialRentalItems, initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
-import { initialFeedbacks } from '../data/mockFeedback';
-import { initialFreePosts } from '../data/mockFreePosts';
-import { initialMaterials } from '../data/mockMaterials';
+import { initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
 
 // Cloudflare D1 API Request Helper (모든 사용자가 동일한 서버 데이터를 조회합니다)
 async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<T | null> {
@@ -93,7 +82,7 @@ export const api = {
     if (Array.isArray(cloudData)) {
       return cloudData;
     }
-    return initialNotices;
+    return [];
   },
 
   async getNoticeById(id: string): Promise<Notice | undefined> {
@@ -141,7 +130,7 @@ export const api = {
     if (Array.isArray(cloudEvents)) {
       return cloudEvents;
     }
-    return initialEvents;
+    return [];
   },
 
   async createEvent(event: Omit<AcademicEvent, 'id'>): Promise<AcademicEvent> {
@@ -196,7 +185,7 @@ export const api = {
     if (Array.isArray(cloud)) {
       return cloud;
     }
-    return mockCouncilMembers;
+    return [];
   },
 
   async createCouncilMember(member: Omit<CouncilMember, 'id'>): Promise<CouncilMember> {
@@ -258,7 +247,7 @@ export const api = {
     if (Array.isArray(cloudStudies)) {
       return cloudStudies;
     }
-    return mockInitialStudies;
+    return [];
   },
 
   async createStudy(study: Omit<StudyGroup, 'id' | 'created_at' | 'approval' | 'author_id'>): Promise<StudyGroup> {
@@ -287,10 +276,10 @@ export const api = {
   // ==========================================
   async getBudgetReports(): Promise<BudgetReport[]> {
     const cloud = await fetchD1<BudgetReport[]>('budget-reports');
-    if (Array.isArray(cloud) && cloud.length > 0) {
+    if (Array.isArray(cloud)) {
       return cloud;
     }
-    return initialBudgetReports;
+    return [];
   },
 
   async createBudgetReport(report: Omit<BudgetReport, 'id' | 'published_date'>): Promise<BudgetReport> {
@@ -327,10 +316,10 @@ export const api = {
   // ==========================================
   async getActivities(): Promise<ActivityReport[]> {
     const cloud = await fetchD1<ActivityReport[]>('activities');
-    if (Array.isArray(cloud) && cloud.length > 0) {
+    if (Array.isArray(cloud)) {
       return cloud;
     }
-    return initialActivities;
+    return [];
   },
 
   async createActivity(activity: Omit<ActivityReport, 'id' | 'created_at'>): Promise<ActivityReport> {
@@ -427,10 +416,10 @@ export const api = {
   // ==========================================
   async getMeetingMinutes(): Promise<MeetingMinute[]> {
     const cloud = await fetchD1<MeetingMinute[]>('minutes');
-    if (Array.isArray(cloud) && cloud.length > 0) {
+    if (Array.isArray(cloud)) {
       return cloud;
     }
-    return initialMeetingMinutes;
+    return [];
   },
 
   async createMeetingMinute(minute: Omit<MeetingMinute, 'id'>): Promise<MeetingMinute> {
@@ -516,10 +505,10 @@ export const api = {
   // ==========================================
   async getRentalItems(): Promise<RentalItem[]> {
     const cloud = await fetchD1<RentalItem[]>('rentals');
-    if (Array.isArray(cloud) && cloud.length > 0) {
+    if (Array.isArray(cloud)) {
       return cloud;
     }
-    return initialRentalItems;
+    return [];
   },
 
   async createRentalItem(item: Omit<RentalItem, 'id'>): Promise<RentalItem> {
@@ -558,7 +547,7 @@ export const api = {
     if (Array.isArray(cloudFeedbacks)) {
       return cloudFeedbacks;
     }
-    return initialFeedbacks;
+    return [];
   },
 
   async createFeedback(feedback: Omit<FeedbackItem, 'id' | 'created_at' | 'status' | 'replies' | 'author' | 'author_id'>): Promise<FeedbackItem> {
@@ -593,7 +582,7 @@ export const api = {
     if (Array.isArray(cloudPosts)) {
       return cloudPosts;
     }
-    return initialFreePosts;
+    return [];
   },
 
   async createFreePost(post: Omit<FreePost, 'id' | 'created_at' | 'views' | 'replies' | 'author' | 'author_id'>): Promise<FreePost> {
@@ -714,7 +703,7 @@ export const api = {
     if (Array.isArray(cloudMaterials)) {
       return cloudMaterials;
     }
-    return initialMaterials;
+    return [];
   },
 
   async getMaterialFile(id: string): Promise<string | null> {
