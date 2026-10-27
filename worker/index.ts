@@ -922,7 +922,7 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
   const isPrivileged = session.admin || session.member?.role === 'president' || session.member?.role === 'officer';
   const MAX_REGULAR_SIZE = 30 * 1024 * 1024; // 30MB
   if (!isPrivileged && uploadFile.size > MAX_REGULAR_SIZE) {
-    throw new HttpError(413, '파일 1개당 크기는 최대 30MB까지 업로드 가능합니다. (학생회 임원 및 관리자는 용량 제한 없음)');
+    throw new HttpError(413, '파일 1개당 크기는 최대 30MB까지 업로드 가능합니다.');
   }
 
   // 9.9GB storage capacity check!

@@ -142,7 +142,7 @@ export const StudyMaterialsPage: React.FC = () => {
       return;
     }
     if (!isPrivileged && file.size > 30 * 1024 * 1024) {
-      alert('파일 크기는 최대 30MB 이하여야 합니다. (학생회 임원 및 관리자는 용량 제한 없이 업로드 가능합니다.)');
+      alert('파일 크기는 최대 30MB 이하여야 합니다.');
       e.target.value = '';
       return;
     }
@@ -1424,9 +1424,7 @@ export const StudyMaterialsPage: React.FC = () => {
                         클릭하여 파일을 선택하거나 이곳으로 드래그하세요
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        {isAdmin || member?.role === 'president' || member?.role === 'officer'
-                          ? 'PDF, HWP, Office 문서, 압축파일, 소스코드 등 (학생회 임원/관리자: 파일 용량 제한 없음)'
-                          : 'PDF, HWP, Office 문서, 압축파일, 소스코드 등 (최대 30MB · 임원/관리자는 무제한)'}
+                        PDF, HWP, Office 문서, 압축파일, 소스코드 등 (파일당 최대 30MB)
                       </p>
                     </div>
                   )}
