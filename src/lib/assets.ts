@@ -39,5 +39,10 @@ export const ASSETS = {
     councilMeeting: encodeURI('/pictures/임원회의.jpg'),
     competition1: encodeURI('/pictures/총장배소프트웨어경진대회260829-1.jpg'),
     competition2: encodeURI('/pictures/총장배소프트웨어경진대회260829-2.jpg'),
+  },
+
+  // KakaoTalk Open Chat
+  openchat: {
+    qrCode: encodeURI('/kakaotalk_openchat/오픈채팅방qr코드.png'),
   }
 } as const;

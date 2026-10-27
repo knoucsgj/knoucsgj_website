@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Mail, MapPin, Scale } from 'lucide-react';
+import { ExternalLink, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ASSETS } from '../../lib/assets';
 
@@ -40,9 +40,6 @@ export const Footer: React.FC = () => {
                 <Mail className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>학생회 공식 이메일: knoucsgj@gmail.com</span>
               </div>
-              <div className="text-xs text-slate-400 pl-6.5">
-                <span>(관리자 메일: knoucsgj@daum.net, knoucsgj@hanmail.net, knoucsgj@kakao.com)</span>
-              </div>
             </div>
           </div>
 
@@ -60,7 +57,18 @@ export const Footer: React.FC = () => {
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  한국방송통신대학교 본교
+                  한국방송통신대학교
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://wgwangju.knou.ac.kr/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  광주전남지역대학
                 </a>
               </li>
               <li>
@@ -72,6 +80,17 @@ export const Footer: React.FC = () => {
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   컴퓨터과학과
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://library.knou.ac.kr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  중앙도서관
                 </a>
               </li>
               <li>
@@ -93,78 +112,39 @@ export const Footer: React.FC = () => {
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  U-KNOU 캠퍼스 (원격강의)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://wgwangju.knou.ac.kr/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  광주전남지역대학
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://library.knou.ac.kr"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  중앙도서관 학술검색
+                  U-KNOU 캠퍼스
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Student Council Links */}
+          {/* Column 4: KakaoTalk Open Chat */}
           <div>
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5">
-              학생회 & 소통
+            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-3.5 flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-amber-400" />
+              카카오톡 오픈채팅방
             </h4>
-            <ul className="space-y-2.5 text-sm text-slate-300">
-              <li>
-                <Link to="/notices?category=결산" className="hover:text-white transition-colors flex items-center gap-2">
-                  <Scale className="w-3.5 h-3.5 text-blue-400" />
-                  학생회비 결산보고
-                </Link>
-              </li>
-              <li>
-                <Link to="/notices?category=회의록" className="hover:text-white transition-colors">
-                  임원회·총회 회의록
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="hover:text-white transition-colors">
-                  학과 학생회칙 및 세칙
-                </Link>
-              </li>
-              <li>
-                <Link to="/studies" className="hover:text-white transition-colors">
-                  학술·스터디 & 자료실
-                </Link>
-              </li>
-              <li>
-                <Link to="/community" className="hover:text-white transition-colors">
-                  커뮤니티 & 자유게시판·건의함
-                </Link>
-              </li>
-              <li className="pt-2">
-                <Link to="/admin" className="text-slate-400 hover:text-white text-xs underline">
-                  학생회 임원 관리자 로그인
-                </Link>
-              </li>
-            </ul>
+            <div className="space-y-3">
+              <div className="bg-white p-2.5 rounded-2xl inline-block shadow-sm">
+                <img
+                  src={ASSETS.openchat.qrCode}
+                  alt="카카오톡 오픈채팅방 QR코드"
+                  className="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-xl"
+                />
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-[220px]">
+                스마트폰 카메라로 QR코드를 스캔하시면 컴퓨터과학과 공식 오픈채팅방으로 바로 연결됩니다.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="pb-4 text-xs sm:text-sm">
+        <div className="pb-4 text-xs sm:text-sm flex items-center justify-between">
           <Link to="/privacy" className="font-bold text-white hover:underline">
             개인정보 처리방침 및 이용약관
+          </Link>
+          <Link to="/admin" className="text-slate-500 hover:text-slate-300 text-xs">
+            학생회 관리자 로그인
           </Link>
         </div>
 
