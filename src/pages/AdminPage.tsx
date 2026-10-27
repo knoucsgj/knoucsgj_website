@@ -3,6 +3,7 @@ import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
 import { AdminR2StorageManager } from '../components/AdminR2StorageManager';
 import { showConfirm } from '../components/ui/GlobalDialog';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
 import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem } from '../lib/types';
@@ -303,8 +304,10 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const navigate = useNavigate();
   const handleLogout = async () => {
-    await auth.adminLogout();
+    await auth.logout();
+    navigate('/', { replace: true });
   };
 
   // ==========================================

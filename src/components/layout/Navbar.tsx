@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ExternalLink, ChevronRight, Shield, ZoomIn } from 'lucide-react';
 import { auth, useAuth } from '../../services/auth';
 import { ASSETS } from '../../lib/assets';
@@ -11,6 +11,13 @@ export const Navbar: React.FC = () => {
   });
   const location = useLocation();
   const { member, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await auth.logout();
+    setIsOpen(false);
+    navigate('/', { replace: true });
+  };
 
   useEffect(() => {
     if (isLargeText) {
@@ -109,7 +116,7 @@ export const Navbar: React.FC = () => {
                     {member.role === 'president' ? '학생회장' : member.role === 'officer' ? '임원진' : member.role === 'regular' ? '정회원' : '준회원'}
                   </span>
                 </Link>
-                <button onClick={() => auth.logout()} className="text-slate-300 hover:text-white transition-colors">
+                <button onClick={handleLogout} className="text-slate-300 hover:text-white transition-colors cursor-pointer">
                   로그아웃
                 </button>
               </>
@@ -269,7 +276,7 @@ export const Navbar: React.FC = () => {
                     {member.nickname} 님 · 내 정보
                   </Link>
                   <button
-                    onClick={() => { auth.logout(); setIsOpen(false); }}
+                    onClick={handleLogout}
                     className="py-3 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm"
                   >
                     로그아웃
