@@ -36,7 +36,8 @@ import {
   Receipt,
   FileCheck,
   HardDrive,
-  Layers
+  Layers,
+  GraduationCap
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -1131,7 +1132,7 @@ export const AdminPage: React.FC = () => {
   // ==========================================
   if (!canAccess) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full my-8 p-8 bg-white rounded-3xl border border-slate-200 shadow-2xl text-center space-y-6">
         <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center">
           <Shield className="w-8 h-8" />
@@ -1218,23 +1219,23 @@ export const AdminPage: React.FC = () => {
   // Logged-in Dashboard
   // ==========================================
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col text-slate-900">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
       {/* Dedicated Admin Console Top Bar */}
-      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 text-slate-900 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold">
-            <Shield className="w-5 h-5 text-blue-400" />
+          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200/60 flex items-center justify-center font-bold shadow-xs">
+            <Shield className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-white">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900">
                 KNOU CS 광주전남 관리자 센터
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 font-semibold hidden sm:inline">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold hidden sm:inline">
                 Admin Console
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[11px] text-slate-500 hidden sm:block">
               홈페이지 콘텐츠 및 회원 등급을 실시간으로 관리하는 독립 관리자 콘솔입니다.
             </p>
           </div>
@@ -1245,18 +1246,18 @@ export const AdminPage: React.FC = () => {
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs active:scale-95"
             title="새 창/탭으로 학과 홈페이지를 열어 관리자 반영 결과를 실시간으로 나란히 확인합니다"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             <span>학과 홈페이지 열기 (새 창 ↗)</span>
           </a>
 
-          <div className="h-6 w-px bg-slate-800 hidden sm:block" />
+          <div className="h-6 w-px bg-slate-200 hidden sm:block" />
 
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 transition-colors border border-slate-700"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700 transition-colors border border-slate-200 shadow-xs cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>로그아웃</span>
@@ -1266,196 +1267,248 @@ export const AdminPage: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6 flex-1">
         {/* Top Header Card */}
-        <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1.5">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 text-slate-900 shadow-xs border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+          <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               {isAdmin && (
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200">
                   최고 관리자 (Master Admin)
                 </span>
               )}
               {isPresident && (
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200">
                   학생회장: {member?.name} ({member?.nickname})
                 </span>
               )}
               {isOfficer && (
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
                   학생회 임원: {member?.name} ({member?.nickname})
                 </span>
               )}
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-500 font-medium">
                 • 독립 관리자 콘솔 대시보드
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               학생회 웹사이트 운영·회원 관리
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-              회원 등급 변경, 공지사항 및 일정 관리 결과를 즉시 확인하려면 우측 상단의 <strong className="text-blue-400">[학과 홈페이지 열기 (새 창 ↗)]</strong>을 눌러 나란히 두고 실시간 동기화를 검증하세요.
+            <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
+              회원 등급 변경, 공지사항 및 일정 관리 결과를 즉시 확인하려면 우측 상단의 <strong className="text-blue-600 font-semibold">[학과 홈페이지 열기 (새 창 ↗)]</strong>을 눌러 나란히 두고 실시간 동기화를 검증하세요.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-center">
+          <div className="flex items-center gap-2 self-start md:self-center shrink-0">
             <a
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 shadow-xs"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 transition-all border border-slate-200 shadow-xs"
             >
-              홈페이지 새 창 열기
+              <span>홈페이지 새 창 열기</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         </div>
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200 overflow-x-auto pb-px gap-2">
-        <button
-          onClick={() => setActiveTab('notices')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'notices'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Bell className="w-4 h-4 text-blue-600" />
-          공지사항 관리 ({notices.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('events')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'events'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <Calendar className="w-4 h-4 text-indigo-600" />
-          학사일정 관리 ({events.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('studies')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'studies'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <BookOpen className="w-4 h-4 text-teal-600" />
-          스터디 그룹 관리 ({studies.length})
-        </button>
-        {canManageMembers && (
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'members'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Users className="w-4 h-4 text-rose-600" />
-            회원 관리 (${members.length})
-          </button>
-        )}
-        {canManageCouncil && (
-          <button
-            onClick={() => setActiveTab('council')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'council'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Users className="w-4 h-4 text-emerald-600" />
-            인사말 & 현임원 관리
-          </button>
-        )}
-        {canManageCouncil && (
-          <button
-            onClick={() => setActiveTab('alumni')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'alumni'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Award className="w-4 h-4 text-indigo-600" />
-            역대 임원 관리 ({pastMembers.length})
-          </button>
-        )}
-        {isAdmin && (
-          <button
-            onClick={() => setActiveTab('rules')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'rules'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Scale className="w-4 h-4 text-amber-600" />
-            학생회칙 & 세칙 관리
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab('minutes')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'minutes'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <FileText className="w-4 h-4 text-purple-600" />
-          학생회 회의록 관리 ({minutes.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('curriculum')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'curriculum'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <BookOpen className="w-4 h-4 text-blue-600" />
-          개설 교과목 관리
-        </button>
-        {canManagePopups && (
-          <button
-            onClick={() => setActiveTab('popups')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'popups'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-pink-600" />
-            팝업 공지 관리
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab('storage')}
-          className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'storage'
-              ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-          }`}
-        >
-          <HardDrive className="w-4 h-4 text-cyan-600" />
-          파일 저장소 (9.9GB 한도)
-        </button>
-        {canManageBackup && (
-          <button
-            onClick={() => setActiveTab('backup')}
-            className={`px-5 py-3 text-sm font-semibold rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'backup'
-                ? 'bg-white text-blue-700 border-t-2 border-x border-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-            }`}
-          >
-            <Key className="w-4 h-4 text-amber-500" />
-            데이터 백업 & 설정
-          </button>
-        )}
-      </div>
+        {/* Tab Navigation (Categorized Multi-Row Layout - No Horizontal Scrolling) */}
+        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+          {/* Section 1: 학사 · 콘텐츠 관리 */}
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 w-32 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+              <span className="text-xs font-bold text-slate-700">학사 · 콘텐츠</span>
+            </div>
+            <div className="flex flex-wrap gap-2 flex-1">
+              <button
+                onClick={() => setActiveTab('notices')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'notices'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <Bell className="w-4 h-4" />
+                <span>공지사항 관리</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'notices' ? 'bg-blue-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  {notices.length}
+                </span>
+              </button>
+              {canManagePopups && (
+                <button
+                  onClick={() => setActiveTab('popups')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'popups'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>팝업 공지 관리</span>
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'events'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>학사일정 관리</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'events' ? 'bg-blue-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  {events.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('studies')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'studies'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>스터디 그룹 관리</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'studies' ? 'bg-blue-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  {studies.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('curriculum')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'curriculum'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>개설 교과목 관리</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100" />
+
+          {/* Section 2: 회원 · 학생회 거버넌스 */}
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 w-32 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+              <span className="text-xs font-bold text-slate-700">회원 · 학생회</span>
+            </div>
+            <div className="flex flex-wrap gap-2 flex-1">
+              {canManageMembers && (
+                <button
+                  onClick={() => setActiveTab('members')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'members'
+                      ? 'bg-purple-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>회원 관리</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'members' ? 'bg-purple-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                    {members.length}
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTab('minutes')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'minutes'
+                    ? 'bg-purple-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>학생회 회의록 관리</span>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'minutes' ? 'bg-purple-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                  {minutes.length}
+                </span>
+              </button>
+              {canManageCouncil && (
+                <button
+                  onClick={() => setActiveTab('council')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'council'
+                      ? 'bg-purple-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>인사말 & 현임원 관리</span>
+                </button>
+              )}
+              {canManageCouncil && (
+                <button
+                  onClick={() => setActiveTab('alumni')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'alumni'
+                      ? 'bg-purple-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Award className="w-4 h-4" />
+                  <span>역대 임원 관리</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'alumni' ? 'bg-purple-700/60 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                    {pastMembers.length}
+                  </span>
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('rules')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'rules'
+                      ? 'bg-purple-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Scale className="w-4 h-4" />
+                  <span>학생회칙 & 세칙 관리</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100" />
+
+          {/* Section 3: 시스템 · 스토리지 */}
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 w-32 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+              <span className="text-xs font-bold text-slate-700">시스템 · 설정</span>
+            </div>
+            <div className="flex flex-wrap gap-2 flex-1">
+              <button
+                onClick={() => setActiveTab('storage')}
+                className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'storage'
+                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`}
+              >
+                <HardDrive className="w-4 h-4" />
+                <span>파일 저장소 (9.9GB 한도)</span>
+              </button>
+              {canManageBackup && (
+                <button
+                  onClick={() => setActiveTab('backup')}
+                  className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'backup'
+                      ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                  }`}
+                >
+                  <Key className="w-4 h-4" />
+                  <span>데이터 백업 & 설정</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
       {/* ========================================== */}
       {/* TAB 1: Notices Management                  */}
