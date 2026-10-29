@@ -2900,18 +2900,87 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   throw new HttpError(400, 'Unknown resource or unsupported method');
 }
 
+const SECURITY_HEADERS: Record<string, string> = {
+  // 1. Content Security Policy (XSS, Clickjacking, Injection Protection)
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://t1.daumcdn.net https://*.daumcdn.net https://*.daum.net",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+    "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "connect-src 'self' https:",
+    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://*.daum.net",
+    "frame-ancestors 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join('; '),
+
+  // 2. Clickjacking Protection
+  'X-Frame-Options': 'SAMEORIGIN',
+
+  // 3. MIME-Sniffing Protection
+  'X-Content-Type-Options': 'nosniff',
+
+  // 4. Referrer Policy
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+
+  // 5. Browser Permissions / Feature Policy
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+
+  // 6. Strict Transport Security (HSTS - 1 year, subdomains, preload)
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+
+  // 7. Legacy XSS Filter for older browsers
+  'X-XSS-Protection': '1; mode=block',
+};
+
+function applySecurityHeaders(headers: Headers) {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(key)) {
+      headers.set(key, value);
+    }
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // 1. Force HTTPS redirect if accessed over plain HTTP
+    const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
+    if (proto === 'http' && !url.hostname.includes('localhost') && !url.hostname.includes('127.0.0.1')) {
+      url.protocol = 'https:';
+      return Response.redirect(url.toString(), 301);
+    }
+
+    let response: Response;
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       try {
-        return await handleApi(request, env);
+        response = await handleApi(request, env);
       } catch (err: any) {
-        if (err instanceof HttpError) return json({ error: err.message }, err.status);
-        console.error(err);
-        return json({ error: '서버 오류가 발생했습니다.' }, 500);
+        if (err instanceof HttpError) {
+          response = json({ error: err.message }, err.status);
+        } else {
+          console.error(err);
+          response = json({ error: '서버 오류가 발생했습니다.' }, 500);
+        }
       }
+    } else {
+      response = await env.ASSETS.fetch(request);
     }
-    return env.ASSETS.fetch(request);
+
+    // 2. Attach security headers to ALL responses (HTML, Assets, API)
+    const headers = new Headers(response.headers);
+    applySecurityHeaders(headers);
+
+    const hasNoBody = response.status === 204 || response.status === 304 || response.body === null;
+    return new Response(hasNoBody ? null : response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   },
 };
