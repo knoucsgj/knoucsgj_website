@@ -34,7 +34,7 @@ export function App() {
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/studies" element={<StudyMaterialsPage />} />
           <Route path="/community" element={<CommunityPage />} />
-          <Route path="/governance" element={<Navigate to="/notices?category=결산" replace />} />
+          <Route path="/governance" element={<Navigate to="/notices?tab=finance" replace />} />
           <Route path="/welfare" element={<Navigate to="/community" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

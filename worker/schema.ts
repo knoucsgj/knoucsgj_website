@@ -69,7 +69,6 @@ import { initialEvents } from '../src/data/mockEvents';
 import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro, initialPastCouncilMembers } from '../src/data/mockCouncil';
 import { initialMeetingMinutes } from '../src/data/mockGovernance';
 import { officialConstitutionDocuments } from '../src/data/officialConstitution';
-import { initialBudgetReports } from '../src/data/mockFinance';
 import { initialRentalItems } from '../src/data/mockWelfare';
 import { initialActivities } from '../src/data/mockActivities';
 
@@ -338,6 +337,20 @@ async function run(db: D1) {
     }
   }
 
+  // Clean out legacy mock budget reports and mock budget notices (Strict No-Mock Policy)
+  const cleanedBudget = await db.prepare("SELECT value FROM settings WHERE key = 'cleaned_budget_mocks_v1'").first();
+  if (!cleanedBudget) {
+    try {
+      await db.batch([
+        db.prepare("DELETE FROM budget_reports WHERE id IN ('budget-2026-q3', 'budget-2026-q2') OR id LIKE 'budget-2026-%'"),
+        db.prepare("DELETE FROM notices WHERE id = 'notice-6' OR (title LIKE '%[결산보고]%' AND (file_url = '#' OR file_url IS NULL))"),
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cleaned_budget_mocks_v1', '1')"),
+      ]);
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Seed constitution versions (v4)
   const seededV4 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v4'").first();
   if (!seededV4) {
@@ -362,29 +375,10 @@ async function run(db: D1) {
     await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v4', '1')").run();
   }
 
-  // Seed budget reports and rental items (v5)
+  // Seed rental items (v5)
   const seededV5 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v5'").first();
   if (!seededV5) {
     const stmtsV5: any[] = [];
-    for (const b of initialBudgetReports) {
-      stmtsV5.push(
-        db
-          .prepare(
-            'INSERT OR IGNORE INTO budget_reports (id, title, period, income_total, expense_total, balance, status, published_date, items_json) VALUES (?,?,?,?,?,?,?,?,?)'
-          )
-          .bind(
-            b.id,
-            b.title,
-            b.period,
-            b.income_total,
-            b.expense_total,
-            b.balance,
-            b.status,
-            b.published_date,
-            JSON.stringify(b.items || [])
-          )
-      );
-    }
     for (const r of initialRentalItems) {
       stmtsV5.push(
         db

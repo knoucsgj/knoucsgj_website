@@ -120,7 +120,19 @@ export const GovernancePage: React.FC = () => {
             </span>
           </div>
 
-          {/* Report Selector Pills */}
+          {reports.length === 0 ? (
+            <div className="py-20 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-xs border border-emerald-100">
+                <Receipt className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-base">등록된 결산 보고서가 없습니다.</h3>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                학생회비 결산 보고서는 분기별 집행 및 감사 완료 후 공시됩니다.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Report Selector Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {reports.map((rep) => (
               <button
@@ -227,6 +239,8 @@ export const GovernancePage: React.FC = () => {
                 </table>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       )}

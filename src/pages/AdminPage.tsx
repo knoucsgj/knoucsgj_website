@@ -2600,7 +2600,11 @@ export const AdminPage: React.FC = () => {
 
           <div className="divide-y divide-slate-100">
             {budgetReports.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">등록된 결산 보고서가 없습니다.</div>
+              <div className="py-14 text-center text-slate-400 space-y-2">
+                <Receipt className="w-8 h-8 mx-auto text-slate-300" />
+                <p className="text-sm font-semibold text-slate-600">등록된 결산 보고서가 없습니다.</p>
+                <p className="text-xs text-slate-400">새 결산보고 등록 버튼을 눌러 첫 결산 내역을 등록해 주세요.</p>
+              </div>
             ) : (
               budgetReports.map((report) => (
                 <div key={report.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 p-3 rounded-2xl transition-colors">

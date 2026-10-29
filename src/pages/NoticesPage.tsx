@@ -824,8 +824,14 @@ export const NoticesPage: React.FC = () => {
           {loadingBudgets ? (
             <div className="py-20 text-center text-slate-400 text-sm">결산 내역을 불러오는 중입니다...</div>
           ) : budgetReports.length === 0 ? (
-            <div className="py-20 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
-              등록된 결산 보고서가 없습니다.
+            <div className="py-20 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-xs border border-emerald-100">
+                <Receipt className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-base">공시된 결산 보고서가 없습니다.</h3>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                학생회비 결산 보고서는 분기별 집행 및 감사 완료 후 투명하게 공시됩니다.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -910,7 +916,7 @@ export const NoticesPage: React.FC = () => {
                             <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-semibold">필수 증빙</span>
                           </div>
                           <p className="text-xs text-emerald-800 truncate">
-                            {selectedBudget.receipt_name || '결산_영수증_증빙자료.pdf'}
+                            {selectedBudget.receipt_name || '첨부된 증빙 파일 없음'}
                           </p>
                         </div>
                       </div>
@@ -960,7 +966,7 @@ export const NoticesPage: React.FC = () => {
                                 }`}>
                                   {it.type === '수입' ? '+' : '-'}{it.amount.toLocaleString()}원
                                 </td>
-                                <td className="p-3 text-slate-500 text-[11px] whitespace-nowrap">{it.note || '영수증 대조 완료'}</td>
+                                <td className="p-3 text-slate-500 text-[11px] whitespace-nowrap">{it.note || '-'}</td>
                               </tr>
                             ))}
                           </tbody>
