@@ -64,14 +64,7 @@ export const defaultCurriculumCourses: { grade: number; semester: number; type: 
 
 // Idempotent schema bootstrap. Runs once per Worker isolate before the first API call, so no manual
 // D1 console work is required. Safe to run repeatedly (CREATE IF NOT EXISTS + guarded ALTERs).
-import { initialNotices } from '../src/data/mockNotices';
-import { initialEvents } from '../src/data/mockEvents';
-import { councilMembers as initialCouncilMembers, councilIntro as initialCouncilIntro, initialPastCouncilMembers } from '../src/data/mockCouncil';
-import { initialMeetingMinutes } from '../src/data/mockGovernance';
 import { officialConstitutionDocuments } from '../src/data/officialConstitution';
-import { initialRentalItems } from '../src/data/mockWelfare';
-import { initialActivities } from '../src/data/mockActivities';
-
 type D1 = any;
 
 const CREATE_STATEMENTS = [
@@ -255,55 +248,23 @@ async function run(db: D1) {
     }
   }
 
-  // One-time: copy the bundled default notices/events so existing content stays visible.
-  const seeded = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v1'").first();
-  if (!seeded) {
-    const stmts: any[] = [];
-    for (const n of initialNotices) {
-      const att = n.attachments && n.attachments[0];
-      stmts.push(
-        db
-          .prepare(
-            'INSERT OR IGNORE INTO notices (id, title, content, category, author, created_at, views, is_pinned, file_name, file_url) VALUES (?,?,?,?,?,?,?,?,?,?)'
-          )
-          .bind(n.id, n.title, n.content, n.category, n.author, n.created_at, Number(n.views) || 1,
-            n.is_pinned ? 1 : 0, att ? att.name : null, att ? att.url : null)
-      );
+  // Purge ALL legacy mock data from production and local D1 (Strict No-Mock Policy)
+  const purgedMocks = await db.prepare("SELECT value FROM settings WHERE key = 'purged_all_mocks_v1'").first();
+  if (!purgedMocks) {
+    try {
+      await db.batch([
+        db.prepare("DELETE FROM notices WHERE id LIKE 'notice-%'"),
+        db.prepare("DELETE FROM academic_events WHERE id LIKE 'event-%'"),
+        db.prepare("DELETE FROM council_members WHERE id LIKE 'cm-%'"),
+        db.prepare("DELETE FROM meeting_minutes WHERE id LIKE 'min-%' OR id LIKE 'mm-%'"),
+        db.prepare("DELETE FROM rental_items WHERE id LIKE 'rent-%' OR id LIKE 'r-%'"),
+        db.prepare("DELETE FROM activity_reports WHERE id LIKE 'activity-%'"),
+        db.prepare("DELETE FROM budget_reports WHERE id LIKE 'budget-%'"),
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('purged_all_mocks_v1', '1')"),
+      ]);
+    } catch {
+      /* ignore */
     }
-    for (const e of initialEvents) {
-      stmts.push(
-        db
-          .prepare(
-            'INSERT OR IGNORE INTO academic_events (id, title, start_date, end_date, category, description, target_grades, is_important) VALUES (?,?,?,?,?,?,?,?)'
-          )
-          .bind(e.id, e.title, e.start_date, e.end_date, e.category, e.description, e.target_grades, e.is_important ? 1 : 0)
-      );
-    }
-    stmts.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v1', '1')"));
-    await db.batch(stmts);
-  }
-
-  // Seed council intro, members, and minutes (v2)
-  const seededV2 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v2'").first();
-  if (!seededV2) {
-    const stmtsV2: any[] = [];
-    stmtsV2.push(
-      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('council_intro', ?)").bind(JSON.stringify(initialCouncilIntro))
-    );
-    for (const cm of initialCouncilMembers) {
-      stmtsV2.push(
-        db.prepare('INSERT OR IGNORE INTO council_members (id, role, name, grade_info, message, email) VALUES (?,?,?,?,?,?)')
-          .bind(cm.id, cm.role, cm.name, cm.grade_info, cm.message, cm.email || null)
-      );
-    }
-    for (const mm of initialMeetingMinutes) {
-      stmtsV2.push(
-        db.prepare('INSERT OR IGNORE INTO meeting_minutes (id, title, meeting_type, meeting_date, attendees, agenda, content, decisions) VALUES (?,?,?,?,?,?,?,?)')
-          .bind(mm.id, mm.title, mm.meeting_type, mm.meeting_date, mm.attendees, mm.agenda, mm.content, mm.decisions)
-      );
-    }
-    stmtsV2.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v2', '1')"));
-    await db.batch(stmtsV2);
   }
 
   // Clean out any legacy mock past council members so only real records entered by admin exist
@@ -373,65 +334,6 @@ async function run(db: D1) {
         .run();
     }
     await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v4', '1')").run();
-  }
-
-  // Seed rental items (v5)
-  const seededV5 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v5'").first();
-  if (!seededV5) {
-    const stmtsV5: any[] = [];
-    for (const r of initialRentalItems) {
-      stmtsV5.push(
-        db
-          .prepare(
-            'INSERT OR IGNORE INTO rental_items (id, name, category, total_qty, available_qty, location, status, desc) VALUES (?,?,?,?,?,?,?,?)'
-          )
-          .bind(
-            r.id,
-            r.name,
-            r.category,
-            r.total_qty,
-            r.available_qty,
-            r.location,
-            r.status,
-            r.desc
-          )
-      );
-    }
-    stmtsV5.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v5', '1')"));
-    await db.batch(stmtsV5);
-  }
-
-
-  // Seed activity reports (v6)
-  const seededV6 = await db.prepare("SELECT value FROM settings WHERE key = 'seeded_v6'").first();
-  if (!seededV6) {
-    const stmtsV6: any[] = [];
-    for (const a of initialActivities) {
-      stmtsV6.push(
-        db
-          .prepare(
-            'INSERT OR IGNORE INTO activity_reports (id, title, category, description, activity_date, media_type, media_url, thumbnail_url, youtube_id, author, views, is_pinned, is_deleted, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
-          )
-          .bind(
-            a.id,
-            a.title,
-            a.category,
-            a.description,
-            a.activity_date,
-            a.media_type,
-            a.media_url,
-            a.thumbnail_url || null,
-            a.youtube_id || null,
-            a.author || '학생회',
-            Number(a.views) || 1,
-            a.is_pinned ? 1 : 0,
-            0,
-            a.created_at
-          )
-      );
-    }
-    stmtsV6.push(db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('seeded_v6', '1')"));
-    await db.batch(stmtsV6);
   }
 
   // Seed curriculum courses (v7)
