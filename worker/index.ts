@@ -2904,13 +2904,13 @@ const SECURITY_HEADERS: Record<string, string> = {
   // 1. Content Security Policy (XSS, Clickjacking, Injection Protection)
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://t1.daumcdn.net https://*.daumcdn.net https://*.daum.net",
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
     "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https:",
-    "media-src 'self' blob: https:",
-    "connect-src 'self' https:",
-    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://*.daum.net",
+    "img-src 'self' data: blob: https://img.youtube.com https://images.unsplash.com",
+    "media-src 'self' blob:",
+    "connect-src 'self'",
+    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com",
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",

@@ -283,13 +283,6 @@ export const MeetingMinutePrintView: React.FC<Props> = ({ minute, onClose }) => 
     </div>
   </div>
 
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 350);
-    };
-  </script>
 </body>
 </html>
     `;
@@ -297,6 +290,14 @@ export const MeetingMinutePrintView: React.FC<Props> = ({ minute, onClose }) => 
     printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.error(e);
+      }
+    }, 400);
   };
 
   return (
