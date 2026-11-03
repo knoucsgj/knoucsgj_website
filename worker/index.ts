@@ -225,6 +225,11 @@ const requireMemberManager = (s: Session) => {
   throw new HttpError(403, '학생회장 또는 최고 관리자만 접근할 수 있습니다.');
 };
 
+const requireConstitutionManager = (s: Session) => {
+  if (s.admin || isPresident(s)) return;
+  throw new HttpError(403, '학생회장 또는 최고 관리자만 학생회칙을 관리할 수 있습니다.');
+};
+
 const canManagePopups = (s: Session) => {
   if (s.admin || isPresident(s)) return true;
   if (isRestricted(s, 'block_admin_console')) return false;
@@ -2606,7 +2611,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'POST') {
-      requireAdmin(session);
+      requireConstitutionManager(session);
       const b: any = await readJson(req);
       if (!b.title || !b.revision_date || !b.documents) {
         throw new HttpError(400, '회칙 명칭, 개정일자 및 회칙 문서 내용이 필요합니다.');
@@ -2651,7 +2656,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'PUT' && id) {
-      requireAdmin(session);
+      requireConstitutionManager(session);
       const existing: any = await db.prepare('SELECT * FROM constitution_versions WHERE id = ?').bind(id).first();
       if (!existing) throw new HttpError(404, '수정할 회칙 버전을 찾을 수 없습니다.');
 
@@ -2688,7 +2693,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'DELETE' && id) {
-      requireAdmin(session);
+      requireConstitutionManager(session);
       const existing: any = await db.prepare('SELECT * FROM constitution_versions WHERE id = ?').bind(id).first();
       if (!existing) throw new HttpError(404, '해당 회칙 버전을 찾을 수 없습니다.');
 

@@ -53,6 +53,7 @@ export const AdminPage: React.FC = () => {
   const canManageCouncil = isAdmin || isPresident || isOfficer;
   const canManageBackup = isAdmin;
   const canManagePopups = isAdmin || isPresident;
+  const canManageRules = isAdmin || isPresident;
 
   const [adminIdInput, setAdminIdInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -76,10 +77,10 @@ export const AdminPage: React.FC = () => {
     if (activeTab === 'members' && !canManageMembers) setActiveTab('notices');
     if (activeTab === 'council' && !canManageCouncil) setActiveTab('notices');
     if (activeTab === 'alumni' && !canManageCouncil) setActiveTab('notices');
-    if (activeTab === 'rules' && !isAdmin) setActiveTab('notices');
+    if (activeTab === 'rules' && !canManageRules) setActiveTab('notices');
     if (activeTab === 'backup' && !canManageBackup) setActiveTab('notices');
     if (activeTab === 'popups' && !canManagePopups) setActiveTab('notices');
-  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup, canManagePopups, isAdmin]);
+  }, [activeTab, canManageMembers, canManageCouncil, canManageBackup, canManagePopups, canManageRules, isAdmin]);
 
   // Data states
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -1515,7 +1516,7 @@ export const AdminPage: React.FC = () => {
                   </span>
                 </button>
               )}
-              {isAdmin && (
+              {canManageRules && (
                 <button
                   onClick={() => setActiveTab('rules')}
                   className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -2567,7 +2568,7 @@ export const AdminPage: React.FC = () => {
 
       {/* TAB: Constitution Management (학생회칙 & 세칙 관리) */}
       {/* ================================================= */}
-      {isAdmin && activeTab === 'rules' && (
+      {canManageRules && activeTab === 'rules' && (
         <AdminConstitutionManager />
       )}
 

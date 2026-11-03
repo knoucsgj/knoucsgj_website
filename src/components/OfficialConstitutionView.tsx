@@ -19,6 +19,13 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+const formatChapterLabel = (raw: number | string): string => {
+  const s = String(raw).trim();
+  if (!s || s === '부칙') return '부칙';
+  const cleaned = s.replace(/^제/, '').replace(/장$/, '').trim();
+  return `제${cleaned}장`;
+};
+
 export const OfficialConstitutionView: React.FC = () => {
   const [versions, setVersions] = useState<ConstitutionVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string>('');
@@ -335,7 +342,7 @@ export const OfficialConstitutionView: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 font-extrabold text-xs">
-                      {chapKey === '부칙' ? '부칙' : `제${chapter.chapter}장`}
+                      {formatChapterLabel(chapter.chapter)}
                     </span>
                     <h3 className="font-bold text-sm sm:text-base text-slate-900 tracking-tight">
                       {chapter.title}
@@ -357,6 +364,11 @@ export const OfficialConstitutionView: React.FC = () => {
                 {/* Chapter Articles Body */}
                 {isOpen && (
                   <div className="p-4 sm:p-6 border-t border-slate-100 space-y-6 divide-y divide-slate-100">
+                    {chapter.content && (
+                      <div className="p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl text-xs sm:text-sm text-purple-950 whitespace-pre-line leading-relaxed font-normal">
+                        {chapter.content}
+                      </div>
+                    )}
                     {chapter.articles.map((art) => (
                       <div key={String(art.number)} className="pt-5 first:pt-0 space-y-2">
                         {/* Section Header if available */}

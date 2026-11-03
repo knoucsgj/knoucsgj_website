@@ -23,6 +23,13 @@ import {
   FolderPlus
 } from 'lucide-react';
 
+export const formatChapterLabel = (raw: number | string): string => {
+  const s = String(raw).trim();
+  if (!s || s === '부칙') return '부칙';
+  const cleaned = s.replace(/^제/, '').replace(/장$/, '').trim();
+  return `제${cleaned}장`;
+};
+
 export const AdminConstitutionManager: React.FC = () => {
   const [versions, setVersions] = useState<ConstitutionVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string>('');
@@ -34,6 +41,7 @@ export const AdminConstitutionManager: React.FC = () => {
   const [editingChapterNum, setEditingChapterNum] = useState<number | string>(1);
   const [editingArticleNum, setEditingArticleNum] = useState<number | string | null>(null);
   const [articleForm, setArticleForm] = useState({
+    chapter: 1 as string | number,
     number: '' as string | number,
     title: '',
     section: '',
@@ -45,7 +53,8 @@ export const AdminConstitutionManager: React.FC = () => {
   const [editingChapterTarget, setEditingChapterTarget] = useState<number | string | null>(null);
   const [chapterForm, setChapterForm] = useState({
     chapter: '' as string | number,
-    title: ''
+    title: '',
+    content: ''
   });
 
   // Modals - Section (절 일괄 관리)
@@ -119,14 +128,15 @@ export const AdminConstitutionManager: React.FC = () => {
 
   // Available sections in current editing chapter
   const availableSectionsInChap = useMemo(() => {
-    const targetChap = activeDoc.chapters.find((c) => String(c.chapter) === String(editingChapterNum));
+    const targetChapNum = isArticleModalOpen ? articleForm.chapter : editingChapterNum;
+    const targetChap = activeDoc.chapters.find((c) => String(c.chapter) === String(targetChapNum));
     if (!targetChap) return [];
     const secSet = new Set<string>();
     targetChap.articles.forEach((a) => {
       if (a.section && a.section.trim()) secSet.add(a.section.trim());
     });
     return Array.from(secSet);
-  }, [activeDoc, editingChapterNum]);
+  }, [activeDoc, isArticleModalOpen, articleForm.chapter, editingChapterNum]);
 
   // Filtered chapters & articles
   const filteredChapters = useMemo(() => {
@@ -167,7 +177,8 @@ export const AdminConstitutionManager: React.FC = () => {
     setEditingChapterTarget(null);
     setChapterForm({
       chapter: nextNum,
-      title: ''
+      title: '',
+      content: ''
     });
     setIsChapterModalOpen(true);
   };
@@ -176,7 +187,8 @@ export const AdminConstitutionManager: React.FC = () => {
     setEditingChapterTarget(chapter.chapter);
     setChapterForm({
       chapter: chapter.chapter,
-      title: chapter.title
+      title: chapter.title,
+      content: chapter.content || ''
     });
     setIsChapterModalOpen(true);
   };
@@ -185,6 +197,7 @@ export const AdminConstitutionManager: React.FC = () => {
     e.preventDefault();
     const chapInput = String(chapterForm.chapter).trim();
     const titleInput = chapterForm.title.trim();
+    const contentInput = chapterForm.content.trim() || null;
 
     if (!chapInput || !titleInput) {
       alert('장의 번호/구분과 장 제목을 모두 입력해 주세요.');
@@ -210,24 +223,26 @@ export const AdminConstitutionManager: React.FC = () => {
         if (String(editingChapterTarget) !== String(finalChapKey)) {
           const duplicate = targetDoc.chapters.some((c) => String(c.chapter) === String(finalChapKey));
           if (duplicate) {
-            alert(`이미 '${finalChapKey === '부칙' ? '부칙' : `제${finalChapKey}장`}'이(가) 존재합니다.`);
+            alert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
             return;
           }
         }
 
         targetChap.chapter = finalChapKey;
         targetChap.title = titleInput;
+        targetChap.content = contentInput;
       } else {
         // Add new chapter
         const duplicate = targetDoc.chapters.some((c) => String(c.chapter) === String(finalChapKey));
         if (duplicate) {
-          alert(`이미 '${finalChapKey === '부칙' ? '부칙' : `제${finalChapKey}장`}'이(가) 존재합니다.`);
+          alert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
           return;
         }
 
         targetDoc.chapters.push({
           chapter: finalChapKey,
           title: titleInput,
+          content: contentInput,
           articles: []
         });
       }
@@ -245,7 +260,7 @@ export const AdminConstitutionManager: React.FC = () => {
   };
 
   const handleDeleteChapter = async (chapter: ConstitutionChapter) => {
-    const chapName = chapter.chapter === '부칙' ? '부칙' : `제${chapter.chapter}장 (${chapter.title})`;
+    const chapName = `${formatChapterLabel(chapter.chapter)} (${chapter.title})`;
     const count = chapter.articles.length;
 
     const confirmed = await showConfirm({
@@ -363,6 +378,7 @@ export const AdminConstitutionManager: React.FC = () => {
     setEditingChapterNum(chapterNumber);
     setEditingArticleNum(article.number);
     setArticleForm({
+      chapter: chapterNumber,
       number: article.number,
       title: article.title,
       section: article.section || '',
@@ -376,6 +392,7 @@ export const AdminConstitutionManager: React.FC = () => {
     setEditingChapterNum(defaultChap);
     setEditingArticleNum(null);
     setArticleForm({
+      chapter: defaultChap,
       number: '',
       title: '',
       section: '',
@@ -396,9 +413,9 @@ export const AdminConstitutionManager: React.FC = () => {
       const targetDoc = updatedDocs.find((d) => d.id === selectedDocId);
       if (!targetDoc) return;
 
-      const targetChap = targetDoc.chapters.find((c) => String(c.chapter) === String(editingChapterNum));
+      const targetChap = targetDoc.chapters.find((c) => String(c.chapter) === String(articleForm.chapter));
       if (!targetChap) {
-        alert('해당 장을 찾을 수 없습니다.');
+        alert('선택한 소속 장을 찾을 수 없습니다.');
         return;
       }
 
@@ -406,26 +423,34 @@ export const AdminConstitutionManager: React.FC = () => {
         ? String(articleForm.number).trim()
         : Number(articleForm.number);
 
+      const articlePayload: ConstitutionArticle = {
+        number: parsedNum || (editingArticleNum !== null ? editingArticleNum : (targetChap.articles.length + 1)),
+        title: articleForm.title.trim(),
+        section: articleForm.section.trim() || null,
+        content: articleForm.content.trim()
+      };
+
       if (editingArticleNum !== null) {
-        // Edit existing article
-        const artIdx = targetChap.articles.findIndex((a) => String(a.number) === String(editingArticleNum));
-        if (artIdx !== -1) {
-          targetChap.articles[artIdx] = {
-            number: parsedNum || targetChap.articles[artIdx].number,
-            title: articleForm.title.trim(),
-            section: articleForm.section.trim() || null,
-            content: articleForm.content.trim()
-          };
+        // Edit existing article - handle possible chapter move
+        if (String(editingChapterNum) !== String(articleForm.chapter)) {
+          // Remove from old chapter
+          const oldChap = targetDoc.chapters.find((c) => String(c.chapter) === String(editingChapterNum));
+          if (oldChap) {
+            oldChap.articles = oldChap.articles.filter((a) => String(a.number) !== String(editingArticleNum));
+          }
+          // Push into new target chapter
+          targetChap.articles.push(articlePayload);
+        } else {
+          const artIdx = targetChap.articles.findIndex((a) => String(a.number) === String(editingArticleNum));
+          if (artIdx !== -1) {
+            targetChap.articles[artIdx] = articlePayload;
+          } else {
+            targetChap.articles.push(articlePayload);
+          }
         }
       } else {
         // Add new article
-        const newArtNum = parsedNum || (targetChap.articles.length + 1);
-        targetChap.articles.push({
-          number: newArtNum,
-          title: articleForm.title.trim(),
-          section: articleForm.section.trim() || null,
-          content: articleForm.content.trim()
-        });
+        targetChap.articles.push(articlePayload);
       }
 
       await api.updateConstitutionVersion(activeVersion.id, {
@@ -743,7 +768,7 @@ export const AdminConstitutionManager: React.FC = () => {
             <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-extrabold text-xs">
-                  {chapter.chapter === '부칙' ? '부칙' : `제${chapter.chapter}장`}
+                  {formatChapterLabel(chapter.chapter)}
                 </span>
                 <h3 className="font-bold text-sm sm:text-base text-slate-900">{chapter.title}</h3>
                 <span className="text-xs text-slate-400 font-medium">({chapter.articles.length}개 조항)</span>
@@ -753,7 +778,7 @@ export const AdminConstitutionManager: React.FC = () => {
                 <button
                   onClick={() => openEditChapterModal(chapter)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 text-xs font-bold transition-all shadow-2xs cursor-pointer"
-                  title="장 번호 및 제목 수정"
+                  title="장 번호, 제목 및 구문 수정"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   <span>장 수정</span>
@@ -774,6 +799,17 @@ export const AdminConstitutionManager: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Chapter Clause / Description (장의 구문/본문) */}
+            {chapter.content && (
+              <div className="mx-4 sm:mx-6 mt-4 p-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl text-xs sm:text-sm text-purple-950 whitespace-pre-line leading-relaxed">
+                <div className="flex items-center gap-1.5 font-bold text-purple-900 text-xs mb-1">
+                  <FileText className="w-3.5 h-3.5 text-purple-700" />
+                  <span>장 구문 / 본문</span>
+                </div>
+                {chapter.content}
+              </div>
+            )}
 
             {/* Articles List with Section Banners */}
             <div className="p-4 sm:p-6 space-y-4">
@@ -930,6 +966,22 @@ export const AdminConstitutionManager: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  장의 본문 / 서술 구문 (선택 사항)
+                </label>
+                <textarea
+                  rows={4}
+                  value={chapterForm.content}
+                  onChange={(e) => setChapterForm({ ...chapterForm, content: e.target.value })}
+                  placeholder="장에 조항 외 별도 총괄 구문, 도입문 또는 선언 문구가 있는 경우 입력하세요. (없으면 비워둠)"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-purple-500 font-medium leading-relaxed"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  * 조항 위에 표시될 장 자체의 총괄 안내 구문이나 선언문을 서술할 수 있습니다.
+                </p>
+              </div>
+
               <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
@@ -1034,7 +1086,7 @@ export const AdminConstitutionManager: React.FC = () => {
                     {editingArticleNum !== null ? `제${editingArticleNum}조 조항 및 오타 수정` : '새 조항 추가'}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {activeDoc.short_title} · {editingChapterNum === '부칙' ? '부칙' : `제${editingChapterNum}장`}
+                    {activeDoc.short_title} · {formatChapterLabel(articleForm.chapter)}
                   </p>
                 </div>
               </div>
@@ -1047,6 +1099,28 @@ export const AdminConstitutionManager: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveArticle} className="space-y-4 text-xs sm:text-sm">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">소속 장(Chapter) *</label>
+                <select
+                  value={String(articleForm.chapter)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const numVal = isNaN(Number(val)) ? val : Number(val);
+                    setArticleForm({ ...articleForm, chapter: numVal });
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 font-bold text-slate-800"
+                >
+                  {activeDoc.chapters.map((ch) => (
+                    <option key={String(ch.chapter)} value={String(ch.chapter)}>
+                      {formatChapterLabel(ch.chapter)}: {ch.title}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  * 조항이 소속될 장을 선택하거나 다른 장으로 이동시킬 수 있습니다.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">조항 번호 *</label>
@@ -1114,7 +1188,44 @@ export const AdminConstitutionManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">조항 본문 (오타 수정 및 항/호 구성) *</label>
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <label className="block font-bold text-slate-700">조항 본문 (오타 수정 및 항/호 구성) *</label>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[11px] text-slate-400 font-medium mr-1">빠른 기호:</span>
+                    {['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => {
+                          setArticleForm((prev) => ({
+                            ...prev,
+                            content: prev.content ? `${prev.content}\n${num} ` : `${num} `
+                          }));
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 cursor-pointer"
+                        title={`${num} 항 기호 삽입`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    {['가.', '나.', '다.', '라.', '마.'].map((mok) => (
+                      <button
+                        key={mok}
+                        type="button"
+                        onClick={() => {
+                          setArticleForm((prev) => ({
+                            ...prev,
+                            content: prev.content ? `${prev.content}\n  ${mok} ` : `  ${mok} `
+                          }));
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 cursor-pointer"
+                        title={`${mok} 목 기호 삽입`}
+                      >
+                        {mok}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <textarea
                   required
                   rows={10}

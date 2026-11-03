@@ -11,6 +11,7 @@ export interface ConstitutionArticle {
 export interface ConstitutionChapter {
   chapter: number | string;
   title: string;
+  content?: string | null;
   articles: ConstitutionArticle[];
 }
 
