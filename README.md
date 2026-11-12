@@ -1,27 +1,34 @@
 # 한국방송통신대학교 광주전남지역대학 컴퓨터과학과 학생회 홈페이지
 
 한국방송통신대학교(KNOU) 광주전남지역대학 컴퓨터과학과 학생회 공식 웹사이트입니다.  
-직장과 학업을 병행하는 학우들을 위해 **공지사항**, **학사일정 캘린더 & D-Day 알림**, **학과 및 학생회 소개**, **스터디 그룹 & FAQ**를 제공합니다.
+직장과 학업을 병행하는 학우들을 위해 **공지사항**, **학사일정 캘린더 & D-Day 알림**, **학과 및 학생회 소개**, **학생회칙 & 세칙**, **투명 결산·회의록·감사보고**, **학술·스터디 자료실**, **커뮤니티 소통 공간**을 제공합니다.
 
 ---
 
 ## 🌟 핵심 특징
 
-- **0원(무료) 서버리스 인프라**:
-  - **호스팅**: Cloudflare Pages (무제한 대역폭, 초고속 전세계/국내 CDN 무료)
-  - **데이터베이스/스토리지**: Supabase (PostgreSQL, 실시간 DB, RLS 보안 정책 무료)
+- **서버리스 클라우드 인프라**:
+  - **호스팅 & API**: Cloudflare Workers & Pages (글로벌 CDN, 초고속 엣지 라우팅)
+  - **데이터베이스**: Cloudflare D1 (서버리스 분산 SQLite 관계형 DB)
+  - **파일 저장소**: Cloudflare R2 (학습 자료, 결산 영수증, 회의록 문서 스토리지)
+- **엄격한 데이터 신뢰성 (No-Mock Policy)**:
+  - 임의의 Mock(가짜) 데이터를 배제하고, 데이터베이스(D1) 및 스토리지(R2)만을 단일 진실 공급원(SSOT)으로 작동
 - **모바일 퍼스트 & 반응형 디자인**:
-  - 스마트폰부터 PC/태블릿까지 최적화된 Pretendard 폰트 및 모바일 드로어 메뉴 지원
+  - 스마트폰부터 PC/태블릿까지 최적화된 반응형 레이아웃 및 모바일 드로어 메뉴 지원
+  - 방송대 공식 상징물 표준관리지침(BS 16 엠블럼 C) 준수
 - **실시간 학사일정 & D-Day 알림**:
   - 월간 달력 그리드 뷰 및 타임라인 목록 뷰 지원
-  - 중간과제물 제출 마감, 출석수업, 기말평가 D-Day 자동 계산
-- **코딩 없는 관리자 센터 (`/admin`)**:
-  - 개발 지식이나 Git/Vite/배포를 몰라도, 웹 화면에서 마우스 클릭과 입력만으로 공지사항, 학사일정, 임원 소개를 바로 추가/수정/삭제
-  - 초기 기본 관리자 비밀번호: `knoucs2026!` (관리자 센터에서 변경 가능)
-  - **원클릭 데이터 백업 & 인수인계**: 차기 학생회로 넘어갈 때 클릭 한 번으로 `.json` 백업 파일 다운로드 및 복원 지원
-- **안정적인 듀얼 데이터 모드**:
-  - Supabase 연동 전에도 풍부한 목업 데이터로 모든 기능 즉시 작동
-  - Supabase 환경변수 연결 시 즉시 실시간 클라우드 DB 모드로 자동 전환
+  - 과제물 제출, 출석수업, 기말평가 D-Day 자동 계산
+- **전공 학술 & 스터디 자료실**:
+  - 1~4학년 전공 교과목별 강의/실습 과제 파일 업로드 & 다운로드
+  - IT 실무 및 자격증 자료실 (Python, C/C++, Java 등 소스코드 업로드 지원)
+- **투명한 학생회 운영**:
+  - 학생회비 결산보고 (영수증 첨부 의무화)
+  - 운영위원회 회의록 및 감사보고서 등록/열람
+  - 학생회칙 및 선거시행세칙 통합 관리
+- **보안 강화 및 웹 표준 준수**:
+  - OWASP ZAP 및 Security Headers 점검 기준 통과 (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy 적용)
+  - 파일 업로드 보안 격리 헤더 적용
 
 ---
 
@@ -29,56 +36,60 @@
 
 - **프론트엔드**: React 19, TypeScript, Vite
 - **스타일링**: Tailwind CSS v4, Lucide React (아이콘)
-- **라우팅**: React Router v7 (`public/_redirects` Cloudflare SPA 지원)
-- **백엔드/DB**: Supabase (PostgreSQL, RLS)
-- **배포 플랫폼**: Cloudflare Pages
+- **라우팅**: React Router v7 (SPA 라우팅 지원)
+- **백엔드/API**: Cloudflare Workers (TypeScript REST API)
+- **데이터베이스**: Cloudflare D1 (SQLite)
+- **파일 스토리지**: Cloudflare R2
+- **배포 & 인프라 설정**: `wrangler.jsonc`
 
 ---
 
 ## 🚀 빠른 시작 (로컬 개발)
 
+### 1. 패키지 설치
 ```bash
-# 1. 의존성 패키지 설치
 npm install
+```
 
-# 2. 로컬 개발 서버 실행
+### 2. 로컬 개발 서버 실행
+```bash
 npm run dev
 ```
+브라우저에서 `http://localhost:5173`으로 접속합니다. (로컬 Wrangler D1 및 Vite 연동)
 
-브라우저에서 `http://localhost:5173` 접속
-
----
-
-## ☁️ Cloudflare Pages 배포 가이드 (무료)
-
-1. 이 저장소를 **GitHub** 개인/학생회 계정에 Push합니다.
-2. [Cloudflare 대시보드](https://dash.cloudflare.com/)에 로그인 후 **Workers & Pages** > **Create application** > **Pages** 클릭
-3. **Connect to Git**을 누르고 해당 레포지토리를 선택합니다.
-4. 빌드 설정을 입력합니다:
-   - **Framework preset**: `Vite`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-5. **Save and Deploy**를 클릭하면 1분 안에 무료 서브도메인(`*.pages.dev`)으로 즉시 배포됩니다!
-
----
-
-## 🗄️ Supabase 데이터베이스 연동 가이드 (무료)
-
-1. [Supabase](https://supabase.com/)에서 무료 계정 생성 후 새 프로젝트(예: `knou-cs-gj`)를 생성합니다.
-2. 좌측 메뉴의 **SQL Editor**로 이동합니다.
-3. 프로젝트 루트에 있는 `supabase_schema.sql` 파일의 전체 내용을 복사하여 붙여넣고 **Run**을 실행합니다.
-   - `notices`(공지사항), `academic_events`(학사일정), `council_members`(임원진) 테이블 및 보안 정책(RLS), 초기 데이터가 자동 생성됩니다.
-4. Supabase **Project Settings > API**에서 아래 두 값을 복사합니다:
-   - `Project URL`
-   - `Project API Keys` 중 `anon / public` 키
-5. 프로젝트 루트의 `.env` 파일(또는 Cloudflare Pages의 Settings > Environment variables)에 등록합니다:
-
-```env
-VITE_SUPABASE_URL=https://[YOUR-PROJECT-ID].supabase.co
-VITE_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
+### 3. 프로덕션 빌드 및 타입 검증
+```bash
+npm run build
 ```
 
-연동이 완료되면 상단 바에 `Supabase 연동됨` 표시가 나타나며 실시간 데이터베이스와 동기화됩니다.
+---
+
+## 🗄️ 데이터베이스 스키마 및 마이그레이션
+
+프로젝트 루트의 [`cloudflare_d1_schema.sql`](./cloudflare_d1_schema.sql)에 모든 테이블 스키마가 정의되어 있습니다:
+
+- `members` / `sessions`: 회원 및 세션 인증 테이블
+- `notices`: 공지사항 테이블
+- `academic_events`: 학사일정 테이블
+- `council_members`: 학생회 임원진 테이블
+- `council_intros`: 학생회 소개 및 회장 인사말
+- `study_materials`: 학술 및 IT 실무 자료실 테이블
+- `free_posts` / `free_comments`: 자유게시판 테이블
+- `suggestions` / `suggestion_comments`: 학우 소통 및 건의함 테이블
+- `finance_reports`: 투명 재정 결산보고 테이블
+- `meeting_minutes`: 학생회 회의록 테이블
+- `audit_reports`: 감사보고서 테이블
+- `constitution_versions`: 학생회칙 및 세칙 연혁 테이블
+- `popups`: 메인 팝업 공지 관리 테이블
+
+### D1 데이터베이스 적용 명령어 (Wrangler CLI)
+```bash
+# 로컬 개발 환경 D1 적용
+npx wrangler d1 execute knoucs-db --local --file=./cloudflare_d1_schema.sql
+
+# 원격 프로덕션 D1 적용
+npx wrangler d1 execute knoucs-db --remote --file=./cloudflare_d1_schema.sql
+```
 
 ---
 
@@ -86,19 +97,21 @@ VITE_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
 
 ```
 ├── public/
-│   ├── _redirects          # Cloudflare Pages SPA 리다이렉트 규칙
+│   ├── UI/                     # 방송대 공식 엠블럼 및 정적 이미지 에셋
 │   └── favicon.svg
 ├── src/
-│   ├── components/
-│   │   ├── home/           # 히어로, 바로가기, 최근공지, 주요학사일정
-│   │   └── layout/         # 네비게이션바, 푸터, 레이아웃
-│   ├── data/               # 공지, 학사일정, 학생회 초기 데이터
-│   ├── lib/                # Supabase 클라이언트 및 날짜 유틸
-│   ├── pages/              # 홈, 소개, 공지사항, 캘린더, 커뮤니티 페이지
-│   ├── services/           # Supabase & 로컬 Fallback API 레이어
-│   ├── App.tsx             # 라우트 설정
+│   ├── components/             # 관리자 화면, 회칙 뷰어, 모달 등 UI 컴포넌트
+│   ├── data/                   # 공식 학생회칙 텍스트 원문 및 상수 데이터
+│   ├── lib/                    # 공통 타입(types.ts) 및 유틸리티
+│   ├── pages/                  # 홈, 공지사항, 학사일정, 자료실, 커뮤니티, 관리자 등
+│   ├── services/               # 백엔드 API 통신 레이어 (api.ts)
+│   ├── App.tsx                 # 라우트 설정
 │   └── main.tsx
-├── supabase_schema.sql     # Supabase 1클릭 DB 생성 스크립트
-├── .env.example
-└── vite.config.ts
+├── worker/
+│   └── index.ts                # Cloudflare Workers 백엔드 REST API & 보안 헤더
+├── cloudflare_d1_schema.sql    # Cloudflare D1 데이터베이스 테이블 생성 스크립트
+├── wrangler.jsonc              # Cloudflare Workers, D1, R2 바인딩 설정
+├── GEMINI.md                   # 프로젝트 개발 및 운영 핵심 원칙 (No-Mock 원칙 등)
+├── PROJECT_TRANSFER_GUIDE.md   # 프로젝트 인수인계 가이드
+└── package.json
 ```
