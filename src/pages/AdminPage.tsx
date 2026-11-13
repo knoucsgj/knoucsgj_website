@@ -2,7 +2,7 @@ import { AdminConstitutionManager } from '../components/AdminConstitutionManager
 import { AdminCurriculumManager } from '../components/AdminCurriculumManager';
 import { AdminR2StorageManager } from '../components/AdminR2StorageManager';
 import { AdminPopupManager } from '../components/AdminPopupManager';
-import { showConfirm } from '../components/ui/GlobalDialog';
+import { showAlert, showConfirm } from '../components/ui/GlobalDialog';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -125,8 +125,8 @@ export const AdminPage: React.FC = () => {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventForm, setEventForm] = useState({
     title: '',
-    start_date: '2026-10-15',
-    end_date: '2026-10-25',
+    start_date: '',
+    end_date: '',
     category: '과제' as '출석수업' | '시험' | '과제' | '등록/수강' | '행사',
     description: '',
     target_grades: '전학년',
@@ -253,29 +253,6 @@ export const AdminPage: React.FC = () => {
   const [newMemberNickname, setNewMemberNickname] = useState('');
   const [isUpdatingNickname, setIsUpdatingNickname] = useState(false);
 
-  useEffect(() => {
-    const onRejection = (ev: PromiseRejectionEvent) => {
-      if (ev.reason instanceof Error) {
-        ev.preventDefault();
-        alert(ev.reason.message);
-      }
-    };
-    window.addEventListener('unhandledrejection', onRejection);
-    return () => window.removeEventListener('unhandledrejection', onRejection);
-  }, []);
-
-  useEffect(() => {
-    if (canAccess) {
-      loadAllData();
-    }
-  }, [canAccess]);
-
-  useEffect(() => {
-    if (!canManageMembers && activeTab === 'members') {
-      setActiveTab('notices');
-    }
-  }, [canManageMembers, activeTab]);
-
   const loadAllData = async () => {
     const [nData, eData, sData, iData, mData, pastData, minData, memberData, bData] = await Promise.all([
       api.getNotices(),
@@ -305,6 +282,29 @@ export const AdminPage: React.FC = () => {
       }));
     }).catch(() => {});
   };
+
+  useEffect(() => {
+    const onRejection = (ev: PromiseRejectionEvent) => {
+      if (ev.reason instanceof Error) {
+        ev.preventDefault();
+        void showAlert(ev.reason.message);
+      }
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => window.removeEventListener('unhandledrejection', onRejection);
+  }, []);
+
+  useEffect(() => {
+    if (canAccess) {
+      loadAllData();
+    }
+  }, [canAccess]);
+
+  useEffect(() => {
+    if (!canManageMembers && activeTab === 'members') {
+      setActiveTab('notices');
+    }
+  }, [canManageMembers, activeTab]);
 
   // Login handler
   const handleLogin = async (e: React.FormEvent) => {
@@ -354,7 +354,7 @@ export const AdminPage: React.FC = () => {
   const handleSaveNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeForm.title.trim() || !noticeForm.content.trim()) {
-      alert('제목과 내용을 모두 입력해 주세요.');
+      void showAlert('제목과 내용을 모두 입력해 주세요.');
       return;
     }
 
@@ -370,7 +370,7 @@ export const AdminPage: React.FC = () => {
 
   const handleDeleteNotice = async (id: string, title: string, category?: string) => {
     if ((category === '결산' || category === '회의록') && !isAdmin) {
-      alert('결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다.');
+      void showAlert('결산 및 회의록 공지사항은 최고 관리자(admin)만 삭제할 수 있습니다.');
       return;
     }
     if (await showConfirm({
@@ -389,11 +389,13 @@ export const AdminPage: React.FC = () => {
   // Event CRUD
   // ==========================================
   const openNewEventModal = () => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     setEditingEventId(null);
     setEventForm({
       title: '',
-      start_date: '2026-10-15',
-      end_date: '2026-10-25',
+      start_date: todayStr,
+      end_date: todayStr,
       category: '과제',
       description: '',
       target_grades: '전학년',
@@ -419,7 +421,7 @@ export const AdminPage: React.FC = () => {
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventForm.title.trim()) {
-      alert('일정명을 입력해 주세요.');
+      void showAlert('일정명을 입력해 주세요.');
       return;
     }
 
@@ -486,7 +488,7 @@ export const AdminPage: React.FC = () => {
   const handleSaveStudy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studyForm.title.trim() || !studyForm.subject.trim()) {
-      alert('스터디 제목과 주제를 모두 입력해 주세요.');
+      void showAlert('스터디 제목과 주제를 모두 입력해 주세요.');
       return;
     }
 
@@ -531,10 +533,10 @@ export const AdminPage: React.FC = () => {
       setMembers((prev) =>
         prev.map((m) => (m.id === editingNicknameMember.id ? { ...m, nickname: newMemberNickname.trim() } : m))
       );
-      alert(`[${editingNicknameMember.name}] 학우의 닉네임이 '${newMemberNickname.trim()}'(으)로 변경되었습니다.`);
+      void showAlert(`[${editingNicknameMember.name}] 학우의 닉네임이 '${newMemberNickname.trim()}'(으)로 변경되었습니다.`);
       setEditingNicknameMember(null);
     } catch (err: any) {
-      alert(err.message || '닉네임 변경에 실패했습니다.');
+      void showAlert(err.message || '닉네임 변경에 실패했습니다.');
     } finally {
       setIsUpdatingNickname(false);
     }
@@ -560,10 +562,10 @@ export const AdminPage: React.FC = () => {
         regular: '정회원',
         associate: '준회원',
       };
-      alert(`[${editingRoleMember.name}] 학우의 회원 등급이 '${roleNames[newMemberRole]}'(으)로 변경되었습니다.`);
+      void showAlert(`[${editingRoleMember.name}] 학우의 회원 등급이 '${roleNames[newMemberRole]}'(으)로 변경되었습니다.`);
       setEditingRoleMember(null);
     } catch (err: any) {
-      alert(err.message || '등급 변경에 실패했습니다.');
+      void showAlert(err.message || '등급 변경에 실패했습니다.');
     } finally {
       setIsUpdatingRole(false);
     }
@@ -602,10 +604,10 @@ export const AdminPage: React.FC = () => {
       setMembers((prev) =>
         prev.map((m) => (m.id === editingPermsMember.id ? { ...m, permissions: toSend } : m))
       );
-      alert(`[${editingPermsMember.name}] 학우의 개별 맞춤 권한이 성공적으로 저장되었습니다.`);
+      void showAlert(`[${editingPermsMember.name}] 학우의 개별 맞춤 권한이 성공적으로 저장되었습니다.`);
       setEditingPermsMember(null);
     } catch (err: any) {
-      alert(err.message || '권한 저장에 실패했습니다.');
+      void showAlert(err.message || '권한 저장에 실패했습니다.');
     } finally {
       setIsUpdatingPerms(false);
     }
@@ -672,7 +674,7 @@ export const AdminPage: React.FC = () => {
   const handleSaveCouncilIntro = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.updateCouncilIntro(councilIntro);
-    alert('학생회 인사말이 성공적으로 저장되었습니다!');
+    void showAlert('학생회 인사말이 성공적으로 저장되었습니다!');
   };
 
   const openNewMemberModal = () => {
@@ -702,23 +704,23 @@ export const AdminPage: React.FC = () => {
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberForm.name.trim()) {
-      alert('이름을 입력해 주세요.');
+      void showAlert('이름을 입력해 주세요.');
       return;
     }
 
     try {
       if (editingMemberId) {
         await api.updateCouncilMember(editingMemberId, memberForm);
-        alert('임원 정보가 성공적으로 수정되었습니다.');
+        void showAlert('임원 정보가 성공적으로 수정되었습니다.');
       } else {
         await api.createCouncilMember(memberForm);
-        alert('새로운 임원이 성공적으로 등록되었습니다.');
+        void showAlert('새로운 임원이 성공적으로 등록되었습니다.');
       }
       setIsMemberModalOpen(false);
       await loadAllData();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || '임원 정보 저장에 실패했습니다.');
+      void showAlert(err.message || '임원 정보 저장에 실패했습니다.');
     }
   };
 
@@ -732,11 +734,11 @@ export const AdminPage: React.FC = () => {
     }))) return;
     try {
       await api.deleteCouncilMember(id);
-      alert(`"${name}" 임원 정보가 성공적으로 삭제되었습니다.`);
+      void showAlert(`"${name}" 임원 정보가 성공적으로 삭제되었습니다.`);
       await loadAllData();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || '임원 정보 삭제에 실패했습니다.');
+      void showAlert(err.message || '임원 정보 삭제에 실패했습니다.');
     }
   };
 
@@ -783,7 +785,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('사진 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
+        void showAlert('사진 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -791,11 +793,11 @@ export const AdminPage: React.FC = () => {
   const handleSavePastMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canManageCouncil) {
-      alert('역대 임원 관리는 학생회장 또는 최고 관리자만 가능합니다.');
+      void showAlert('역대 임원 관리는 학생회장 또는 최고 관리자만 가능합니다.');
       return;
     }
     if (!pastForm.generation.trim() || !pastForm.name.trim() || !pastForm.role.trim()) {
-      alert('기수, 직책명, 성명을 모두 입력해 주세요.');
+      void showAlert('기수, 직책명, 성명을 모두 입력해 주세요.');
       return;
     }
     try {
@@ -806,15 +808,15 @@ export const AdminPage: React.FC = () => {
       }
       setIsPastModalOpen(false);
       await loadAllData();
-      alert('역대 임원 정보가 성공적으로 저장되었습니다!');
+      void showAlert('역대 임원 정보가 성공적으로 저장되었습니다!');
     } catch (err: any) {
-      alert(err.message || '저장에 실패했습니다.');
+      void showAlert(err.message || '저장에 실패했습니다.');
     }
   };
 
   const handleDeletePastMember = async (id: string, name: string) => {
     if (!canManageCouncil) {
-      alert('역대 임원 관리는 학생회 또는 최고 관리자만 가능합니다.');
+      void showAlert('역대 임원 관리는 학생회 또는 최고 관리자만 가능합니다.');
       return;
     }
     if (!(await showConfirm({
@@ -826,11 +828,11 @@ export const AdminPage: React.FC = () => {
     }))) return;
     try {
       await api.deletePastCouncilMember(id);
-      alert(`"${name}" 역대 임원 정보가 성공적으로 삭제되었습니다.`);
+      void showAlert(`"${name}" 역대 임원 정보가 성공적으로 삭제되었습니다.`);
       await loadAllData();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || '역대 임원 정보 삭제에 실패했습니다.');
+      void showAlert(err.message || '역대 임원 정보 삭제에 실패했습니다.');
     }
   };
 
@@ -857,10 +859,10 @@ export const AdminPage: React.FC = () => {
       const content = event.target?.result as string;
       const res = await api.importAllData(content);
       if (res.success) {
-        alert(res.message);
+        void showAlert(res.message);
         loadAllData();
       } else {
-        alert(res.message);
+        void showAlert(res.message);
       }
     };
     reader.readAsText(file);
@@ -906,7 +908,7 @@ export const AdminPage: React.FC = () => {
 
   const handleSendTestEmail = async () => {
     if (!emailTestTarget.trim()) {
-      alert('테스트 메일을 받을 이메일 주소를 입력해 주세요.');
+      void showAlert('테스트 메일을 받을 이메일 주소를 입력해 주세요.');
       return;
     }
     try {
@@ -928,7 +930,7 @@ export const AdminPage: React.FC = () => {
 
   const openNewBudgetModal = () => {
     if (!canManageGovernance) {
-      alert('결산 보고 등록 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      void showAlert('결산 보고 등록 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
       return;
     }
     setEditingBudgetId(null);
@@ -952,7 +954,7 @@ export const AdminPage: React.FC = () => {
 
   const openEditBudgetModal = (report: BudgetReport) => {
     if (!canManageGovernance) {
-      alert('결산 보고 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      void showAlert('결산 보고 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
       return;
     }
     setEditingBudgetId(report.id);
@@ -976,7 +978,7 @@ export const AdminPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) {
-      alert('영수증 파일 크기는 20MB 이하만 가능합니다.');
+      void showAlert('영수증 파일 크기는 20MB 이하만 가능합니다.');
       return;
     }
     try {
@@ -999,7 +1001,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('영수증 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
+        void showAlert('영수증 파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -1007,25 +1009,25 @@ export const AdminPage: React.FC = () => {
   const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!budgetForm.title.trim()) {
-      alert('결산 보고서 제목을 입력해 주세요.');
+      void showAlert('결산 보고서 제목을 입력해 주세요.');
       return;
     }
     // 영수증 파일 필수 검증!
     if (!budgetForm.receipt_url.trim()) {
-      alert('투명한 학생회비 집행 증빙을 위해 [영수증 및 증빙 파일] 첨부는 필수입니다!');
+      void showAlert('투명한 학생회비 집행 증빙을 위해 [영수증 및 증빙 파일] 첨부는 필수입니다!');
       return;
     }
 
     if (editingBudgetId) {
       if (!budgetEditReason.trim()) {
-        alert('투명성 보존을 위해 [결산 정정/수정 사유]를 반드시 입력해야 합니다.');
+        void showAlert('투명성 보존을 위해 [결산 정정/수정 사유]를 반드시 입력해야 합니다.');
         return;
       }
       await api.updateBudgetReport(editingBudgetId, budgetForm, budgetEditReason.trim());
-      alert('결산 내역이 정정 사유와 함께 성공적으로 수정되었습니다.');
+      void showAlert('결산 내역이 정정 사유와 함께 성공적으로 수정되었습니다.');
     } else {
       await api.createBudgetReport(budgetForm);
-      alert('결산 보고서가 영수증 증빙과 함께 성공적으로 등록되었습니다.');
+      void showAlert('결산 보고서가 영수증 증빙과 함께 성공적으로 등록되었습니다.');
     }
 
     setIsBudgetModalOpen(false);
@@ -1035,7 +1037,7 @@ export const AdminPage: React.FC = () => {
   // Delete Request Handler (Only Master Admin)
   const requestDelete = (type: 'budget' | 'minute', id: string, title: string) => {
     if (!isAdmin) {
-      alert('투명성과 신뢰 보존을 위해 삭제 권한은 오직 [최고 관리자(admin)]에게만 있습니다.\n학생회장은 삭제 권한이 부여되지 않습니다.');
+      void showAlert('투명성과 신뢰 보존을 위해 삭제 권한은 오직 [최고 관리자(admin)]에게만 있습니다.\n학생회장은 삭제 권한이 부여되지 않습니다.');
       return;
     }
     setDeleteTarget({ type, id, title });
@@ -1046,16 +1048,16 @@ export const AdminPage: React.FC = () => {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     if (!deleteReasonInput.trim()) {
-      alert('삭제 사유를 반드시 입력해야 합니다. (투명성 감사 기록에 영구 보존됩니다)');
+      void showAlert('삭제 사유를 반드시 입력해야 합니다. (투명성 감사 기록에 영구 보존됩니다)');
       return;
     }
 
     if (deleteTarget.type === 'budget') {
       await api.deleteBudgetReport(deleteTarget.id, deleteReasonInput.trim());
-      alert(`"${deleteTarget.title}" 결산 내역이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
+      void showAlert(`"${deleteTarget.title}" 결산 내역이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
     } else {
       await api.deleteMeetingMinute(deleteTarget.id, deleteReasonInput.trim());
-      alert(`"${deleteTarget.title}" 회의록이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
+      void showAlert(`"${deleteTarget.title}" 회의록이 삭제 사유와 함께 감사 로그에 안전하게 보존 처리되었습니다.`);
     }
 
     setDeleteModalOpen(false);
@@ -1077,7 +1079,7 @@ export const AdminPage: React.FC = () => {
   // Minute Handlers
   const openNewMinuteModal = () => {
     if (!canManageGovernance) {
-      alert('회의록 작성 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      void showAlert('회의록 작성 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
       return;
     }
     setEditingMinuteId(null);
@@ -1100,7 +1102,7 @@ export const AdminPage: React.FC = () => {
 
   const openEditMinuteModal = (m: MeetingMinute) => {
     if (!canManageGovernance) {
-      alert('회의록 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
+      void showAlert('회의록 수정 권한이 없습니다 (학생회장 또는 최고관리자 전용).');
       return;
     }
     setEditingMinuteId(m.id);
@@ -1159,7 +1161,7 @@ export const AdminPage: React.FC = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('첨부파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
+        void showAlert('첨부파일 업로드에 실패했습니다. (저장소 상태 또는 파일 크기를 확인해 주세요)');
       }
     }
   };
@@ -1167,20 +1169,20 @@ export const AdminPage: React.FC = () => {
   const handleSaveMinute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!minuteForm.title.trim() || !minuteForm.decisions.trim()) {
-      alert('회의 제목과 의결 사항을 입력해 주세요.');
+      void showAlert('회의 제목과 의결 사항을 입력해 주세요.');
       return;
     }
 
     if (editingMinuteId) {
       if (!minuteEditReason.trim()) {
-        alert('투명성 보존을 위해 [회의록 정정/수정 사유]를 반드시 입력해야 합니다.');
+        void showAlert('투명성 보존을 위해 [회의록 정정/수정 사유]를 반드시 입력해야 합니다.');
         return;
       }
       await api.updateMeetingMinute(editingMinuteId, minuteForm, minuteEditReason.trim());
-      alert('회의록이 정정 사유와 함께 성공적으로 수정되었습니다.');
+      void showAlert('회의록이 정정 사유와 함께 성공적으로 수정되었습니다.');
     } else {
       await api.createMeetingMinute(minuteForm);
-      alert('회의록이 성공적으로 등록되었습니다.');
+      void showAlert('회의록이 성공적으로 등록되었습니다.');
     }
     setIsMinuteModalOpen(false);
     loadAllData();

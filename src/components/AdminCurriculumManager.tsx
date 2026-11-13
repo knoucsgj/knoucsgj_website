@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { showConfirm } from './ui/GlobalDialog';
+import { showAlert, showConfirm } from './ui/GlobalDialog';
 import type { CurriculumCourse } from '../lib/types';
 import {
   BookOpen,
@@ -45,7 +45,7 @@ export const AdminCurriculumManager: React.FC = () => {
       setCourses(data);
     } catch (err) {
       console.error(err);
-      alert('교과목 목록을 불러오지 못했습니다.');
+      void showAlert('교과목 목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export const AdminCurriculumManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
-      alert('교과목명을 입력해 주세요.');
+      await showAlert('교과목명을 입력해 주세요.');
       return;
     }
 
@@ -88,7 +88,7 @@ export const AdminCurriculumManager: React.FC = () => {
           course_name: formName.trim(),
           sort_order: formSortOrder,
         });
-        alert('교과목 정보가 성공적으로 수정되었습니다.');
+        await showAlert('교과목 정보가 성공적으로 수정되었습니다.');
       } else {
         await api.createCourse({
           grade: formGrade,
@@ -97,13 +97,13 @@ export const AdminCurriculumManager: React.FC = () => {
           course_name: formName.trim(),
           sort_order: formSortOrder,
         });
-        alert('새 교과목이 성공적으로 등록되었습니다.');
+        await showAlert('새 교과목이 성공적으로 등록되었습니다.');
       }
       setIsModalOpen(false);
       setEditingCourse(null);
       await loadCourses();
     } catch (err: any) {
-      alert(err.message || '저장 중 오류가 발생했습니다.');
+      await showAlert(err.message || '저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -124,10 +124,10 @@ export const AdminCurriculumManager: React.FC = () => {
 
     try {
       await api.deleteCourse(course.id);
-      alert('교과목이 삭제되었습니다.');
+      await showAlert('교과목이 삭제되었습니다.');
       await loadCourses();
     } catch (err: any) {
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      await showAlert(err.message || '삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -147,10 +147,10 @@ export const AdminCurriculumManager: React.FC = () => {
     try {
       setLoading(true);
       await api.resetCourses();
-      alert('2026년 정규 교육과정 52개 교과목으로 성공적으로 복원되었습니다.');
+      await showAlert('2026년 정규 교육과정 52개 교과목으로 성공적으로 복원되었습니다.');
       await loadCourses();
     } catch (err: any) {
-      alert(err.message || '복원 중 오류가 발생했습니다.');
+      await showAlert(err.message || '복원 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

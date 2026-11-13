@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { ASSETS } from '../lib/assets';
+import { showAlert } from '../components/ui/GlobalDialog';
 import {
   Image as ImageIcon,
   MessageSquare,
@@ -32,7 +33,7 @@ export const WelfarePage: React.FC = () => {
   const handleFeedbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackTitle.trim() || !feedbackContent.trim()) {
-      alert('제목과 내용을 입력해 주세요.');
+      void showAlert('제목과 내용을 입력해 주세요.');
       return;
     }
     // 건의 제출 시뮬레이션

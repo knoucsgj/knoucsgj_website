@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { showConfirm } from './ui/GlobalDialog';
+import { showAlert, showConfirm } from './ui/GlobalDialog';
 import {
   HardDrive,
   RefreshCw,
@@ -73,10 +73,10 @@ export const AdminR2StorageManager: React.FC = () => {
     try {
       setSyncing(true);
       const res = await api.syncR2StorageStats();
-      alert(res.message || '파일 저장소와의 동기화가 완료되었습니다.');
+      await showAlert(res.message || '파일 저장소와의 동기화가 완료되었습니다.');
       await loadStats();
     } catch (err: any) {
-      alert(err.message || '동기화 중 오류가 발생했습니다.');
+      await showAlert(err.message || '동기화 중 오류가 발생했습니다.');
     } finally {
       setSyncing(false);
     }
@@ -98,13 +98,13 @@ export const AdminR2StorageManager: React.FC = () => {
       setDeletingKey(key);
       const ok = await api.deleteUploadedFile(key);
       if (ok) {
-        alert('파일이 성공적으로 삭제되었습니다.');
+        await showAlert('파일이 성공적으로 삭제되었습니다.');
         await loadStats();
       } else {
-        alert('파일 삭제에 실패했습니다.');
+        await showAlert('파일 삭제에 실패했습니다.');
       }
     } catch (err: any) {
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      await showAlert(err.message || '삭제 중 오류가 발생했습니다.');
     } finally {
       setDeletingKey(null);
     }

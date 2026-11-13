@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { showConfirm } from './ui/GlobalDialog';
+import { showAlert, showConfirm } from './ui/GlobalDialog';
 import { api } from '../services/api';
 import type {
   ConstitutionVersion,
@@ -200,7 +200,7 @@ export const AdminConstitutionManager: React.FC = () => {
     const contentInput = chapterForm.content.trim() || null;
 
     if (!chapInput || !titleInput) {
-      alert('장의 번호/구분과 장 제목을 모두 입력해 주세요.');
+      void showAlert('장의 번호/구분과 장 제목을 모두 입력해 주세요.');
       return;
     }
 
@@ -215,7 +215,7 @@ export const AdminConstitutionManager: React.FC = () => {
         // Edit existing chapter
         const targetChap = targetDoc.chapters.find((c) => String(c.chapter) === String(editingChapterTarget));
         if (!targetChap) {
-          alert('수정할 대상을 찾을 수 없습니다.');
+          void showAlert('수정할 대상을 찾을 수 없습니다.');
           return;
         }
 
@@ -223,7 +223,7 @@ export const AdminConstitutionManager: React.FC = () => {
         if (String(editingChapterTarget) !== String(finalChapKey)) {
           const duplicate = targetDoc.chapters.some((c) => String(c.chapter) === String(finalChapKey));
           if (duplicate) {
-            alert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
+            void showAlert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
             return;
           }
         }
@@ -235,7 +235,7 @@ export const AdminConstitutionManager: React.FC = () => {
         // Add new chapter
         const duplicate = targetDoc.chapters.some((c) => String(c.chapter) === String(finalChapKey));
         if (duplicate) {
-          alert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
+          void showAlert(`이미 '${formatChapterLabel(finalChapKey)}'이(가) 존재합니다.`);
           return;
         }
 
@@ -253,9 +253,9 @@ export const AdminConstitutionManager: React.FC = () => {
 
       setIsChapterModalOpen(false);
       await loadVersions();
-      alert('장 정보가 성공적으로 저장되었습니다!');
+      void showAlert('장 정보가 성공적으로 저장되었습니다!');
     } catch (err: any) {
-      alert(err.message || '장 저장 중 오류가 발생했습니다.');
+      void showAlert(err.message || '장 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -284,9 +284,9 @@ export const AdminConstitutionManager: React.FC = () => {
       });
 
       await loadVersions();
-      alert(`${chapName}이(가) 삭제되었습니다.`);
+      void showAlert(`${chapName}이(가) 삭제되었습니다.`);
     } catch (err: any) {
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      void showAlert(err.message || '삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -304,7 +304,7 @@ export const AdminConstitutionManager: React.FC = () => {
     e.preventDefault();
     const trimmed = newSectionName.trim();
     if (!trimmed) {
-      alert('새로운 절 명칭을 입력해 주세요.');
+      void showAlert('새로운 절 명칭을 입력해 주세요.');
       return;
     }
 
@@ -330,9 +330,9 @@ export const AdminConstitutionManager: React.FC = () => {
 
       setIsSectionModalOpen(false);
       await loadVersions();
-      alert(`절 명칭이 '${trimmed}'(으)로 일괄 변경되었습니다. (소속 ${changedCount}개 조항 반영)`);
+      void showAlert(`절 명칭이 '${trimmed}'(으)로 일괄 변경되었습니다. (소속 ${changedCount}개 조항 반영)`);
     } catch (err: any) {
-      alert(err.message || '절 수정 중 오류가 발생했습니다.');
+      void showAlert(err.message || '절 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -365,9 +365,9 @@ export const AdminConstitutionManager: React.FC = () => {
       });
 
       await loadVersions();
-      alert(`'${sectionName}' 절 구분이 해제되었습니다.`);
+      void showAlert(`'${sectionName}' 절 구분이 해제되었습니다.`);
     } catch (err: any) {
-      alert(err.message || '절 해제 중 오류가 발생했습니다.');
+      void showAlert(err.message || '절 해제 중 오류가 발생했습니다.');
     }
   };
 
@@ -404,7 +404,7 @@ export const AdminConstitutionManager: React.FC = () => {
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!articleForm.title.trim() || !articleForm.content.trim()) {
-      alert('조항 제목과 내용을 모두 입력해 주세요.');
+      void showAlert('조항 제목과 내용을 모두 입력해 주세요.');
       return;
     }
 
@@ -415,7 +415,7 @@ export const AdminConstitutionManager: React.FC = () => {
 
       const targetChap = targetDoc.chapters.find((c) => String(c.chapter) === String(articleForm.chapter));
       if (!targetChap) {
-        alert('선택한 소속 장을 찾을 수 없습니다.');
+        void showAlert('선택한 소속 장을 찾을 수 없습니다.');
         return;
       }
 
@@ -459,9 +459,9 @@ export const AdminConstitutionManager: React.FC = () => {
 
       setIsArticleModalOpen(false);
       await loadVersions();
-      alert('조항 내용이 성공적으로 저장되었습니다!');
+      void showAlert('조항 내용이 성공적으로 저장되었습니다!');
     } catch (err: any) {
-      alert(err.message || '저장 중 오류가 발생했습니다.');
+      void showAlert(err.message || '저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -490,9 +490,9 @@ export const AdminConstitutionManager: React.FC = () => {
       });
 
       await loadVersions();
-      alert('조항이 삭제되었습니다.');
+      void showAlert('조항이 삭제되었습니다.');
     } catch (err: any) {
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      void showAlert(err.message || '삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -519,9 +519,9 @@ export const AdminConstitutionManager: React.FC = () => {
 
       setIsPreambleModalOpen(false);
       await loadVersions();
-      alert('전문(Preamble) 내용이 성공적으로 저장되었습니다!');
+      void showAlert('전문(Preamble) 내용이 성공적으로 저장되었습니다!');
     } catch (err: any) {
-      alert(err.message || '저장 중 오류가 발생했습니다.');
+      void showAlert(err.message || '저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -542,7 +542,7 @@ export const AdminConstitutionManager: React.FC = () => {
   const handleCreateNewVersion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVersionForm.title.trim() || !newVersionForm.revision_date.trim()) {
-      alert('개정 회칙 명칭과 개정일자를 입력해 주세요.');
+      void showAlert('개정 회칙 명칭과 개정일자를 입력해 주세요.');
       return;
     }
 
@@ -561,9 +561,9 @@ export const AdminConstitutionManager: React.FC = () => {
       setIsNewVersionModalOpen(false);
       await loadVersions();
       setSelectedVersionId(created.id);
-      alert('새 개정 회칙 버전이 성공적으로 등록되었습니다!\n기존 과거 회칙은 보존되며, 이제 새 버전의 조항들을 수정하실 수 있습니다.');
+      void showAlert('새 개정 회칙 버전이 성공적으로 등록되었습니다!\n기존 과거 회칙은 보존되며, 이제 새 버전의 조항들을 수정하실 수 있습니다.');
     } catch (err: any) {
-      alert(err.message || '개정안 생성에 실패했습니다.');
+      void showAlert(err.message || '개정안 생성에 실패했습니다.');
     }
   };
 
@@ -580,9 +580,9 @@ export const AdminConstitutionManager: React.FC = () => {
     try {
       await api.updateConstitutionVersion(versionId, { is_current: true });
       await loadVersions();
-      alert('현행 회칙으로 변경되었습니다.');
+      void showAlert('현행 회칙으로 변경되었습니다.');
     } catch (err: any) {
-      alert(err.message || '변경에 실패했습니다.');
+      void showAlert(err.message || '변경에 실패했습니다.');
     }
   };
 
@@ -600,9 +600,9 @@ export const AdminConstitutionManager: React.FC = () => {
     try {
       await api.deleteConstitutionVersion(versionId);
       await loadVersions();
-      alert('회칙 버전이 삭제되었습니다.');
+      void showAlert('회칙 버전이 삭제되었습니다.');
     } catch (err: any) {
-      alert(err.message || '삭제에 실패했습니다.');
+      void showAlert(err.message || '삭제에 실패했습니다.');
     }
   };
 

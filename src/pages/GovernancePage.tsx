@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { showAlert } from '../components/ui/GlobalDialog';
 import type { BudgetReport, MeetingMinute } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
 import { ASSETS } from '../lib/assets';
@@ -165,7 +166,7 @@ export const GovernancePage: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => alert('PDF 결산 영수증 모음집 다운로드 준비 중입니다.')}
+                  onClick={() => void showAlert('PDF 결산 영수증 모음집 다운로드 준비 중입니다.')}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold self-start sm:self-center transition-colors"
                 >
                   <Receipt className="w-4 h-4" />

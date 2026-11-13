@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { showConfirm } from '../components/ui/GlobalDialog';
+import { showAlert, showConfirm } from '../components/ui/GlobalDialog';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
 import { useRequireLogin } from '../lib/useRequireLogin';
@@ -127,7 +127,7 @@ export const StudyMaterialsPage: React.FC = () => {
     if (!file) return;
 
     if (isStorageBlocked) {
-      alert('저장용량 보호 한도(9.9GB)에 도달하여 현재 새 파일 업로드가 불가능합니다. 관리자에게 문의해 주세요.');
+      void showAlert('저장용량 보호 한도(9.9GB)에 도달하여 현재 새 파일 업로드가 불가능합니다. 관리자에게 문의해 주세요.');
       e.target.value = '';
       return;
     }
@@ -137,12 +137,12 @@ export const StudyMaterialsPage: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const DANGEROUS_EXTS = ['.exe', '.scr', '.bat', '.cmd', '.msi', '.dll', '.com'];
     if (DANGEROUS_EXTS.some((ext) => lowerName.endsWith(ext))) {
-      alert('실행 파일(.exe, .bat, .scr 등)은 보안상 직접 업로드할 수 없습니다. 정보보안 실습 소스코드(.c, .py, .java 등)나 압축파일(.zip) 형태로 등록해 주세요.');
+      void showAlert('실행 파일(.exe, .bat, .scr 등)은 보안상 직접 업로드할 수 없습니다. 정보보안 실습 소스코드(.c, .py, .java 등)나 압축파일(.zip) 형태로 등록해 주세요.');
       e.target.value = '';
       return;
     }
     if (!isPrivileged && file.size > 30 * 1024 * 1024) {
-      alert('파일 크기는 최대 30MB 이하여야 합니다.');
+      void showAlert('파일 크기는 최대 30MB 이하여야 합니다.');
       e.target.value = '';
       return;
     }
@@ -171,7 +171,7 @@ export const StudyMaterialsPage: React.FC = () => {
   const handleDownload = async (mat: AcademicMaterial) => {
     if (!requireLogin()) return;
     if (member?.role === 'associate') {
-      alert('학습자료 다운로드는 광주전남지역대학 컴퓨터과학과 재학생(정회원) 전용 혜택입니다. 준회원은 열람만 가능합니다.');
+      void showAlert('학습자료 다운로드는 광주전남지역대학 컴퓨터과학과 재학생(정회원) 전용 혜택입니다. 준회원은 열람만 가능합니다.');
       return;
     }
     await api.incrementMaterialDownload(mat.id);
@@ -218,11 +218,11 @@ export const StudyMaterialsPage: React.FC = () => {
   const handleCreateStudy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (member?.role === 'associate') {
-      alert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+      void showAlert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
       return;
     }
     if (!newStudyTitle.trim() || !newSubject.trim()) {
-      alert('스터디 제목과 주제를 입력해주세요.');
+      void showAlert('스터디 제목과 주제를 입력해주세요.');
       return;
     }
     try {
@@ -245,10 +245,10 @@ export const StudyMaterialsPage: React.FC = () => {
       setNewSubject('');
       setNewLeaderContact('');
       setNewDescription('');
-      alert(isAdmin ? '새 스터디 그룹이 등록되었습니다!' : '스터디 개설 신청이 접수되었습니다. 학생회 승인 후 목록에 공개됩니다.');
+      void showAlert(isAdmin ? '새 스터디 그룹이 등록되었습니다!' : '스터디 개설 신청이 접수되었습니다. 학생회 승인 후 목록에 공개됩니다.');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '스터디 등록 중 오류가 발생했습니다.');
+      void showAlert(err instanceof Error ? err.message : '스터디 등록 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingStudy(false);
     }
@@ -256,7 +256,7 @@ export const StudyMaterialsPage: React.FC = () => {
 
   const openCreateModal = (defaultCategory: '출석수업요약' | '기타자료' = '출석수업요약') => {
     if (member?.role === 'associate') {
-      alert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+      void showAlert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
       return;
     }
     setEditingMaterial(null);
@@ -312,21 +312,21 @@ export const StudyMaterialsPage: React.FC = () => {
     try {
       await api.deleteMaterial(mat.id);
       await loadData();
-      alert('자료가 삭제되었습니다.');
+      void showAlert('자료가 삭제되었습니다.');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '자료 삭제 중 오류가 발생했습니다.');
+      void showAlert(err instanceof Error ? err.message : '자료 삭제 중 오류가 발생했습니다.');
     }
   };
 
   const handleSaveMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (member?.role === 'associate') {
-      alert('자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
+      void showAlert('자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다.');
       return;
     }
     if (!newMatTitle.trim() || !newMatCourse.trim()) {
-      alert('자료 제목과 전공 과목명을 입력해주세요.');
+      void showAlert('자료 제목과 전공 과목명을 입력해주세요.');
       return;
     }
     try {
@@ -366,7 +366,7 @@ export const StudyMaterialsPage: React.FC = () => {
           file_size: targetFileSize || editingMaterial.file_size || '2.5MB',
           ...(targetFileUrl ? { file_url: targetFileUrl } : {})
         });
-        alert('자료가 성공적으로 수정되었습니다!');
+        void showAlert('자료가 성공적으로 수정되었습니다!');
       } else {
         await api.createMaterial({
           grade: newMatGrade,
@@ -379,7 +379,7 @@ export const StudyMaterialsPage: React.FC = () => {
           file_size: targetFileSize || '2.5MB',
           file_url: targetFileUrl || undefined
         });
-        alert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
+        void showAlert('자료와 첨부파일이 성공적으로 자료실에 등록되었습니다!');
       }
       await loadData();
       setIsCreateMaterialModalOpen(false);
@@ -387,7 +387,7 @@ export const StudyMaterialsPage: React.FC = () => {
       setNewMatFile(null);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '자료 저장 중 오류가 발생했습니다.');
+      void showAlert(err instanceof Error ? err.message : '자료 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingMaterial(false);
     }
@@ -483,7 +483,7 @@ export const StudyMaterialsPage: React.FC = () => {
               onClick={() => {
                 if (!requireLogin()) return;
                 if (member?.role === 'associate') {
-                  alert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  void showAlert('학습자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
                   return;
                 }
                 openCreateModal('출석수업요약');
@@ -499,7 +499,7 @@ export const StudyMaterialsPage: React.FC = () => {
               onClick={() => {
                 if (!requireLogin()) return;
                 if (member?.role === 'associate') {
-                  alert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  void showAlert('스터디 개설 신청은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
                   return;
                 }
                 setIsCreateStudyModalOpen(true);
@@ -829,7 +829,7 @@ export const StudyMaterialsPage: React.FC = () => {
               onClick={() => {
                 if (!requireLogin()) return;
                 if (member?.role === 'associate') {
-                  alert('기타자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
+                  void showAlert('기타자료 등록은 광주전남 컴퓨터과학과 재학생(정회원) 이상만 가능합니다. 준회원은 열람만 가능합니다.');
                   return;
                 }
                 openCreateModal('기타자료');

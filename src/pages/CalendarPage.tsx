@@ -15,7 +15,8 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X
+  X,
+  Search
 } from 'lucide-react';
 
 export const CalendarPage: React.FC = () => {
@@ -25,6 +26,8 @@ export const CalendarPage: React.FC = () => {
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedCategory, setSelectedCategory] = useState<string>('전체');
+  const [selectedYear, setSelectedYear] = useState<string>('전체');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Event Write / Edit Modal State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -142,9 +145,21 @@ export const CalendarPage: React.FC = () => {
 
   const categories = ['전체', '출석수업', '시험', '과제', '등록/수강', '행사'];
 
+  const eventYears = Array.from(
+    new Set(events.map((evt) => (evt.start_date || '').slice(0, 4)).filter((y) => /^\d{4}$/.test(y)))
+  ).sort((a, b) => b.localeCompare(a));
+
   const filteredEvents = events.filter((evt) => {
     if (selectedCategory !== '전체' && evt.category !== selectedCategory) {
       return false;
+    }
+    if (selectedYear !== '전체' && !(evt.start_date || '').startsWith(selectedYear) && !(evt.end_date || '').startsWith(selectedYear)) {
+      return false;
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const hay = `${evt.title} ${evt.description || ''} ${evt.target_grades || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
     }
     return true;
   });
@@ -187,6 +202,23 @@ export const CalendarPage: React.FC = () => {
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       default:
         return 'bg-slate-100 text-slate-800 border-slate-300';
+    }
+  };
+
+  const getCategoryDotColor = (category: EventCategory) => {
+    switch (category) {
+      case '과제':
+        return 'bg-amber-500';
+      case '출석수업':
+        return 'bg-blue-500';
+      case '시험':
+        return 'bg-rose-500';
+      case '등록/수강':
+        return 'bg-purple-500';
+      case '행사':
+        return 'bg-emerald-500';
+      default:
+        return 'bg-slate-400';
     }
   };
 
@@ -266,22 +298,52 @@ export const CalendarPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
-        <span className="text-sm font-bold text-slate-700 pl-2 shrink-0">구분:</span>
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-              selectedCategory === cat
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Category, Year & Search Filter Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+          <span className="text-sm font-bold text-slate-700 pl-2 shrink-0">구분:</span>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                selectedCategory === cat
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {eventYears.length > 0 && (
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              aria-label="일정 연도 필터"
+              className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+            >
+              <option value="전체">전체 연도</option>
+              {eventYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}년
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="relative flex-1 sm:w-56">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="일정 제목·내용 검색"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
       {/* View Mode 1: Calendar Grid */}
@@ -335,7 +397,7 @@ export const CalendarPage: React.FC = () => {
             <div className="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden mt-2">
               {/* Previous month filler cells */}
               {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                <div key={`empty-${i}`} className="bg-slate-50/60 min-h-[90px] sm:min-h-[110px] p-2" />
+                <div key={`empty-${i}`} className="bg-slate-50/60 min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-2" />
               ))}
 
               {/* Current month day cells */}
@@ -351,7 +413,7 @@ export const CalendarPage: React.FC = () => {
                   <div
                     key={day}
                     onClick={() => setSelectedDateStr(dateStr)}
-                    className={`min-h-[90px] sm:min-h-[110px] p-2 transition-all cursor-pointer flex flex-col justify-between ${
+                    className={`min-h-[64px] sm:min-h-[110px] p-1.5 sm:p-2 transition-all cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? 'bg-blue-50/90 ring-2 ring-blue-600 z-10'
                         : isToday
@@ -380,24 +442,45 @@ export const CalendarPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Event labels in cell */}
-                    <div className="mt-1 space-y-1">
-                      {dayEvents.slice(0, 2).map((ev) => (
-                        <div
-                          key={ev.id}
-                          className={`text-xs font-semibold px-1.5 py-0.5 rounded-md truncate border ${getCategoryColor(
-                            ev.category
-                          )}`}
-                          title={ev.title}
-                        >
-                          {ev.title}
-                        </div>
-                      ))}
-                      {dayEvents.length > 2 && (
-                        <div className="text-xs text-blue-600 font-bold pl-1">
-                          +{dayEvents.length - 2}개 더보기
+                    {/* Event labels in cell (compact dots on mobile, text pills on tablet/desktop) */}
+                    <div className="mt-1">
+                      {/* Mobile Dots */}
+                      {dayEvents.length > 0 && (
+                        <div className="flex sm:hidden flex-wrap items-center gap-1 pt-0.5">
+                          {dayEvents.slice(0, 4).map((ev) => (
+                            <span
+                              key={ev.id}
+                              className={`w-2 h-2 rounded-full ${getCategoryDotColor(ev.category)}`}
+                              title={ev.title}
+                            />
+                          ))}
+                          {dayEvents.length > 4 && (
+                            <span className="text-[10px] text-blue-600 font-bold leading-none">
+                              +{dayEvents.length - 4}
+                            </span>
+                          )}
                         </div>
                       )}
+
+                      {/* Desktop/Tablet Pills */}
+                      <div className="hidden sm:block space-y-1">
+                        {dayEvents.slice(0, 2).map((ev) => (
+                          <div
+                            key={ev.id}
+                            className={`text-xs font-semibold px-1.5 py-0.5 rounded-md truncate border ${getCategoryColor(
+                              ev.category
+                            )}`}
+                            title={ev.title}
+                          >
+                            {ev.title}
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div className="text-xs text-blue-600 font-bold pl-1">
+                            +{dayEvents.length - 2}개 더보기
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

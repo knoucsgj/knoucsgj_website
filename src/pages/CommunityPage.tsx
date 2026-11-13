@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { showConfirm } from '../components/ui/GlobalDialog';
+import { showAlert, showConfirm } from '../components/ui/GlobalDialog';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
@@ -152,7 +152,7 @@ export const CommunityPage: React.FC = () => {
   const handleCreateFreePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!freeTitle.trim() || !freeContent.trim()) {
-      alert('제목과 내용을 입력해 주세요.');
+      void showAlert('제목과 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -168,10 +168,10 @@ export const CommunityPage: React.FC = () => {
       setIsWriteFreeModalOpen(false);
       setFreeTitle('');
       setFreeContent('');
-      alert('자유게시판에 게시글이 등록되었습니다!');
+      void showAlert('자유게시판에 게시글이 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '게시글 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '게시글 등록에 실패했습니다.');
     } finally {
       setIsSubmittingFree(false);
     }
@@ -184,7 +184,7 @@ export const CommunityPage: React.FC = () => {
     }
     const text = freeReplyInputMap[postId]?.trim();
     if (!text) {
-      alert('댓글 내용을 입력해 주세요.');
+      void showAlert('댓글 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -194,7 +194,7 @@ export const CommunityPage: React.FC = () => {
       setFreePosts(data);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '댓글 등록 중 오류가 발생했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 등록 중 오류가 발생했습니다.');
     }
   };
 
@@ -205,7 +205,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getFreePosts();
       setFreePosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
     }
   };
 
@@ -216,7 +216,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getFreePosts();
       setFreePosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
     }
   };
 
@@ -226,7 +226,7 @@ export const CommunityPage: React.FC = () => {
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackTitle.trim() || !feedbackContent.trim()) {
-      alert('제목과 내용을 입력해 주세요.');
+      void showAlert('제목과 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -242,10 +242,10 @@ export const CommunityPage: React.FC = () => {
       setIsWriteFeedbackModalOpen(false);
       setFeedbackTitle('');
       setFeedbackContent('');
-      alert('학생회에 바란다 게시글이 등록되었습니다. 학생회 임원진이 확인 후 댓글로 답변드리겠습니다!');
+      void showAlert('학생회에 바란다 게시글이 등록되었습니다. 학생회 임원진이 확인 후 댓글로 답변드리겠습니다!');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '등록 중 오류가 발생했습니다.');
+      void showAlert(err instanceof Error ? err.message : '등록 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -253,12 +253,12 @@ export const CommunityPage: React.FC = () => {
 
   const handleAddFeedbackReply = async (feedbackId: string) => {
     if (!canAnswerFeedback) {
-      alert('학생회에 바란다 댓글은 학생회 임원, 학생회장 및 관리자 등급만 작성할 수 있습니다.');
+      void showAlert('학생회에 바란다 댓글은 학생회 임원, 학생회장 및 관리자 등급만 작성할 수 있습니다.');
       return;
     }
     const replyText = replyInputMap[feedbackId]?.trim();
     if (!replyText) {
-      alert('댓글(답변) 내용을 입력해 주세요.');
+      void showAlert('댓글(답변) 내용을 입력해 주세요.');
       return;
     }
     const defaultAuthor = isAdmin && !member ? '학생회 관리자' : (member?.nickname || '학생회 임원');
@@ -271,10 +271,10 @@ export const CommunityPage: React.FC = () => {
       setReplyInputMap((prev) => ({ ...prev, [feedbackId]: '' }));
       const data = await api.getFeedbacks();
       setFeedbacks(data);
-      alert('학생회 공식 답변 댓글이 등록되었습니다!');
+      void showAlert('학생회 공식 답변 댓글이 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
     }
   };
 
@@ -285,7 +285,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getFeedbacks();
       setFeedbacks(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
     }
   };
 
@@ -296,7 +296,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getFeedbacks();
       setFeedbacks(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
     }
   };
 
@@ -306,7 +306,7 @@ export const CommunityPage: React.FC = () => {
   const handleCreateMarketPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!marketTitle.trim() || !marketContent.trim()) {
-      alert('제목과 상세 내용을 입력해 주세요.');
+      void showAlert('제목과 상세 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -325,10 +325,10 @@ export const CommunityPage: React.FC = () => {
       setMarketTitle('');
       setMarketPrice('');
       setMarketContent('');
-      alert('벼룩시장에 게시글이 등록되었습니다!');
+      void showAlert('벼룩시장에 게시글이 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '벼룩시장 글 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '벼룩시장 글 등록에 실패했습니다.');
     } finally {
       setIsSubmittingMarket(false);
     }
@@ -341,7 +341,7 @@ export const CommunityPage: React.FC = () => {
     }
     const text = marketReplyInputMap[postId]?.trim();
     if (!text) {
-      alert('댓글 내용을 입력해 주세요.');
+      void showAlert('댓글 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -351,7 +351,7 @@ export const CommunityPage: React.FC = () => {
       setMarketPosts(data);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 등록에 실패했습니다.');
     }
   };
 
@@ -361,7 +361,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getMarketPosts();
       setMarketPosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '상태 변경에 실패했습니다.');
     }
   };
 
@@ -372,7 +372,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getMarketPosts();
       setMarketPosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
     }
   };
 
@@ -383,7 +383,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getMarketPosts();
       setMarketPosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
     }
   };
 
@@ -393,7 +393,7 @@ export const CommunityPage: React.FC = () => {
   const handleCreateQnaPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qnaTitle.trim() || !qnaContent.trim()) {
-      alert('질문 제목과 내용을 입력해 주세요.');
+      void showAlert('질문 제목과 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -409,10 +409,10 @@ export const CommunityPage: React.FC = () => {
       setIsWriteQnaModalOpen(false);
       setQnaTitle('');
       setQnaContent('');
-      alert('Q&A 코너에 질문이 등록되었습니다!');
+      void showAlert('Q&A 코너에 질문이 등록되었습니다!');
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '질문 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '질문 등록에 실패했습니다.');
     } finally {
       setIsSubmittingQna(false);
     }
@@ -425,7 +425,7 @@ export const CommunityPage: React.FC = () => {
     }
     const text = qnaReplyInputMap[postId]?.trim();
     if (!text) {
-      alert('답변 또는 댓글 내용을 입력해 주세요.');
+      void showAlert('답변 또는 댓글 내용을 입력해 주세요.');
       return;
     }
     try {
@@ -435,7 +435,7 @@ export const CommunityPage: React.FC = () => {
       setQnaPosts(data);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : '답변 등록에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '답변 등록에 실패했습니다.');
     }
   };
 
@@ -446,7 +446,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getQnaPosts();
       setQnaPosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
     }
   };
 
@@ -457,7 +457,7 @@ export const CommunityPage: React.FC = () => {
       const data = await api.getQnaPosts();
       setQnaPosts(data);
     } catch (err) {
-      alert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
+      void showAlert(err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.');
     }
   };
 

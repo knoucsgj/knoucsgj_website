@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../services/auth';
+import { showAlert } from '../components/ui/GlobalDialog';
 
 /**
  * 글쓰기·자료 등록·스터디 신청 전에 호출합니다.
@@ -11,7 +12,7 @@ export function useRequireLogin() {
   const location = useLocation();
   return useCallback((): boolean => {
     if (auth.isLoggedIn()) return true;
-    alert('회원 전용 기능입니다. 로그인 후 이용해 주세요.');
+    void showAlert('회원 전용 기능입니다. 로그인 후 이용해 주세요.');
     navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
     return false;
   }, [navigate, location]);

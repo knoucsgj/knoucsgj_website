@@ -197,7 +197,6 @@ const requireSignedIn = (s: Session): { id: string | null; nickname: string } =>
   throw new HttpError(401, '회원 로그인이 필요합니다. 회원가입 또는 로그인 후 이용해 주세요.');
 };
 
-const isMasterAdmin = (s: Session) => s.admin;
 const isPresident = (s: Session) => s.member?.role === 'president';
 const isOfficer = (s: Session) => s.member?.role === 'officer';
 const isCouncil = (s: Session) => {
@@ -212,7 +211,6 @@ const isRegularOrAbove = (s: Session) => {
   if (s.admin) return true;
   return !!s.member && (s.member.role === 'regular' || s.member.role === 'officer' || s.member.role === 'president');
 };
-const canManageMembers = (s: Session) => s.admin || isPresident(s);
 const canManageCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
 
 const requireCouncil = (s: Session) => {

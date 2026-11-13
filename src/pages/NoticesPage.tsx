@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { showPrompt } from '../components/ui/GlobalDialog';
+import { showAlert, showPrompt } from '../components/ui/GlobalDialog';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../services/auth';
@@ -70,6 +70,7 @@ export const NoticesPage: React.FC = () => {
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [activityCategory, setActivityCategory] = useState<string>('전체');
   const [activityMediaType, setActivityMediaType] = useState<'전체' | 'image' | 'video'>('전체');
+  const [activityYear, setActivityYear] = useState<string>('전체');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<ActivityReport | null>(null);
   const [selectedActivityPhotoIdx, setSelectedActivityPhotoIdx] = useState(0);
@@ -145,7 +146,7 @@ export const NoticesPage: React.FC = () => {
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!actTitle.trim()) {
-      alert('활동보고 제목을 입력해 주세요.');
+      void showAlert('활동보고 제목을 입력해 주세요.');
       return;
     }
 
@@ -157,7 +158,7 @@ export const NoticesPage: React.FC = () => {
     if (actMediaType === 'video') {
       const url = actYoutubeUrl.trim();
       if (!url) {
-        alert('YouTube 영상 주소(URL)를 입력해 주세요.');
+        void showAlert('YouTube 영상 주소(URL)를 입력해 주세요.');
         return;
       }
       finalMediaUrl = url;
@@ -171,7 +172,7 @@ export const NoticesPage: React.FC = () => {
       }
     } else {
       if (actImages.length === 0) {
-        alert('활동 사진 이미지를 1장 이상 등록해 주세요.');
+        void showAlert('활동 사진 이미지를 1장 이상 등록해 주세요.');
         return;
       }
     }
@@ -206,7 +207,7 @@ export const NoticesPage: React.FC = () => {
           thumbnail_url: finalThumbUrl || undefined,
           is_pinned: actIsPinned,
         });
-        alert('활동보고가 성공적으로 수정되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
+        void showAlert('활동보고가 성공적으로 수정되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
       } else {
         await api.createActivity({
           title: actTitle.trim(),
@@ -221,7 +222,7 @@ export const NoticesPage: React.FC = () => {
           is_pinned: actIsPinned,
           author: member?.name || member?.nickname || '학생회 미디어부',
         });
-        alert('활동보고가 성공적으로 등록되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
+        void showAlert('활동보고가 성공적으로 등록되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
       }
       setEditingActivityId(null);
       setIsActivityModalOpen(false);
@@ -233,7 +234,7 @@ export const NoticesPage: React.FC = () => {
       setActIsPinned(false);
       loadActivities();
     } catch (err: any) {
-      alert(err.message || '등록 중 오류가 발생했습니다.');
+      void showAlert(err.message || '등록 중 오류가 발생했습니다.');
     } finally {
       setIsSubmittingActivity(false);
     }
@@ -251,16 +252,16 @@ export const NoticesPage: React.FC = () => {
     });
     if (reason === null) return;
     if (!reason.trim()) {
-      alert('삭제 사유를 반드시 입력해야 합니다.');
+      void showAlert('삭제 사유를 반드시 입력해야 합니다.');
       return;
     }
     try {
       await api.deleteActivity(id, reason.trim());
-      alert('활동보고가 삭제되었습니다.');
+      void showAlert('활동보고가 삭제되었습니다.');
       setSelectedActivity(null);
       loadActivities();
     } catch (err: any) {
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      void showAlert(err.message || '삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -270,11 +271,11 @@ export const NoticesPage: React.FC = () => {
     const validItems: { url: string; file?: File }[] = [];
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
-        alert(`'${file.name}' 파일은 이미지 형식이 아니므로 제외되었습니다.`);
+        void showAlert(`'${file.name}' 파일은 이미지 형식이 아니므로 제외되었습니다.`);
         continue;
       }
       if (!isPrivileged && file.size > 30 * 1024 * 1024) {
-        alert(`'${file.name}' 파일이 30MB를 초과하여 제외되었습니다.`);
+        void showAlert(`'${file.name}' 파일이 30MB를 초과하여 제외되었습니다.`);
         continue;
       }
       validItems.push({ url: URL.createObjectURL(file), file });
@@ -381,11 +382,11 @@ export const NoticesPage: React.FC = () => {
   const handleCreateNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canWriteNotice) {
-      alert('공지사항 등록 권한이 없습니다.');
+      void showAlert('공지사항 등록 권한이 없습니다.');
       return;
     }
     if (!newTitle.trim() || !newContent.trim()) {
-      alert('제목과 내용을 모두 입력해 주세요.');
+      void showAlert('제목과 내용을 모두 입력해 주세요.');
       return;
     }
 
@@ -404,9 +405,9 @@ export const NoticesPage: React.FC = () => {
       setNewTitle('');
       setNewContent('');
       setNewIsPinned(false);
-      alert('공지사항이 성공적으로 등록되었습니다!');
+      void showAlert('공지사항이 성공적으로 등록되었습니다!');
     } catch (err: any) {
-      alert(err.message || '공지 등록에 실패했습니다.');
+      void showAlert(err.message || '공지 등록에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -424,17 +425,23 @@ export const NoticesPage: React.FC = () => {
     return matchesCategory && matchesQuery;
   });
 
+  // 활동 연도 목록 추출 (최신순)
+  const activityYears = Array.from(
+    new Set(activities.map((act) => (act.activity_date || '').slice(0, 4)).filter((y) => /^\d{4}$/.test(y)))
+  ).sort((a, b) => b.localeCompare(a));
+
   // 활동 필터링
   const filteredActivities = activities.filter((act) => {
     const matchesCategory = activityCategory === '전체' ? true : act.category === activityCategory;
     const matchesMedia = activityMediaType === '전체' ? true : act.media_type === activityMediaType;
+    const matchesYear = activityYear === '전체' ? true : (act.activity_date || '').startsWith(activityYear);
     const q = activitySearchQuery.toLowerCase().trim();
     const matchesQuery =
       q === '' ||
       act.title.toLowerCase().includes(q) ||
       (act.description && act.description.toLowerCase().includes(q)) ||
       (act.author && act.author.toLowerCase().includes(q));
-    return matchesCategory && matchesMedia && matchesQuery;
+    return matchesCategory && matchesMedia && matchesYear && matchesQuery;
   });
 
   const activityCategories = ['전체', '대회', '행사', '스터디', '임원회의', '기타'];
@@ -700,6 +707,23 @@ export const NoticesPage: React.FC = () => {
                   <span>영상</span>
                 </button>
               </div>
+
+              {/* 연도 필터 */}
+              {activityYears.length > 0 && (
+                <select
+                  value={activityYear}
+                  onChange={(e) => setActivityYear(e.target.value)}
+                  aria-label="활동 연도 필터"
+                  className="px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="전체">전체 연도</option>
+                  {activityYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}년
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Search Input */}

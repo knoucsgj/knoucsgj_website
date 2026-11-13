@@ -27,12 +27,10 @@ import type {
 } from '../lib/types';
 import { KNOU_COURSES_2026 } from '../data/mockMaterials';
 import { councilIntro as mockCouncilIntro } from '../data/mockCouncil';
-import { councilRules as mockCouncilRules } from '../data/mockGovernance';
 import {
   officialConstitutionDocuments,
   type ConstitutionDocument
 } from '../data/officialConstitution';
-import { initialPartnerships, initialGalleryPhotos } from '../data/mockWelfare';
 
 // Cloudflare D1 API Request Helper (모든 사용자가 동일한 서버 데이터를 조회합니다)
 async function fetchD1<T>(resource: string, options: RequestInit = {}): Promise<T | null> {
@@ -456,7 +454,7 @@ export const api = {
   // 7. 학과 학생회칙 및 세칙 - 공식 문서 & D1 버전 관리
   // ==========================================
   async getCouncilRules(): Promise<CouncilRuleChapter[]> {
-    return mockCouncilRules;
+    return [];
   },
 
   async getConstitutionDocuments(): Promise<ConstitutionDocument[]> {
@@ -534,11 +532,11 @@ export const api = {
   },
 
   async getPartnerships(): Promise<PartnershipItem[]> {
-    return initialPartnerships;
+    return [];
   },
 
-  async getGalleryPhotos() {
-    return initialGalleryPhotos;
+  async getGalleryPhotos(): Promise<{ id: string; title: string; date: string; location: string; image_url: string; desc: string }[]> {
+    return [];
   },
 
   // ==========================================
