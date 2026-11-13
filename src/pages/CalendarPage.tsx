@@ -331,7 +331,7 @@ export const CalendarPage: React.FC = () => {
                             <span className="text-xs text-slate-500 font-medium">대상: {evt.target_grades}</span>
                           </div>
                           <h4 className="text-base font-bold text-slate-900">{evt.title}</h4>
-                          <p className="text-sm text-slate-600">{evt.description}</p>
+                          <p className="text-sm text-slate-600 whitespace-pre-wrap">{evt.description}</p>
                         </div>
                         <div className="text-sm text-slate-600 font-semibold shrink-0 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
                           {formatEventPeriod(evt.start_date, evt.end_date)}
@@ -382,7 +382,7 @@ export const CalendarPage: React.FC = () => {
                       {evt.title}
                     </h3>
 
-                    <p className="text-sm text-slate-600 leading-relaxed">
+                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
                       {evt.description}
                     </p>
                   </div>

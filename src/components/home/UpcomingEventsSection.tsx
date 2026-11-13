@@ -177,7 +177,7 @@ export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({
 
                   {evt.description && (
                     <p
-                      className={`text-xs sm:text-sm mt-1.5 line-clamp-1 ${
+                      className={`text-xs sm:text-sm mt-1.5 whitespace-pre-wrap ${
                         isDark ? 'text-slate-400' : 'text-slate-600'
                       }`}
                     >
