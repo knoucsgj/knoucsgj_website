@@ -2360,8 +2360,8 @@ export const AdminPage: React.FC = () => {
           </div>
 
           {/* Members Table */}
-          <div className="border border-slate-200 rounded-2xl overflow-hidden">
-            <table className="w-full text-left text-xs sm:text-sm border-collapse">
+          <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[580px] text-left text-xs sm:text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
                   <th className="py-3 px-4 w-16 text-center">사진</th>
