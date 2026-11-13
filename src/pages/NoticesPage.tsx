@@ -28,7 +28,8 @@ import {
   Camera,
   Trash2,
   Edit3,
-  ExternalLink
+  ExternalLink,
+  Upload
 } from 'lucide-react';
 
 export const NoticesPage: React.FC = () => {
@@ -81,6 +82,7 @@ export const NoticesPage: React.FC = () => {
   const [actMediaType, setActMediaType] = useState<'image' | 'video'>('image');
   const [actMediaUrl, setActMediaUrl] = useState('');
   const [actImages, setActImages] = useState<{ url: string; file?: File }[]>([]);
+  const [isDraggingActivityFiles, setIsDraggingActivityFiles] = useState(false);
   const [actYoutubeUrl, setActYoutubeUrl] = useState('');
   const [actDesc, setActDesc] = useState('');
   const [actIsPinned, setActIsPinned] = useState(false);
@@ -262,12 +264,15 @@ export const NoticesPage: React.FC = () => {
     }
   };
 
-  const handleActivityImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const processActivityImageFiles = (files: File[]) => {
     if (files.length === 0) return;
     const isPrivileged = isAdmin || member?.role === 'president' || member?.role === 'officer';
     const validItems: { url: string; file?: File }[] = [];
     for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        alert(`'${file.name}' 파일은 이미지 형식이 아니므로 제외되었습니다.`);
+        continue;
+      }
       if (!isPrivileged && file.size > 30 * 1024 * 1024) {
         alert(`'${file.name}' 파일이 30MB를 초과하여 제외되었습니다.`);
         continue;
@@ -277,7 +282,19 @@ export const NoticesPage: React.FC = () => {
     if (validItems.length > 0) {
       setActImages((prev) => [...prev, ...validItems]);
     }
+  };
+
+  const handleActivityImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processActivityImageFiles(Array.from(e.target.files || []));
     e.target.value = '';
+  };
+
+  const handleActivityDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingActivityFiles(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    processActivityImageFiles(files);
   };
 
   const { member, isAdmin } = useAuth();
@@ -1673,13 +1690,47 @@ export const NoticesPage: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2.5">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleActivityImageFile}
-                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                    />
+                    <label
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingActivityFiles(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingActivityFiles(false);
+                      }}
+                      onDrop={handleActivityDrop}
+                      className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center ${
+                        isDraggingActivityFiles
+                          ? 'border-blue-500 bg-blue-50/90 ring-4 ring-blue-500/15 scale-[1.01]'
+                          : 'border-slate-300 bg-slate-50/80 hover:border-blue-400 hover:bg-blue-50/40'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleActivityImageFile}
+                        className="hidden"
+                      />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                        isDraggingActivityFiles ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs sm:text-sm font-bold text-slate-800">
+                          {isDraggingActivityFiles
+                            ? '여기에 놓으시면 사진이 바로 추가됩니다'
+                            : '사진을 여기에 드래그하거나 클릭하여 선택하세요'}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          JPG, PNG, WEBP 등 여러 장의 사진을 한 번에 등록할 수 있습니다
+                        </p>
+                      </div>
+                    </label>
                     {actImages.length > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
                         {actImages.map((img, idx) => (
