@@ -203,6 +203,7 @@ CREATE TABLE IF NOT EXISTS activity_reports (
   activity_date TEXT NOT NULL,
   media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
   media_url TEXT NOT NULL,
+  media_urls_json TEXT NOT NULL DEFAULT '[]',
   thumbnail_url TEXT,
   youtube_id TEXT,
   author TEXT NOT NULL DEFAULT '학생회',

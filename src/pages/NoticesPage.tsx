@@ -18,6 +18,7 @@ import {
   Receipt,
   FileCheck,
   Printer,
+  ChevronLeft,
   ChevronRight,
   ShieldCheck,
   MapPin,
@@ -70,6 +71,7 @@ export const NoticesPage: React.FC = () => {
   const [activityMediaType, setActivityMediaType] = useState<'전체' | 'image' | 'video'>('전체');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<ActivityReport | null>(null);
+  const [selectedActivityPhotoIdx, setSelectedActivityPhotoIdx] = useState(0);
 
   // 활동보고 등록 모달 State
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
@@ -78,7 +80,7 @@ export const NoticesPage: React.FC = () => {
   const [actDate, setActDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [actMediaType, setActMediaType] = useState<'image' | 'video'>('image');
   const [actMediaUrl, setActMediaUrl] = useState('');
-  const [actImageFile, setActImageFile] = useState<File | null>(null);
+  const [actImages, setActImages] = useState<{ url: string; file?: File }[]>([]);
   const [actYoutubeUrl, setActYoutubeUrl] = useState('');
   const [actDesc, setActDesc] = useState('');
   const [actIsPinned, setActIsPinned] = useState(false);
@@ -93,7 +95,7 @@ export const NoticesPage: React.FC = () => {
     setActDate(new Date().toISOString().split('T')[0]);
     setActMediaType('image');
     setActMediaUrl('');
-    setActImageFile(null);
+    setActImages([]);
     setActYoutubeUrl('');
     setActIsPinned(false);
     setIsActivityModalOpen(true);
@@ -107,7 +109,14 @@ export const NoticesPage: React.FC = () => {
     setActDate(act.activity_date || new Date().toISOString().split('T')[0]);
     setActMediaType(act.media_type || 'image');
     setActMediaUrl(act.media_url || '');
-    setActImageFile(null);
+    if (act.media_type !== 'video') {
+      const urls = act.media_urls && act.media_urls.length > 0
+        ? act.media_urls
+        : (act.media_url ? [act.media_url] : []);
+      setActImages(urls.map((url) => ({ url })));
+    } else {
+      setActImages([]);
+    }
     setActYoutubeUrl(act.youtube_id ? `https://www.youtube.com/watch?v=${act.youtube_id}` : (act.media_type === 'video' ? act.media_url : ''));
     setActIsPinned(!!act.is_pinned);
     setSelectedActivity(null);
@@ -139,6 +148,7 @@ export const NoticesPage: React.FC = () => {
     }
 
     let finalMediaUrl = actMediaUrl;
+    let finalMediaUrls: string[] = [];
     let finalYoutubeId = '';
     let finalThumbUrl = '';
 
@@ -158,8 +168,8 @@ export const NoticesPage: React.FC = () => {
         finalThumbUrl = `https://img.youtube.com/vi/${finalYoutubeId}/hqdefault.jpg`;
       }
     } else {
-      if (!finalMediaUrl && !actImageFile) {
-        alert('활동 사진 이미지를 등록해 주세요.');
+      if (actImages.length === 0) {
+        alert('활동 사진 이미지를 1장 이상 등록해 주세요.');
         return;
       }
     }
@@ -167,19 +177,18 @@ export const NoticesPage: React.FC = () => {
     try {
       setIsSubmittingActivity(true);
 
-      // If user uploaded an image file, store in Cloudflare R2
-      if (actMediaType === 'image' && actImageFile) {
-        try {
-          const uploadRes = await api.uploadFile(actImageFile, 'activities');
-          finalMediaUrl = uploadRes.url;
-        } catch (uploadErr) {
-          console.warn('R2 upload failed, attempting fallback:', uploadErr);
-          if (actMediaUrl.startsWith('data:')) {
-            finalMediaUrl = actMediaUrl;
-          } else {
-            throw uploadErr;
+      if (actMediaType === 'image') {
+        const uploadedUrls: string[] = [];
+        for (const item of actImages) {
+          if (item.file) {
+            const uploadRes = await api.uploadFile(item.file, 'activities');
+            uploadedUrls.push(uploadRes.url);
+          } else if (item.url) {
+            uploadedUrls.push(item.url);
           }
         }
+        finalMediaUrls = uploadedUrls;
+        finalMediaUrl = uploadedUrls[0] || '';
       }
 
       if (editingActivityId) {
@@ -190,6 +199,7 @@ export const NoticesPage: React.FC = () => {
           description: actDesc.trim(),
           media_type: actMediaType,
           media_url: finalMediaUrl,
+          media_urls: finalMediaUrls,
           youtube_id: finalYoutubeId || undefined,
           thumbnail_url: finalThumbUrl || undefined,
           is_pinned: actIsPinned,
@@ -197,17 +207,18 @@ export const NoticesPage: React.FC = () => {
         alert('활동보고가 성공적으로 수정되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
       } else {
         await api.createActivity({
-        title: actTitle.trim(),
-        category: actCategory,
-        activity_date: actDate,
-        description: actDesc.trim(),
-        media_type: actMediaType,
-        media_url: finalMediaUrl,
-        youtube_id: finalYoutubeId || undefined,
-        thumbnail_url: finalThumbUrl || undefined,
-        is_pinned: actIsPinned,
-        author: member?.name || member?.nickname || '학생회 미디어부',
-      });
+          title: actTitle.trim(),
+          category: actCategory,
+          activity_date: actDate,
+          description: actDesc.trim(),
+          media_type: actMediaType,
+          media_url: finalMediaUrl,
+          media_urls: finalMediaUrls,
+          youtube_id: finalYoutubeId || undefined,
+          thumbnail_url: finalThumbUrl || undefined,
+          is_pinned: actIsPinned,
+          author: member?.name || member?.nickname || '학생회 미디어부',
+        });
         alert('활동보고가 성공적으로 등록되었습니다! 메인화면 캠퍼스 라이프 갤러리에도 즉시 연동됩니다.');
       }
       setEditingActivityId(null);
@@ -215,7 +226,7 @@ export const NoticesPage: React.FC = () => {
       setActTitle('');
       setActDesc('');
       setActMediaUrl('');
-      setActImageFile(null);
+      setActImages([]);
       setActYoutubeUrl('');
       setActIsPinned(false);
       loadActivities();
@@ -252,17 +263,21 @@ export const NoticesPage: React.FC = () => {
   };
 
   const handleActivityImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     const isPrivileged = isAdmin || member?.role === 'president' || member?.role === 'officer';
-    if (!isPrivileged && file.size > 30 * 1024 * 1024) {
-      alert('사진 파일 크기는 30MB 이하만 가능합니다.');
-      return;
+    const validItems: { url: string; file?: File }[] = [];
+    for (const file of files) {
+      if (!isPrivileged && file.size > 30 * 1024 * 1024) {
+        alert(`'${file.name}' 파일이 30MB를 초과하여 제외되었습니다.`);
+        continue;
+      }
+      validItems.push({ url: URL.createObjectURL(file), file });
     }
-    setActImageFile(file);
-    // Instant local preview
-    const previewUrl = URL.createObjectURL(file);
-    setActMediaUrl(previewUrl);
+    if (validItems.length > 0) {
+      setActImages((prev) => [...prev, ...validItems]);
+    }
+    e.target.value = '';
   };
 
   const { member, isAdmin } = useAuth();
@@ -698,6 +713,7 @@ export const NoticesPage: React.FC = () => {
                   <div
                     key={act.id}
                     onClick={() => {
+                      setSelectedActivityPhotoIdx(0);
                       setSelectedActivity(act);
                       api.incrementActivityViews(act.id).catch(() => {});
                     }}
@@ -735,7 +751,7 @@ export const NoticesPage: React.FC = () => {
                         ) : (
                           <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600/90 text-white backdrop-blur-xs shadow-xs">
                             <ImageIcon className="w-3 h-3" />
-                            사진
+                            {act.media_urls && act.media_urls.length > 1 ? `사진 ${act.media_urls.length}장` : '사진'}
                           </span>
                         )}
                       </div>
@@ -1369,9 +1385,18 @@ export const NoticesPage: React.FC = () => {
       {/* ========================================================= */}
       {/* Activity Detail Viewer Modal (사진/영상 상세 보기)        */}
       {/* ========================================================= */}
-      {selectedActivity && (
+      {selectedActivity && (() => {
+        const galleryImages = selectedActivity.media_type === 'video'
+          ? []
+          : (selectedActivity.media_urls && selectedActivity.media_urls.length > 0
+              ? selectedActivity.media_urls
+              : [selectedActivity.media_url]);
+        const safeIdx = Math.min(selectedActivityPhotoIdx, Math.max(0, galleryImages.length - 1));
+        const activePhotoUrl = galleryImages[safeIdx] || selectedActivity.media_url;
+
+        return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-3xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
+          <div className="relative w-full max-w-3xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 my-auto">
             {/* Header */}
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1400,7 +1425,7 @@ export const NoticesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Media Player */}
+            {/* Media Player / Multi-Photo Viewer */}
             <div className="bg-black relative aspect-16/9 flex items-center justify-center overflow-hidden">
               {selectedActivity.media_type === 'video' ? (
                 <iframe
@@ -1415,13 +1440,56 @@ export const NoticesPage: React.FC = () => {
                   allowFullScreen
                 />
               ) : (
-                <img
-                  src={selectedActivity.media_url}
-                  alt={selectedActivity.title}
-                  className="w-full h-full object-contain"
-                />
+                <>
+                  <img
+                    src={activePhotoUrl}
+                    alt={`${selectedActivity.title} (${safeIdx + 1}/${galleryImages.length})`}
+                    className="w-full h-full object-contain"
+                  />
+                  {galleryImages.length > 1 && (
+                    <>
+                      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-xs border border-white/15">
+                        {safeIdx + 1} / {galleryImages.length}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedActivityPhotoIdx((safeIdx - 1 + galleryImages.length) % galleryImages.length)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/15"
+                        aria-label="이전 사진"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedActivityPhotoIdx((safeIdx + 1) % galleryImages.length)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/15"
+                        aria-label="다음 사진"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </>
               )}
             </div>
+
+            {/* Multi-photo Thumbnail Strip */}
+            {galleryImages.length > 1 && (
+              <div className="px-6 py-3 bg-slate-950 flex items-center gap-2 overflow-x-auto border-t border-slate-800">
+                {galleryImages.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedActivityPhotoIdx(idx)}
+                    className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                      idx === safeIdx ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={imgUrl} alt={`썸네일 ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Content */}
             <div className="p-6 space-y-4">
@@ -1440,17 +1508,17 @@ export const NoticesPage: React.FC = () => {
                 {selectedActivity.description || '등록된 상세 설명이 없습니다.'}
               </p>
 
-              <div className="pt-2 flex justify-between items-center text-xs">
+              <div className="pt-2 flex flex-wrap justify-between items-center gap-2 text-xs">
                 {selectedActivity.media_type === 'image' && (
                   <a
-                    href={selectedActivity.media_url}
-                    download={selectedActivity.title + '.jpg'}
+                    href={activePhotoUrl}
+                    download={`${selectedActivity.title}-${safeIdx + 1}.jpg`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-1.5 text-blue-600 font-bold hover:underline"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>원본 사진 다운로드</span>
+                    <span>현재 사진 다운로드</span>
                   </a>
                 )}
                 {selectedActivity.media_type === 'video' && (
@@ -1494,7 +1562,8 @@ export const NoticesPage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* Activity Create Modal (새 활동보고 등록)                 */}
@@ -1590,20 +1659,61 @@ export const NoticesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image Input */}
+              {/* Image Input (Multi-photo support) */}
               {actMediaType === 'image' ? (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">활동 사진 등록 *</label>
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      활동 사진 등록 * <span className="font-normal text-slate-500">(여러 장 선택 및 추가 가능)</span>
+                    </label>
+                    {actImages.length > 0 && (
+                      <span className="text-[11px] font-bold text-blue-600">
+                        총 {actImages.length}장 선택됨
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-2.5">
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleActivityImageFile}
                       className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                     />
-                    {actMediaUrl && (
-                      <div className="mt-2 relative aspect-16/9 max-h-48 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
-                        <img src={actMediaUrl} alt="프리뷰" className="w-full h-full object-cover" />
+                    {actImages.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                        {actImages.map((img, idx) => (
+                          <div key={`${img.url}-${idx}`} className="relative group aspect-4/3 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                            <img src={img.url} alt={`프리뷰 ${idx + 1}`} className="w-full h-full object-cover" />
+                            {idx === 0 ? (
+                              <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold shadow-xs">
+                                대표 사진
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActImages((prev) => {
+                                    const next = [...prev];
+                                    const [picked] = next.splice(idx, 1);
+                                    return [picked, ...next];
+                                  });
+                                }}
+                                className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-slate-900/75 hover:bg-blue-600 text-white text-[10px] font-bold cursor-pointer transition-colors"
+                              >
+                                대표로
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setActImages((prev) => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600/90 hover:bg-rose-700 text-white flex items-center justify-center cursor-pointer shadow-xs"
+                              title="사진 제거"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

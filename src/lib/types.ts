@@ -352,7 +352,8 @@ export interface ActivityReport {
   description: string;
   activity_date: string; // YYYY-MM-DD
   media_type: 'image' | 'video';
-  media_url: string;     // 이미지 URL/DataURL 또는 동영상/유튜브 URL
+  media_url: string;     // 대표 이미지 URL/DataURL 또는 동영상/유튜브 URL
+  media_urls?: string[]; // 다중 이미지 URL 목록
   thumbnail_url?: string; // 동영상 썸네일
   youtube_id?: string;   // 유튜브 영상 ID
   author?: string;

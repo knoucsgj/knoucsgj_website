@@ -13,6 +13,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
   const [isTransition, setIsTransition] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityReport | null>(null);
+  const [selectedPhotoIdx, setSelectedPhotoIdx] = useState(0);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartXRef = useRef<number | null>(null);
 
@@ -195,7 +196,10 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                 return (
                   <div
                     key={`${act.id}-${index}`}
-                    onClick={() => setSelectedActivity(act)}
+                    onClick={() => {
+                      setSelectedPhotoIdx(0);
+                      setSelectedActivity(act);
+                    }}
                     className="w-full shrink-0 relative h-[280px] sm:h-[400px] md:h-[480px] lg:h-[540px] bg-slate-950 group cursor-pointer overflow-hidden"
                   >
                     {displayImg ? (
@@ -220,7 +224,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-950/80 text-white text-xs sm:text-sm font-bold shadow-lg backdrop-blur-xs border border-white/20">
                           <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
-                          사진
+                          {act.media_urls && act.media_urls.length > 1 ? `사진 ${act.media_urls.length}장` : '사진'}
                         </span>
                       )}
                       <span className="px-3 py-1 rounded-lg bg-black/65 text-slate-100 text-xs sm:text-sm font-semibold backdrop-blur-xs border border-white/10">
@@ -332,7 +336,16 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
       {/* ======================================================== */}
       {/* Modal: 사진 확대 뷰어 & 영상 플레이어                     */}
       {/* ======================================================== */}
-      {selectedActivity && (
+      {selectedActivity && (() => {
+        const galleryImages = selectedActivity.media_type === 'video'
+          ? []
+          : (selectedActivity.media_urls && selectedActivity.media_urls.length > 0
+              ? selectedActivity.media_urls
+              : [selectedActivity.media_url]);
+        const safeIdx = Math.min(selectedPhotoIdx, Math.max(0, galleryImages.length - 1));
+        const activePhotoUrl = galleryImages[safeIdx] || selectedActivity.media_url;
+
+        return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
           <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl text-white my-auto">
             {/* Modal Header */}
@@ -363,13 +376,56 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                   allowFullScreen
                 />
               ) : (
-                <img
-                  src={selectedActivity.media_url}
-                  alt={selectedActivity.title}
-                  className="w-full h-full object-contain"
-                />
+                <>
+                  <img
+                    src={activePhotoUrl}
+                    alt={`${selectedActivity.title} (${safeIdx + 1}/${galleryImages.length})`}
+                    className="w-full h-full object-contain"
+                  />
+                  {galleryImages.length > 1 && (
+                    <>
+                      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-xs border border-white/15">
+                        {safeIdx + 1} / {galleryImages.length}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhotoIdx((safeIdx - 1 + galleryImages.length) % galleryImages.length)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/15"
+                        aria-label="이전 사진"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhotoIdx((safeIdx + 1) % galleryImages.length)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-blue-600 text-white flex items-center justify-center transition-colors cursor-pointer border border-white/15"
+                        aria-label="다음 사진"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </>
               )}
             </div>
+
+            {/* Thumbnail Strip */}
+            {galleryImages.length > 1 && (
+              <div className="px-6 py-3 bg-slate-950 flex items-center gap-2 overflow-x-auto border-t border-slate-800">
+                {galleryImages.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedPhotoIdx(idx)}
+                    className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                      idx === safeIdx ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={imgUrl} alt={`썸네일 ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Description Info */}
             <div className="p-6 space-y-3">
@@ -393,7 +449,8 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

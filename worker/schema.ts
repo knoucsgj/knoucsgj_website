@@ -145,6 +145,7 @@ const CREATE_STATEMENTS = [
     description TEXT, activity_date TEXT NOT NULL,
     media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video')),
     media_url TEXT NOT NULL, thumbnail_url TEXT, youtube_id TEXT,
+    media_urls_json TEXT NOT NULL DEFAULT '[]',
     author TEXT NOT NULL DEFAULT '학생회', created_by TEXT, views INTEGER NOT NULL DEFAULT 1,
     is_pinned INTEGER NOT NULL DEFAULT 0, is_deleted INTEGER NOT NULL DEFAULT 0,
     deleted_reason TEXT, deleted_at TEXT, deleted_by TEXT, created_at TEXT NOT NULL)`,
@@ -223,6 +224,7 @@ const ADD_COLUMNS: [string, string, string][] = [
   ['meeting_minutes', 'deleted_by', 'TEXT'],
   ['meeting_minutes', 'edit_history', "TEXT NOT NULL DEFAULT '[]'"],
   ['activity_reports', 'created_by', 'TEXT'],
+  ['activity_reports', 'media_urls_json', "TEXT NOT NULL DEFAULT '[]'"],
   ['notices', 'created_by', 'TEXT'],
 ];
 

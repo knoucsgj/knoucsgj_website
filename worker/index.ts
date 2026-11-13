@@ -2041,22 +2041,36 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const sql = 'SELECT * FROM activity_reports WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY is_pinned DESC, activity_date DESC, created_at DESC';
       const { results } = await db.prepare(sql).all();
       return json(
-        results.map((r: any) => ({
-          id: r.id,
-          title: r.title,
-          category: r.category,
-          description: r.description || '',
-          activity_date: r.activity_date,
-          media_type: r.media_type || 'image',
-          media_url: r.media_url,
-          thumbnail_url: r.thumbnail_url || null,
-          youtube_id: r.youtube_id || null,
-          author: r.author || '학생회',
-          created_by: r.created_by || null,
-          views: Number(r.views) || 1,
-          is_pinned: !!r.is_pinned,
-          created_at: r.created_at,
-        }))
+        results.map((r: any) => {
+          const mediaType = r.media_type || 'image';
+          let mediaUrls: string[] = [];
+          if (r.media_urls_json) {
+            try {
+              const parsed = JSON.parse(r.media_urls_json);
+              if (Array.isArray(parsed)) mediaUrls = parsed.filter((u: any) => typeof u === 'string' && u);
+            } catch {}
+          }
+          if (mediaUrls.length === 0 && mediaType !== 'video' && r.media_url) {
+            mediaUrls = [r.media_url];
+          }
+          return {
+            id: r.id,
+            title: r.title,
+            category: r.category,
+            description: r.description || '',
+            activity_date: r.activity_date,
+            media_type: mediaType,
+            media_url: r.media_url,
+            media_urls: mediaUrls,
+            thumbnail_url: r.thumbnail_url || null,
+            youtube_id: r.youtube_id || null,
+            author: r.author || '학생회',
+            created_by: r.created_by || null,
+            views: Number(r.views) || 1,
+            is_pinned: !!r.is_pinned,
+            created_at: r.created_at,
+          };
+        })
       );
     }
 
@@ -2065,8 +2079,15 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const b: any = await readJson(req);
       const title = str(b.title, 150);
       if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
-      const mediaUrl = str(b.media_url, 1000000);
+      const mediaType = b.media_type === 'video' ? 'video' : 'image';
+      const rawMediaUrls: string[] = Array.isArray(b.media_urls)
+        ? b.media_urls.map((u: any) => str(u, 1000000)).filter(Boolean)
+        : [];
+      const mediaUrl = str(b.media_url, 1000000) || rawMediaUrls[0] || '';
       if (!mediaUrl) throw new HttpError(400, '사진 또는 영상 미디어를 등록해 주세요.');
+      const finalMediaUrls = mediaType === 'video'
+        ? []
+        : (rawMediaUrls.length > 0 ? rawMediaUrls : [mediaUrl]);
 
       const act = {
         id: b.id ? str(b.id, 50) : `act-${Date.now()}-${randomHex(2)}`,
@@ -2074,8 +2095,9 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         category: str(b.category, 30) || '행사',
         description: str(b.description, 2000) || '',
         activity_date: str(b.activity_date, 20) || today(),
-        media_type: b.media_type === 'video' ? 'video' : 'image',
+        media_type: mediaType,
         media_url: mediaUrl,
+        media_urls: finalMediaUrls,
         thumbnail_url: b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
         youtube_id: b.youtube_id ? str(b.youtube_id, 50) : null,
         author: session.admin ? '총괄관리자' : (session.member?.name || session.member?.nickname || '학생회'),
@@ -2089,13 +2111,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       await db
         .prepare(
           `INSERT INTO activity_reports (
-            id, title, category, description, activity_date, media_type, media_url,
+            id, title, category, description, activity_date, media_type, media_url, media_urls_json,
             thumbnail_url, youtube_id, author, created_by, views, is_pinned, is_deleted, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
         )
         .bind(
           act.id, act.title, act.category, act.description, act.activity_date,
-          act.media_type, act.media_url, act.thumbnail_url, act.youtube_id,
+          act.media_type, act.media_url, JSON.stringify(finalMediaUrls), act.thumbnail_url, act.youtube_id,
           act.author, act.created_by, act.views, act.is_pinned, act.created_at
         )
         .run();
@@ -2117,21 +2139,28 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const b: any = await readJson(req);
       const title = str(b.title, 150);
       if (!title) throw new HttpError(400, '활동보고 제목을 입력해 주세요.');
-      const mediaUrl = str(b.media_url, 1000000);
+      const mediaType = b.media_type === 'video' ? 'video' : 'image';
+      const rawMediaUrls: string[] = Array.isArray(b.media_urls)
+        ? b.media_urls.map((u: any) => str(u, 1000000)).filter(Boolean)
+        : [];
+      const mediaUrl = str(b.media_url, 1000000) || rawMediaUrls[0] || '';
       if (!mediaUrl) throw new HttpError(400, '사진 또는 영상 미디어를 등록해 주세요.');
+      const finalMediaUrls = mediaType === 'video'
+        ? []
+        : (rawMediaUrls.length > 0 ? rawMediaUrls : [mediaUrl]);
 
       await db
         .prepare(
           `UPDATE activity_reports SET
             title = ?, category = ?, description = ?, activity_date = ?,
-            media_type = ?, media_url = ?, thumbnail_url = ?, youtube_id = ?,
+            media_type = ?, media_url = ?, media_urls_json = ?, thumbnail_url = ?, youtube_id = ?,
             is_pinned = ?
           WHERE id = ?`
         )
         .bind(
           title, str(b.category, 30) || '행사', str(b.description, 2000) || '',
-          str(b.activity_date, 20) || today(), b.media_type === 'video' ? 'video' : 'image',
-          mediaUrl, b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
+          str(b.activity_date, 20) || today(), mediaType,
+          mediaUrl, JSON.stringify(finalMediaUrls), b.thumbnail_url ? str(b.thumbnail_url, 1000) : null,
           b.youtube_id ? str(b.youtube_id, 50) : null, b.is_pinned ? 1 : 0, id
         )
         .run();
