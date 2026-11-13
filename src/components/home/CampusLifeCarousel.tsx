@@ -189,7 +189,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
           </div>
         ) : recentActivities.length === 0 ? (
           <div className="h-[240px] sm:h-[320px] flex items-center justify-center text-slate-400 text-sm bg-slate-900/60">
-            최근 1년 이내에 등록된 활동보고 자료가 없습니다.
+            최근 1년 이내(행사일 기준)의 활동보고 자료가 없습니다.
           </div>
         ) : (
           <>
