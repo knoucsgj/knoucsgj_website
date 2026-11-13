@@ -17,8 +17,12 @@ export const CalendarPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedCategory, setSelectedCategory] = useState<string>('전체');
 
-  // Calendar Date State (Default: 2026 October based on system context)
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(2026, 9, 1)); // 9 = October
+  // Calendar Date State (Default: current month based on real time)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const todayMonthLabel = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,8 +64,10 @@ export const CalendarPage: React.FC = () => {
   };
 
   const setTodayMonth = () => {
-    setCurrentDate(new Date(2026, 9, 1)); // October 2026
-    setSelectedDateStr('2026-10-12');
+    const d = new Date();
+    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    setSelectedDateStr(dStr);
   };
 
   const getCategoryColor = (category: EventCategory) => {
@@ -178,7 +184,7 @@ export const CalendarPage: React.FC = () => {
                   onClick={setTodayMonth}
                   className="px-3 py-1.5 text-sm font-bold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                 >
-                  오늘 (2026.10)
+                  오늘 ({todayMonthLabel})
                 </button>
               </div>
 
@@ -224,7 +230,7 @@ export const CalendarPage: React.FC = () => {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayEvents = getEventsForDay(day);
                 const isSelected = selectedDateStr === dateStr;
-                const isToday = dateStr === '2026-10-12';
+                const isToday = dateStr === todayStr;
                 const dayOfWeek = (firstDayOfMonth + i) % 7;
 
                 return (
