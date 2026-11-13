@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Image as ImageIcon, Video, Calendar, Eye, X, ExternalLink } from 'lucide-react';
 import type { ActivityReport } from '../../lib/types';
@@ -17,10 +17,23 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartXRef = useRef<number | null>(null);
 
-  const total = activities.length;
+  // 현재 날짜 기준 1년 이내 자료만 메인 화면에 노출
+  const recentActivities = useMemo(() => {
+    const now = new Date();
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const cutoffStr = `${oneYearAgo.getFullYear()}-${pad(oneYearAgo.getMonth() + 1)}-${pad(oneYearAgo.getDate())}`;
+
+    return activities.filter((act) => {
+      const dateStr = (act.activity_date || '').slice(0, 10);
+      return dateStr >= cutoffStr;
+    });
+  }, [activities]);
+
+  const total = recentActivities.length;
 
   // 끊김 없는 무한 롤링(Seamless Infinite Loop)을 위해 마지막에 첫 번째 슬라이드 1개를 복제 연결
-  const displayList = total > 1 ? [...activities, activities[0]] : activities;
+  const displayList = total > 1 ? [...recentActivities, recentActivities[0]] : recentActivities;
 
   // 다음 슬라이드로 이동
   const handleNext = () => {
@@ -174,9 +187,9 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
           <div className="h-[280px] sm:h-[400px] md:h-[480px] lg:h-[540px] flex items-center justify-center text-slate-400 text-sm">
             생생한 캠퍼스 활동자료를 불러오는 중입니다...
           </div>
-        ) : activities.length === 0 ? (
+        ) : recentActivities.length === 0 ? (
           <div className="h-[240px] sm:h-[320px] flex items-center justify-center text-slate-400 text-sm bg-slate-900/60">
-            등록된 활동보고 자료가 없습니다.
+            최근 1년 이내에 등록된 활동보고 자료가 없습니다.
           </div>
         ) : (
           <>
@@ -316,7 +329,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
       {/* Indicator Dots (현재 콘텐츠 위치 표시 및 클릭 이동) */}
       {total > 1 && (
         <div className="flex justify-center items-center gap-2 pt-1">
-          {activities.map((act, idx) => (
+          {recentActivities.map((act, idx) => (
             <button
               key={act.id || idx}
               onClick={() => {
