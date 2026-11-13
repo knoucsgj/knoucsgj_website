@@ -1,21 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAuth } from '../services/auth';
 import type { AcademicEvent, EventCategory } from '../lib/types';
 import { getDDay, formatEventPeriod } from '../lib/dateUtils';
 import { ASSETS } from '../lib/assets';
+import { showAlert, showConfirm } from '../components/ui/GlobalDialog';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Clock,
   LayoutGrid,
-  List
+  List,
+  Plus,
+  Pencil,
+  Trash2,
+  X
 } from 'lucide-react';
 
 export const CalendarPage: React.FC = () => {
+  const { member, isAdmin } = useAuth();
+  const canManageEvents = isAdmin || member?.role === 'president' || member?.role === 'officer';
+
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedCategory, setSelectedCategory] = useState<string>('전체');
+
+  // Event Write / Edit Modal State
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    start_date: '',
+    end_date: '',
+    category: '과제' as EventCategory,
+    description: '',
+    target_grades: '전학년',
+    is_important: false
+  });
 
   // Calendar Date State (Default: current month based on real time)
   const now = new Date();
@@ -25,17 +48,97 @@ export const CalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
 
+  const loadEvents = useCallback(async () => {
+    try {
+      const data = await api.getEvents();
+      setEvents(data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
-    async function loadEvents() {
+    loadEvents();
+  }, [loadEvents]);
+
+  const openNewEventModal = () => {
+    const defaultDate = selectedDateStr || todayStr;
+    setEditingEventId(null);
+    setEventForm({
+      title: '',
+      start_date: defaultDate,
+      end_date: defaultDate,
+      category: '과제',
+      description: '',
+      target_grades: '전학년',
+      is_important: false
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const openEditEventModal = (evt: AcademicEvent) => {
+    setEditingEventId(evt.id);
+    setEventForm({
+      title: evt.title,
+      start_date: evt.start_date,
+      end_date: evt.end_date,
+      category: evt.category,
+      description: evt.description || '',
+      target_grades: evt.target_grades || '전학년',
+      is_important: Boolean(evt.is_important)
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventForm.title.trim()) {
+      await showAlert('일정명을 입력해 주세요.');
+      return;
+    }
+    if (!eventForm.start_date || !eventForm.end_date) {
+      await showAlert('시작일과 종료일을 모두 선택해 주세요.');
+      return;
+    }
+    if (eventForm.end_date < eventForm.start_date) {
+      await showAlert('종료일은 시작일보다 빠를 수 없습니다.');
+      return;
+    }
+
+    setIsSavingEvent(true);
+    try {
+      if (editingEventId) {
+        await api.updateEvent(editingEventId, eventForm);
+      } else {
+        await api.createEvent(eventForm);
+      }
+      setIsEventModalOpen(false);
+      await loadEvents();
+    } catch (err: any) {
+      await showAlert(err?.message || '일정 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string, title: string) => {
+    if (
+      await showConfirm({
+        title: '학사 일정 삭제',
+        message: `"${title}" 일정을 정말 삭제하시겠습니까?`,
+        subMessage: '삭제된 일정은 캘린더에서 즉시 제거됩니다.',
+        confirmText: '삭제하기',
+        variant: 'danger'
+      })
+    ) {
       try {
-        const data = await api.getEvents();
-        setEvents(data);
-      } catch (e) {
-        console.error(e);
+        await api.deleteEvent(id);
+        await loadEvents();
+      } catch (err: any) {
+        await showAlert(err?.message || '일정 삭제 중 오류가 발생했습니다.');
       }
     }
-    loadEvents();
-  }, []);
+  };
 
   const categories = ['전체', '출석수업', '시험', '과제', '등록/수강', '행사'];
 
@@ -125,30 +228,41 @@ export const CalendarPage: React.FC = () => {
           </div>
         </div>
 
-        {/* View Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shrink-0 self-start sm:self-auto">
-          <button
-            onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              viewMode === 'calendar'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            월별 달력
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              viewMode === 'list'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            목록 뷰
-          </button>
+        {/* Header Actions: Add Event + View Switcher */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0 self-start sm:self-auto">
+          {canManageEvents && (
+            <button
+              onClick={openNewEventModal}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              일정 등록하기
+            </button>
+          )}
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                viewMode === 'calendar'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              월별 달력
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              목록 뷰
+            </button>
+          </div>
         </div>
       </div>
 
@@ -333,8 +447,30 @@ export const CalendarPage: React.FC = () => {
                           <h4 className="text-base font-bold text-slate-900">{evt.title}</h4>
                           <p className="text-sm text-slate-600 whitespace-pre-wrap">{evt.description}</p>
                         </div>
-                        <div className="text-sm text-slate-600 font-semibold shrink-0 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                          {formatEventPeriod(evt.start_date, evt.end_date)}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-sm text-slate-600 font-semibold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                            {formatEventPeriod(evt.start_date, evt.end_date)}
+                          </div>
+                          {canManageEvents && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => openEditEventModal(evt)}
+                                className="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                title="일정 수정"
+                                aria-label="일정 수정"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEvent(evt.id, evt.title)}
+                                className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="일정 삭제"
+                                aria-label="일정 삭제"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -387,13 +523,148 @@ export const CalendarPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="text-sm text-slate-600 font-semibold flex items-center gap-1.5 shrink-0 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{formatEventPeriod(evt.start_date, evt.end_date)}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-sm text-slate-600 font-semibold flex items-center gap-1.5 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span>{formatEventPeriod(evt.start_date, evt.end_date)}</span>
+                    </div>
+                    {canManageEvents && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditEventModal(evt)}
+                          className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="일정 수정"
+                          aria-label="일정 수정"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(evt.id, evt.title)}
+                          className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="일정 삭제"
+                          aria-label="일정 삭제"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Event Write / Edit Modal (Council & Admin) */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 sm:p-8 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-5">
+              <h3 className="font-bold text-lg text-slate-900">
+                {editingEventId ? '학사일정 수정' : '새 학사일정 등록'}
+              </h3>
+              <button
+                onClick={() => setIsEventModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEvent} className="space-y-4 text-sm">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">일정명</label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                  placeholder="예: 2학기 중간과제물 제출"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">시작일</label>
+                  <input
+                    type="date"
+                    required
+                    value={eventForm.start_date}
+                    onChange={(e) => setEventForm({ ...eventForm, start_date: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">종료일</label>
+                  <input
+                    type="date"
+                    required
+                    value={eventForm.end_date}
+                    onChange={(e) => setEventForm({ ...eventForm, end_date: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">분류</label>
+                  <select
+                    value={eventForm.category}
+                    onChange={(e) => setEventForm({ ...eventForm, category: e.target.value as EventCategory })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="과제">과제</option>
+                    <option value="출석수업">출석수업</option>
+                    <option value="시험">시험</option>
+                    <option value="등록/수강">등록/수강</option>
+                    <option value="행사">행사</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">대상 학년</label>
+                  <input
+                    type="text"
+                    value={eventForm.target_grades}
+                    onChange={(e) => setEventForm({ ...eventForm, target_grades: e.target.value })}
+                    placeholder="예: 전학년, 1학년"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">상세 설명</label>
+                <textarea
+                  rows={4}
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                  placeholder="일정에 대한 부가 설명을 입력하세요 (줄바꿈 지원)"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEventModalOpen(false)}
+                  disabled={isSavingEvent}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEvent}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingEvent ? '저장 중...' : editingEventId ? '수정 완료' : '등록하기'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
