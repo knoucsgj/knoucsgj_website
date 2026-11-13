@@ -1152,6 +1152,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
   const resource = url.searchParams.get('resource');
   const id = url.searchParams.get('id');
+  const tail = url.searchParams.get('tail');
   const db = env.DB;
   const method = req.method;
 
