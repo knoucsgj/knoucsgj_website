@@ -128,7 +128,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
             일터에서 캠퍼스로, 함께 도전하고 성장합니다
           </h2>
           <p className="text-slate-300 text-sm sm:text-base mt-1.5 font-normal max-w-2xl">
-            소프트웨어 경진대회 본선 현장부터 CODE & AI 실습 스터디, 정기 임원회의까지 광주전남 컴퓨터과학과의 따뜻한 열정이 담긴 사진과 영상입니다.
+            CODE:AI 스터디 모임부터 학과 행사와 출석수업 현장까지, 광주전남 컴퓨터과학과 학우들이 함께 만들어가는 소중한 기록입니다.
           </p>
         </div>
 
