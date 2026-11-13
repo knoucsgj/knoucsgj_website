@@ -13,32 +13,13 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
   const [isTransition, setIsTransition] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityReport | null>(null);
-  const [visibleCount, setVisibleCount] = useState(4);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 반응형 한 화면 카드 수 계산 (모바일 1개, 태블릿 2개, 데스크톱 4개)
-  useEffect(() => {
-    const updateVisibleCount = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-        setVisibleCount(1);
-      } else if (width < 1024) {
-        setVisibleCount(2);
-      } else {
-        setVisibleCount(4);
-      }
-    };
-
-    updateVisibleCount();
-    window.addEventListener('resize', updateVisibleCount);
-    return () => window.removeEventListener('resize', updateVisibleCount);
-  }, []);
+  const touchStartXRef = useRef<number | null>(null);
 
   const total = activities.length;
 
-  // 끊김 없는 무한 롤링(Seamless Infinite Loop)을 위해 리스트를 복제 연결
-  // 마지막 콘텐츠 뒤에 첫 번째 콘텐츠가 바로 이어져서 한 방향(왼쪽)으로 계속 롤링됨
-  const displayList = total > 0 ? [...activities, ...activities, ...activities] : [];
+  // 끊김 없는 무한 롤링(Seamless Infinite Loop)을 위해 마지막에 첫 번째 슬라이드 1개를 복제 연결
+  const displayList = total > 1 ? [...activities, activities[0]] : activities;
 
   // 다음 슬라이드로 이동
   const handleNext = () => {
@@ -51,7 +32,6 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
   const handlePrev = () => {
     if (total <= 1) return;
     if (currentIndex <= 0) {
-      // 0에서 이전으로 가면 transition 없이 total 위치로 순간이동 후 total - 1로 슬라이드
       setIsTransition(false);
       setCurrentIndex(total);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -65,11 +45,9 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
     }
   };
 
-  // 슬라이드 애니메이션 완료 시점(transitionend)에 마지막을 지나 첫 번째로 돌아왔을 때 무음 텔레포트
+  // 슬라이드 애니메이션 완료 시점에 복제된 첫 번째 슬라이드에 도달하면 0번 인덱스로 무음 이동
   const handleTransitionEnd = () => {
-    if (currentIndex >= total) {
-      // 마지막 콘텐츠를 지나 복제된 첫 번째 콘텐츠에 도달한 순간,
-      // 애니메이션 없이 원본 0번 인덱스로 순간이동하여 영원히 한 방향으로 롤링되게 함
+    if (total > 1 && currentIndex >= total) {
       setIsTransition(false);
       setCurrentIndex(0);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -79,13 +57,13 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
     }
   };
 
-  // 일정 시간(4초)마다 왼쪽 방향으로 자동 연속 롤링
+  // 4.5초마다 자동으로 다음 큰 이미지로 스크롤
   useEffect(() => {
     if (total <= 1 || isPaused || selectedActivity) return;
 
     const timer = setInterval(() => {
       handleNext();
-    }, 4000);
+    }, 4500);
 
     return () => clearInterval(timer);
   }, [total, isPaused, selectedActivity, currentIndex]);
@@ -95,6 +73,25 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
+
+  // 모바일 터치 스와이프 지원
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current !== null && total > 1) {
+      const diff = touchStartXRef.current - e.changedTouches[0].clientX;
+      if (diff > 45) {
+        handleNext();
+      } else if (diff < -45) {
+        handlePrev();
+      }
+    }
+    touchStartXRef.current = null;
+    setIsPaused(false);
+  };
 
   const getYoutubeEmbedUrl = (act: ActivityReport) => {
     if (act.youtube_id) {
@@ -111,9 +108,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
     return act.media_url;
   };
 
-  // 카드 1개의 너비 퍼센트 (모바일: 100%, 태블릿: 50%, 데스크톱: 25%)
-  const cardWidthPercent = 100 / visibleCount;
-  const translateX = -(currentIndex * cardWidthPercent);
+  const translateX = -(currentIndex * 100);
   const activeDotIndex = total > 0 ? currentIndex % total : 0;
 
   return (
@@ -137,7 +132,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
           </p>
         </div>
 
-        {/* Controls: 이전/다음 버튼 & 공지사항 활동보고 바로가기 */}
+        {/* Controls: 활동보고 갤러리 전체보기 & 이전/다음 버튼 */}
         <div className="flex items-center gap-3 shrink-0 self-start sm:self-end">
           <Link
             to="/notices?tab=activities"
@@ -168,18 +163,22 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
         </div>
       </div>
 
-      {/* Carousel Track Container (무한 연속 롤링 트랙) */}
-      <div className="relative overflow-hidden rounded-2xl">
+      {/* Large 1-Slide Showcase Carousel */}
+      <div
+        className="relative overflow-hidden rounded-3xl border border-slate-800/90 bg-slate-900 shadow-2xl"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {loading ? (
-          <div className="py-20 text-center text-slate-400 text-sm">
+          <div className="h-[280px] sm:h-[400px] md:h-[480px] lg:h-[540px] flex items-center justify-center text-slate-400 text-sm">
             생생한 캠퍼스 활동자료를 불러오는 중입니다...
           </div>
         ) : activities.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 text-sm bg-slate-900/60 rounded-2xl border border-slate-800">
+          <div className="h-[240px] sm:h-[320px] flex items-center justify-center text-slate-400 text-sm bg-slate-900/60">
             등록된 활동보고 자료가 없습니다.
           </div>
         ) : (
-          <div className="-mx-2 overflow-hidden">
+          <>
             <div
               className="flex"
               onTransitionEnd={handleTransitionEnd}
@@ -191,85 +190,86 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
             >
               {displayList.map((act, index) => {
                 const isVideo = act.media_type === 'video';
-                const displayImg = isVideo
-                  ? (act.thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80')
-                  : act.media_url;
+                const displayImg = isVideo ? act.thumbnail_url : act.media_url;
 
                 return (
                   <div
                     key={`${act.id}-${index}`}
-                    style={{ width: `${cardWidthPercent}%` }}
-                    className="shrink-0 px-2"
+                    onClick={() => setSelectedActivity(act)}
+                    className="w-full shrink-0 relative h-[280px] sm:h-[400px] md:h-[480px] lg:h-[540px] bg-slate-950 group cursor-pointer overflow-hidden"
                   >
-                    <div
-                      onClick={() => setSelectedActivity(act)}
-                      className="h-full rounded-2xl overflow-hidden border border-slate-800/90 bg-slate-900 group shadow-md hover:border-blue-500/60 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between"
-                    >
-                      <div className="relative aspect-4/3 overflow-hidden bg-slate-950">
-                        <img
-                          src={displayImg}
-                          alt={act.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                        />
+                    {displayImg ? (
+                      <img
+                        src={displayImg}
+                        alt={act.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700 ease-out"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-900 via-blue-950/60 to-slate-950 flex items-center justify-center">
+                        <Video className="w-16 h-16 text-slate-700" />
+                      </div>
+                    )}
 
-                        {/* Media Type Badge */}
-                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                          {isVideo ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-rose-600/90 text-white text-[11px] font-bold shadow-md backdrop-blur-xs">
-                              <Video className="w-3 h-3" />
-                              영상
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[11px] font-bold shadow-md backdrop-blur-xs border border-white/20">
-                              <ImageIcon className="w-3 h-3 text-blue-400" />
-                              사진
-                            </span>
-                          )}
-                          <span className="px-2 py-0.5 rounded-md bg-black/60 text-slate-200 text-[10px] font-semibold backdrop-blur-xs">
-                            {act.category}
-                          </span>
+                    {/* Top Badges */}
+                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 flex items-center gap-2 z-10">
+                      {isVideo ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600/95 text-white text-xs sm:text-sm font-bold shadow-lg backdrop-blur-xs">
+                          <Video className="w-3.5 h-3.5" />
+                          영상
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-950/80 text-white text-xs sm:text-sm font-bold shadow-lg backdrop-blur-xs border border-white/20">
+                          <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                          사진
+                        </span>
+                      )}
+                      <span className="px-3 py-1 rounded-lg bg-black/65 text-slate-100 text-xs sm:text-sm font-semibold backdrop-blur-xs border border-white/10">
+                        {act.category}
+                      </span>
+                    </div>
+
+                    {/* Top Right Counter */}
+                    {total > 1 && (
+                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-xs font-bold text-slate-200 tabular-nums">
+                        {activeDotIndex + 1} / {total}
+                      </div>
+                    )}
+
+                    {/* Video Center Play Button */}
+                    {isVideo && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/10 transition-colors z-10">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-rose-600/95 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform animate-pulse">
+                          <Play className="w-8 h-8 sm:w-9 sm:h-9 ml-1 fill-white" />
                         </div>
+                      </div>
+                    )}
 
-                        {/* Video Center Play Button (깜빡임/펄스 효과) */}
-                        {isVideo && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
-                            <div className="w-12 h-12 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform animate-pulse">
-                              <Play className="w-6 h-6 ml-0.5 fill-white" />
-                            </div>
-                          </div>
+                    {/* Bottom Gradient Overlay Info */}
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent p-5 sm:p-8 lg:p-10 pt-20 sm:pt-28 z-10">
+                      <div className="max-w-4xl space-y-2">
+                        <h3 className="text-lg sm:text-2xl lg:text-3xl font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-1 leading-snug">
+                          {act.title}
+                        </h3>
+                        {act.description && (
+                          <p className="text-xs sm:text-sm lg:text-base text-slate-200 line-clamp-2 leading-relaxed max-w-3xl">
+                            {act.description}
+                          </p>
                         )}
-
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent p-2.5 pt-6 text-[11px] text-slate-400 flex items-center justify-between">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-slate-400" />
+                        <div className="pt-2 flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-300 font-medium">
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-blue-400" />
                             {act.activity_date}
                           </span>
+                          <span>• {act.author || '학생회'}</span>
                           {act.views && (
                             <span className="flex items-center gap-1">
-                              <Eye className="w-3 h-3 text-slate-400" />
+                              <Eye className="w-3.5 h-3.5 text-slate-400" />
                               {act.views}
                             </span>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Card Bottom Content */}
-                      <div className="p-4 flex-1 flex flex-col justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-blue-400">{act.category}</span>
-                          <h3 className="text-sm sm:text-base font-bold text-white mt-1 group-hover:text-blue-300 transition-colors line-clamp-1 leading-snug">
-                            {act.title}
-                          </h3>
-                          {act.description && (
-                            <p className="text-xs text-slate-400 mt-1 line-clamp-1 leading-relaxed">
-                              {act.description}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="pt-2.5 mt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                          <span>{act.author || '학생회'}</span>
-                          <span className="text-blue-400 group-hover:underline">상세보기</span>
+                          <span className="text-blue-400 font-bold group-hover:underline ml-auto">
+                            크게 보기 →
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -277,24 +277,53 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                 );
               })}
             </div>
-          </div>
+
+            {/* Overlay Left / Right Scroll Arrows */}
+            {total > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrev();
+                  }}
+                  className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/70 hover:bg-blue-600/90 text-white backdrop-blur-md border border-white/15 items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                  aria-label="이전 이미지"
+                  title="이전 사진/영상"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNext();
+                  }}
+                  className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/70 hover:bg-blue-600/90 text-white backdrop-blur-md border border-white/15 items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                  aria-label="다음 이미지"
+                  title="다음 사진/영상"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </>
         )}
       </div>
 
       {/* Indicator Dots (현재 콘텐츠 위치 표시 및 클릭 이동) */}
       {total > 1 && (
-        <div className="flex justify-center items-center gap-1.5 pt-2">
-          {activities.map((_, idx) => (
+        <div className="flex justify-center items-center gap-2 pt-1">
+          {activities.map((act, idx) => (
             <button
-              key={idx}
+              key={act.id || idx}
               onClick={() => {
                 setIsTransition(true);
                 setCurrentIndex(idx);
               }}
-              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                activeDotIndex === idx ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700 hover:bg-slate-600'
+              className={`h-2 rounded-full transition-all cursor-pointer ${
+                activeDotIndex === idx ? 'w-8 bg-blue-500' : 'w-2.5 bg-slate-700 hover:bg-slate-500'
               }`}
-              title={`슬라이드 ${idx + 1}`}
+              title={`${idx + 1}. ${act.title}`}
+              aria-label={`슬라이드 ${idx + 1}`}
             />
           ))}
         </div>
@@ -305,7 +334,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
       {/* ======================================================== */}
       {selectedActivity && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl text-white">
+          <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl text-white my-auto">
             {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
