@@ -866,10 +866,22 @@ async function syncR2BucketWithDb(env: Env, db: D1): Promise<{ totalBytes: numbe
 
       const key = obj.key;
       const category = key.includes('/') ? key.split('/')[0] : 'general';
-      const origName = obj.customMetadata?.originalName
-        ? decodeURIComponent(obj.customMetadata.originalName)
-        : key.split('/').pop() || 'file';
-      const uploader = obj.customMetadata?.uploadedBy || 'admin';
+      let origName = key.split('/').pop() || 'file';
+      if (obj.customMetadata?.originalName) {
+        try {
+          origName = decodeURIComponent(obj.customMetadata.originalName);
+        } catch {
+          origName = obj.customMetadata.originalName;
+        }
+      }
+      let uploader = 'admin';
+      if (obj.customMetadata?.uploadedBy) {
+        try {
+          uploader = decodeURIComponent(obj.customMetadata.uploadedBy);
+        } catch {
+          uploader = obj.customMetadata.uploadedBy;
+        }
+      }
       const uploadedAt = obj.customMetadata?.uploadedAt || (obj.uploaded ? obj.uploaded.toISOString() : new Date().toISOString());
 
       objectsToInsert.push({ key, name: origName, size, category, uploader, uploadedAt });
@@ -1019,14 +1031,23 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
     ? '관리자'
     : (session.member?.nickname || session.member?.name || 'unknown');
 
-  await env.R2_BUCKET.put(key, uploadFile.stream(), {
+  let uploadBody: ArrayBuffer | ReadableStream;
+  if (uploadFile.size > 50 * 1024 * 1024 && typeof FixedLengthStream !== 'undefined') {
+    const { readable, writable } = new FixedLengthStream(uploadFile.size);
+    uploadFile.stream().pipeTo(writable).catch(() => {});
+    uploadBody = readable;
+  } else {
+    uploadBody = await uploadFile.arrayBuffer();
+  }
+
+  await env.R2_BUCKET.put(key, uploadBody, {
     httpMetadata: {
       contentType: uploadFile.type || 'application/octet-stream',
     },
     customMetadata: {
       originalName: encodeURIComponent(origName),
       fileSize: String(uploadFile.size),
-      uploadedBy: uploaderName,
+      uploadedBy: encodeURIComponent(uploaderName),
       uploadedAt: new Date().toISOString(),
     },
   });
