@@ -1079,7 +1079,13 @@ async function handleUpload(req: Request, env: Env, db: D1, session: SessionStat
   }, 201);
 }
 
-async function handleFiles(req: Request, env: Env, db: D1, session: SessionState): Promise<Response> {
+async function handleFiles(
+  req: Request,
+  env: Env,
+  db: D1,
+  session: SessionState,
+  ctx?: ExecutionContext
+): Promise<Response> {
   const url = new URL(req.url);
   const prefix = '/api/files/';
   if (!url.pathname.startsWith(prefix)) throw new HttpError(404, '경로가 올바르지 않습니다.');
@@ -1088,6 +1094,9 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
   const key = decodeURIComponent(rawKey);
 
   if (!key) throw new HttpError(400, '파일 키가 누락되었습니다.');
+
+  const edgeCache = typeof caches !== 'undefined' ? (caches as any).default : null;
+  const cacheKey = new Request(url.toString(), { method: 'GET' });
 
   if (req.method === 'GET') {
     if (!env.R2_BUCKET) {
@@ -1149,7 +1158,11 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
       return new Response(object.body, { status: 206, headers });
     }
 
-    return new Response(object.body, { headers });
+    const response = new Response(object.body, { headers });
+    if (!isProtectedMaterial && !hasRange && edgeCache && ctx) {
+      ctx.waitUntil(edgeCache.put(cacheKey, response.clone()));
+    }
+    return response;
   }
 
   if (req.method === 'DELETE') {
@@ -1161,6 +1174,9 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
     }
     await env.R2_BUCKET.delete(key);
     await db.prepare('DELETE FROM r2_files WHERE key = ?').bind(key).run();
+    if (edgeCache && ctx) {
+      ctx.waitUntil(edgeCache.delete(cacheKey));
+    }
     return json({ success: true, message: '파일이 성공적으로 삭제되었습니다.', key });
   }
 
@@ -1168,13 +1184,34 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
 }
 
 // ---------------------------------------------------------------- resource handlers
-async function handleApi(req: Request, env: Env): Promise<Response> {
+async function handleApi(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
   const resource = url.searchParams.get('resource');
   const id = url.searchParams.get('id');
   const tail = url.searchParams.get('tail');
   const db = env.DB;
   const method = req.method;
+
+  // Serve cached public R2 assets directly from Edge Cache before touching D1/session
+  if (
+    method === 'GET' &&
+    url.pathname.startsWith('/api/files/') &&
+    !url.pathname.startsWith('/api/files/materials/') &&
+    !req.headers.has('range')
+  ) {
+    const edgeCache = typeof caches !== 'undefined' ? (caches as any).default : null;
+    if (edgeCache) {
+      const cached = await edgeCache.match(new Request(url.toString(), { method: 'GET' }));
+      if (cached) {
+        const ifNoneMatch = req.headers.get('if-none-match');
+        const cachedEtag = cached.headers.get('etag');
+        if (ifNoneMatch && cachedEtag && ifNoneMatch === cachedEtag) {
+          return new Response(null, { status: 304, headers: cached.headers });
+        }
+        return cached;
+      }
+    }
+  }
 
   if (!db) throw new HttpError(500, 'D1 binding (DB) not found');
   await ensureSchema(db);
@@ -1189,7 +1226,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
 
   // ---- R2 file streaming & management (/api/files/*)
   if (url.pathname.startsWith('/api/files/')) {
-    return handleFiles(req, env, db, session);
+    return handleFiles(req, env, db, session, ctx);
   }
 
   // ---- R2 file upload (/api/upload or /api?resource=upload)
@@ -1261,6 +1298,12 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- notices (read: public / write: council, delete 결산/회의록: master admin only)
   if (resource === 'notices') {
     if (method === 'GET') {
+      if (url.searchParams.get('home') === '1') {
+        const { results } = await db
+          .prepare('SELECT id, title, category, author, created_at, views, is_pinned FROM notices ORDER BY is_pinned DESC, created_at DESC LIMIT 5')
+          .all();
+        return json(results.map((r: any) => ({ ...r, content: '', is_pinned: !!r.is_pinned, attachments: [] })));
+      }
       const { results } = await db.prepare('SELECT * FROM notices ORDER BY is_pinned DESC, created_at DESC').all();
       return json(
         results.map((r: any) => ({
@@ -2082,8 +2125,24 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
     }
 
     if (method === 'GET') {
-      const sql = 'SELECT * FROM activity_reports WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY is_pinned DESC, activity_date DESC, created_at DESC';
-      const { results } = await db.prepare(sql).all();
+      const isHome = url.searchParams.get('home') === '1';
+      let results: any[];
+      if (isHome) {
+        const now = new Date();
+        const cutoff = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const cutoffStr = `${cutoff.getFullYear()}-${pad(cutoff.getMonth() + 1)}-${pad(cutoff.getDate())}`;
+        const res = await db
+          .prepare(
+            'SELECT * FROM activity_reports WHERE (is_deleted = 0 OR is_deleted IS NULL) AND activity_date >= ? ORDER BY is_pinned DESC, activity_date DESC, created_at DESC LIMIT 20'
+          )
+          .bind(cutoffStr)
+          .all();
+        results = res.results;
+      } else {
+        const sql = 'SELECT * FROM activity_reports WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY is_pinned DESC, activity_date DESC, created_at DESC';
+        results = (await db.prepare(sql).all()).results;
+      }
       return json(
         results.map((r: any) => {
           const mediaType = r.media_type || 'image';
@@ -3046,7 +3105,7 @@ function applySecurityHeaders(headers: Headers) {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // 1. Force HTTPS redirect if accessed over plain HTTP
@@ -3059,7 +3118,7 @@ export default {
     let response: Response;
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       try {
-        response = await handleApi(request, env);
+        response = await handleApi(request, env, ctx);
       } catch (err: any) {
         if (err instanceof HttpError) {
           response = json({ error: err.message }, err.status);

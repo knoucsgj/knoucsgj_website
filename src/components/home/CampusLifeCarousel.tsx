@@ -205,6 +205,10 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
               {displayList.map((act, index) => {
                 const isVideo = act.media_type === 'video';
                 const displayImg = isVideo ? act.thumbnail_url : act.media_url;
+                const isNearCurrent =
+                  index === 0 ||
+                  index === activeDotIndex ||
+                  index === (activeDotIndex + 1) % displayList.length;
 
                 return (
                   <div
@@ -219,6 +223,9 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                       <img
                         src={displayImg}
                         alt={act.title}
+                        loading={isNearCurrent ? 'eager' : 'lazy'}
+                        fetchPriority={index === 0 ? 'high' : 'low'}
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                       />
                     ) : (
@@ -434,7 +441,7 @@ export const CampusLifeCarousel: React.FC<Props> = ({ activities, loading }) => 
                       idx === safeIdx ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={imgUrl} alt={`썸네일 ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={imgUrl} alt={`썸네일 ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

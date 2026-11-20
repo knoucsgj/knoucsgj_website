@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { useAuth } from '../services/auth';
 import type { Notice, NoticeCategory, BudgetReport, MeetingMinute, ActivityReport } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
+import { optimizeImageFile } from '../lib/imageOptimizer';
 import { ASSETS } from '../lib/assets';
 import { MeetingMinutePrintView } from '../components/MeetingMinutePrintView';
 import {
@@ -184,7 +185,8 @@ export const NoticesPage: React.FC = () => {
         const uploadedUrls: string[] = [];
         for (const item of actImages) {
           if (item.file) {
-            const uploadRes = await api.uploadFile(item.file, 'activities');
+            const optimized = await optimizeImageFile(item.file, { maxDimension: 1920, quality: 0.85 });
+            const uploadRes = await api.uploadFile(optimized, 'activities');
             uploadedUrls.push(uploadRes.url);
           } else if (item.url) {
             uploadedUrls.push(item.url);

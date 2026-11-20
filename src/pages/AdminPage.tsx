@@ -9,6 +9,7 @@ import { api } from '../services/api';
 import { auth, useAuth } from '../services/auth';
 import type { Notice, AcademicEvent, CouncilMember, PastCouncilMember, StudyGroup, StudyStatus, MeetingMinute, AdminMember, BudgetReport, BudgetItem, MemberCustomPermissions } from '../lib/types';
 import { formatDate } from '../lib/dateUtils';
+import { optimizeImageFile } from '../lib/imageOptimizer';
 import { parseStudentNo } from '../lib/knouDepartments';
 import {
   Shield,
@@ -775,7 +776,8 @@ export const AdminPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const res = await api.uploadFile(file, 'past_members');
+      const optimized = await optimizeImageFile(file, { maxDimension: 1200, quality: 0.85 });
+      const res = await api.uploadFile(optimized, 'past_members');
       setPastForm((prev) => ({ ...prev, photo_url: res.url }));
     } catch {
       if (file.size <= 1024 * 1024) {

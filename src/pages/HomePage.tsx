@@ -18,9 +18,9 @@ export const HomePage: React.FC = () => {
       setLoading(true);
       setLoadError(false);
       const [noticesData, eventsData, activitiesData] = await Promise.all([
-        api.getNotices(),
+        api.getHomeNotices(),
         api.getEvents(),
-        api.getActivities(),
+        api.getHomeActivities(),
       ]);
       setNotices(noticesData);
       setEvents(eventsData);

@@ -85,6 +85,14 @@ export const api = {
     return [];
   },
 
+  async getHomeNotices(): Promise<Notice[]> {
+    const cloudData = await fetchD1<Notice[]>('notices&home=1');
+    if (Array.isArray(cloudData)) {
+      return cloudData;
+    }
+    return [];
+  },
+
   async getNoticeById(id: string): Promise<Notice | undefined> {
     const notices = await this.getNotices();
     return notices.find((n) => n.id === id);
@@ -316,6 +324,14 @@ export const api = {
   // ==========================================
   async getActivities(): Promise<ActivityReport[]> {
     const cloud = await fetchD1<ActivityReport[]>('activities');
+    if (Array.isArray(cloud)) {
+      return cloud;
+    }
+    return [];
+  },
+
+  async getHomeActivities(): Promise<ActivityReport[]> {
+    const cloud = await fetchD1<ActivityReport[]>('activities&home=1');
     if (Array.isArray(cloud)) {
       return cloud;
     }
