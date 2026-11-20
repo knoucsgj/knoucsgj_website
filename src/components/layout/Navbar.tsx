@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ExternalLink, ChevronRight, Shield, ZoomIn } from 'lucide-react';
+import { Menu, X, ExternalLink, ChevronRight, ZoomIn, Users } from 'lucide-react';
 import { auth, useAuth } from '../../services/auth';
 import { ASSETS } from '../../lib/assets';
+import { showAlert } from '../ui/GlobalDialog';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,13 +11,22 @@ export const Navbar: React.FC = () => {
     return localStorage.getItem('knou_large_text') === 'true';
   });
   const location = useLocation();
-  const { member, isAdmin } = useAuth();
+  const { member } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await auth.logout();
     setIsOpen(false);
     navigate('/', { replace: true });
+  };
+
+  const handleAlumniClick = () => {
+    setIsOpen(false);
+    void showAlert({
+      title: '동문회 안내',
+      message: '준비중입니다.',
+      variant: 'info',
+    });
   };
 
   useEffect(() => {
@@ -100,6 +110,14 @@ export const Navbar: React.FC = () => {
               컴퓨터과학과
             </a>
             <span className="text-slate-700">|</span>
+            <button
+              type="button"
+              onClick={handleAlumniClick}
+              className="text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              동문회
+            </button>
+            <span className="text-slate-700">|</span>
             {member ? (
               <>
                 <Link to="/account" className="flex items-center gap-1.5 text-blue-300 hover:text-white font-semibold transition-colors">
@@ -130,19 +148,6 @@ export const Navbar: React.FC = () => {
                 </Link>
               </>
             )}
-            <span className="text-slate-700">|</span>
-            <Link
-              to="/admin"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-1 transition-colors px-2 py-0.5 rounded-md ${
-                isAdmin ? 'text-amber-300 bg-amber-950/60 font-bold border border-amber-800' : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-              title="관리자 센터를 별도의 새 창/탭에서 엽니다 (홈페이지와 나란히 실시간 확인 가능)"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>{isAdmin ? '관리자 콘솔 ↗' : '학생회 관리 ↗'}</span>
-            </Link>
           </div>
         </div>
       </div>
@@ -318,16 +323,14 @@ export const Navbar: React.FC = () => {
                 U-KNOU 캠퍼스 바로가기
                 <ExternalLink className="w-4 h-4" />
               </a>
-              <Link
-                to="/admin"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setIsOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 text-amber-300 font-bold text-sm shadow-xs border border-slate-700"
+              <button
+                type="button"
+                onClick={handleAlumniClick}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-colors cursor-pointer"
               >
-                <Shield className="w-4 h-4 text-amber-400" />
-                관리자 센터 별도 창 열기 ↗
-              </Link>
+                <Users className="w-4 h-4 text-slate-600" />
+                동문회
+              </button>
             </div>
           </div>
         </div>
