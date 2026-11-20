@@ -11,31 +11,46 @@ export const HomePage: React.FC = () => {
   const [events, setEvents] = useState<AcademicEvent[]>([]);
   const [activities, setActivities] = useState<ActivityReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(false);
+      const [noticesData, eventsData, activitiesData] = await Promise.all([
+        api.getNotices(),
+        api.getEvents(),
+        api.getActivities(),
+      ]);
+      setNotices(noticesData);
+      setEvents(eventsData);
+      setActivities(activitiesData);
+    } catch (err) {
+      console.error('Failed to load home data', err);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const [noticesData, eventsData, activitiesData] = await Promise.all([
-          api.getNotices(),
-          api.getEvents(),
-          api.getActivities(),
-        ]);
-        setNotices(noticesData);
-        setEvents(eventsData);
-        setActivities(activitiesData);
-      } catch (err) {
-        console.error('Failed to load home data', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
-  }, []);
+  }, [loadData]);
 
   return (
     <>
       <GlobalPopupModal />
+      {loadError && (
+        <div className="mb-4 px-4 py-3 rounded-2xl bg-rose-950/90 border border-rose-700/60 text-rose-100 text-sm flex items-center justify-between gap-3">
+          <span>일부 홈 화면 데이터를 불러오지 못했습니다. 네트워크 상태를 확인해 주세요.</span>
+          <button
+            onClick={loadData}
+            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shrink-0 cursor-pointer"
+          >
+            다시 불러오기
+          </button>
+        </div>
+      )}
       <div className="rounded-3xl bg-slate-950 text-white border border-slate-800 shadow-2xl overflow-hidden divide-y divide-slate-800/80">
       
       {/* ======================================================== */}

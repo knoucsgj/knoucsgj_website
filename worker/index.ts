@@ -124,11 +124,13 @@ interface Session {
 
 async function createSession(db: D1, kind: 'member' | 'admin', memberId: string | null, ttl: number) {
   const token = randomHex(32);
-  await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(Date.now()).run();
-  await db
-    .prepare('INSERT INTO sessions (token_hash, kind, member_id, expires_at) VALUES (?, ?, ?, ?)')
-    .bind(await sha256Hex(token), kind, memberId, Date.now() + ttl * 1000)
-    .run();
+  const now = Date.now();
+  await db.batch([
+    db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now),
+    db
+      .prepare('INSERT INTO sessions (token_hash, kind, member_id, expires_at) VALUES (?, ?, ?, ?)')
+      .bind(await sha256Hex(token), kind, memberId, now + ttl * 1000),
+  ]);
   return token;
 }
 
@@ -211,7 +213,6 @@ const isRegularOrAbove = (s: Session) => {
   if (s.admin) return true;
   return !!s.member && (s.member.role === 'regular' || s.member.role === 'officer' || s.member.role === 'president');
 };
-const canManageCouncil = (s: Session) => s.admin || isPresident(s) || isOfficer(s);
 
 const requireCouncil = (s: Session) => {
   if (!isCouncil(s)) throw new HttpError(403, '학생회 임원진 또는 권한이 부여된 관리자만 접근할 수 있습니다.');
@@ -1094,13 +1095,18 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
     }
 
     // Academic materials protection: regular members only
-    if (key.startsWith('materials/')) {
+    const isProtectedMaterial = key.startsWith('materials/');
+    if (isProtectedMaterial) {
       if (session.member?.role === 'associate' || (!isRegularOrAbove(session) && !session.admin)) {
         throw new HttpError(403, '학습자료 다운로드는 광주전남지역대학 컴퓨터과학과 재학생(정회원) 전용입니다. 준회원은 열람만 가능합니다.');
       }
     }
 
-    const object = await env.R2_BUCKET.get(key);
+    const hasRange = req.headers.has('range');
+    const object = await env.R2_BUCKET.get(key, {
+      onlyIf: req.headers,
+      range: hasRange ? req.headers : undefined,
+    });
     if (!object) {
       throw new HttpError(404, '요청하신 파일이 존재하지 않거나 삭제되었습니다.');
     }
@@ -1108,10 +1114,19 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set('etag', object.httpEtag);
-    headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    headers.set('Accept-Ranges', 'bytes');
+    headers.set(
+      'Cache-Control',
+      isProtectedMaterial ? 'private, max-age=3600' : 'public, max-age=86400, stale-while-revalidate=604800'
+    );
     // Security headers to prevent MIME sniffing and cross-site script execution
     headers.set('X-Content-Type-Options', 'nosniff');
     headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+    // Conditional GET (If-None-Match / If-Modified-Since): R2 returns object without body
+    if (!('body' in object) || object.body === null) {
+      return new Response(null, { status: 304, headers });
+    }
 
     const isDownload = url.searchParams.get('download') === 'true' || url.searchParams.get('dl') === '1';
     const origName = object.customMetadata?.originalName
@@ -1125,6 +1140,13 @@ async function handleFiles(req: Request, env: Env, db: D1, session: SessionState
       headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(origName)}`);
     } else {
       headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(origName)}`);
+    }
+
+    if (hasRange && object.range) {
+      const { offset = 0, length = object.size } = object.range as { offset?: number; length?: number };
+      const end = Math.max(offset, offset + length - 1);
+      headers.set('Content-Range', `bytes ${offset}-${end}/${object.size}`);
+      return new Response(object.body, { status: 206, headers });
     }
 
     return new Response(object.body, { headers });
@@ -1454,8 +1476,12 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- free posts (read: public / write & reply: any signed-up member or admin)
   if (resource === 'freeposts') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare("SELECT * FROM free_posts WHERE id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at DESC").all();
-      const { results: replies } = await db.prepare("SELECT * FROM free_post_replies WHERE post_id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at ASC").all();
+      const [postRes, replyRes] = await db.batch([
+        db.prepare("SELECT * FROM free_posts WHERE id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at DESC"),
+        db.prepare("SELECT * FROM free_post_replies WHERE post_id NOT IN ('fp-1', 'fp-2', 'fp-3') ORDER BY created_at ASC"),
+      ]);
+      const posts = postRes.results || [];
+      const replies = replyRes.results || [];
       return json(posts.map((p: any) => ({ ...p, replies: replies.filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
@@ -1507,8 +1533,10 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const row: any = await db.prepare('SELECT author_id FROM free_posts WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '게시글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
-      await db.prepare('DELETE FROM free_post_replies WHERE post_id = ?').bind(id).run();
-      await db.prepare('DELETE FROM free_posts WHERE id = ?').bind(id).run();
+      await db.batch([
+        db.prepare('DELETE FROM free_post_replies WHERE post_id = ?').bind(id),
+        db.prepare('DELETE FROM free_posts WHERE id = ?').bind(id),
+      ]);
       return json({ success: true });
     }
   }
@@ -1516,8 +1544,12 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- feedbacks (학생회에 바란다: read: public / write post: any signed-up member / replies: officer, president, admin only)
   if (resource === 'feedbacks') {
     if (method === 'GET') {
-      const { results: items } = await db.prepare("SELECT * FROM feedbacks WHERE id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at DESC").all();
-      const { results: replies } = await db.prepare("SELECT * FROM feedback_replies WHERE feedback_id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at ASC").all();
+      const [itemRes, replyRes] = await db.batch([
+        db.prepare("SELECT * FROM feedbacks WHERE id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at DESC"),
+        db.prepare("SELECT * FROM feedback_replies WHERE feedback_id NOT IN ('fb-1', 'fb-2', 'fb-3') ORDER BY created_at ASC"),
+      ]);
+      const items = itemRes.results || [];
+      const replies = replyRes.results || [];
       return json(items.map((f: any) => ({ ...f, replies: replies.filter((r: any) => r.feedback_id === f.id) })));
     }
     if (method === 'POST') {
@@ -1574,8 +1606,10 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const row: any = await db.prepare('SELECT author_id FROM feedbacks WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '건의글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
-      await db.prepare('DELETE FROM feedback_replies WHERE feedback_id = ?').bind(id).run();
-      await db.prepare('DELETE FROM feedbacks WHERE id = ?').bind(id).run();
+      await db.batch([
+        db.prepare('DELETE FROM feedback_replies WHERE feedback_id = ?').bind(id),
+        db.prepare('DELETE FROM feedbacks WHERE id = ?').bind(id),
+      ]);
       return json({ success: true });
     }
   }
@@ -1583,9 +1617,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- market (벼룩시장: read: public / write & reply: any signed-up member or admin)
   if (resource === 'market') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare("SELECT * FROM market_posts WHERE id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at DESC, rowid DESC").all();
-      const { results: replies } = await db.prepare("SELECT * FROM market_post_replies WHERE post_id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at ASC, rowid ASC").all();
-      return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
+      const [postRes, replyRes] = await db.batch([
+        db.prepare("SELECT * FROM market_posts WHERE id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at DESC, rowid DESC"),
+        db.prepare("SELECT * FROM market_post_replies WHERE post_id NOT IN ('mk-1', 'mk-2', 'mk-3') ORDER BY created_at ASC, rowid ASC"),
+      ]);
+      const posts = postRes.results || [];
+      const replies = replyRes.results || [];
+      return json(posts.map((p: any) => ({ ...p, replies: replies.filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
       const writer = requireSignedIn(session);
@@ -1651,9 +1689,11 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const row: any = await db.prepare('SELECT author_id FROM market_posts WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '게시글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
-      await db.prepare('DELETE FROM market_post_replies WHERE post_id = ?').bind(id).run();
-      await db.prepare('DELETE FROM market_posts WHERE id = ?').bind(id).run();
-      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('market_posts_init', '1')").run();
+      await db.batch([
+        db.prepare('DELETE FROM market_post_replies WHERE post_id = ?').bind(id),
+        db.prepare('DELETE FROM market_posts WHERE id = ?').bind(id),
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('market_posts_init', '1')"),
+      ]);
       return json({ success: true });
     }
   }
@@ -1661,9 +1701,13 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
   // ---- qna (Q&A 코너: read: public / write & reply: any signed-up member or admin)
   if (resource === 'qna') {
     if (method === 'GET') {
-      const { results: posts } = await db.prepare("SELECT * FROM qna_posts WHERE id NOT IN ('qna-1', 'qna-2', 'qna-3') ORDER BY created_at DESC, rowid DESC").all();
-      const { results: replies } = await db.prepare("SELECT * FROM qna_post_replies WHERE post_id NOT IN ('qna-1', 'qna-2', 'qna-3') AND id NOT IN ('qna-r-1', 'qna-r-2', 'qna-r-3') ORDER BY created_at ASC, rowid ASC").all();
-      return json((posts || []).map((p: any) => ({ ...p, replies: (replies || []).filter((r: any) => r.post_id === p.id) })));
+      const [postRes, replyRes] = await db.batch([
+        db.prepare("SELECT * FROM qna_posts WHERE id NOT IN ('qna-1', 'qna-2', 'qna-3') ORDER BY created_at DESC, rowid DESC"),
+        db.prepare("SELECT * FROM qna_post_replies WHERE post_id NOT IN ('qna-1', 'qna-2', 'qna-3') AND id NOT IN ('qna-r-1', 'qna-r-2', 'qna-r-3') ORDER BY created_at ASC, rowid ASC"),
+      ]);
+      const posts = postRes.results || [];
+      const replies = replyRes.results || [];
+      return json(posts.map((p: any) => ({ ...p, replies: replies.filter((r: any) => r.post_id === p.id) })));
     }
     if (method === 'POST') {
       const writer = requireSignedIn(session);
@@ -1719,9 +1763,11 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       const row: any = await db.prepare('SELECT author_id FROM qna_posts WHERE id = ?').bind(id).first();
       if (!row) throw new HttpError(404, '질문글을 찾을 수 없습니다.');
       if (!canModify(session, row.author_id)) throw new HttpError(403, '본인이 작성한 글만 삭제할 수 있습니다.');
-      await db.prepare('DELETE FROM qna_post_replies WHERE post_id = ?').bind(id).run();
-      await db.prepare('DELETE FROM qna_posts WHERE id = ?').bind(id).run();
-      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('qna_posts_init', '1')").run();
+      await db.batch([
+        db.prepare('DELETE FROM qna_post_replies WHERE post_id = ?').bind(id),
+        db.prepare('DELETE FROM qna_posts WHERE id = ?').bind(id),
+        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('qna_posts_init', '1')"),
+      ]);
       return json({ success: true });
     }
   }

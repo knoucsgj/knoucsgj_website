@@ -243,11 +243,20 @@ export function ensureSchema(db: D1): Promise<void> {
 async function run(db: D1) {
   await db.batch(CREATE_STATEMENTS.map((s) => db.prepare(s)));
 
-  for (const [table, column, type] of ADD_COLUMNS) {
-    const { results } = await db.prepare(`PRAGMA table_info(${table})`).all();
-    if (!results.some((r: any) => r.name === column)) {
-      await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
-    }
+  // Batch PRAGMA table_info queries across unique tables (1 D1 roundtrip instead of ~40 sequential queries)
+  const uniqueTables = Array.from(new Set(ADD_COLUMNS.map(([t]) => t)));
+  const infoResults = await db.batch(uniqueTables.map((t) => db.prepare(`PRAGMA table_info(${t})`)));
+  const existingColsByTable = new Map<string, Set<string>>();
+  uniqueTables.forEach((t, idx) => {
+    const rows = (infoResults[idx]?.results || []) as Array<{ name: string }>;
+    existingColsByTable.set(t, new Set(rows.map((r) => r.name)));
+  });
+
+  const alterStmts = ADD_COLUMNS.filter(([table, column]) => !existingColsByTable.get(table)?.has(column)).map(
+    ([table, column, type]) => db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
+  );
+  if (alterStmts.length > 0) {
+    await db.batch(alterStmts);
   }
 
   // Purge ALL legacy mock data from production and local D1 (Strict No-Mock Policy)
