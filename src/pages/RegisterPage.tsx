@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth, REGIONAL_COLLEGES } from '../services/auth';
 import { LEARNING_CENTERS, KOREA_DISTRICTS, SIDO_LIST } from '../lib/koreaDistricts';
 import { formatStudentNoInput, parseStudentNo, KNOU_DEPARTMENT_LIST } from '../lib/knouDepartments';
-import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin, Sparkles, Award } from 'lucide-react';
+import { Shield, CheckCircle2, AlertCircle, Eye, EyeOff, Send, Clock, Building2, MapPin, Sparkles, Award, Mail, ExternalLink, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-hidden transition-all text-sm';
@@ -51,6 +51,7 @@ export const RegisterPage: React.FC = () => {
   // Password visibility toggle
   const [showPw, setShowPw] = useState(false);
   const [showPwC, setShowPwC] = useState(false);
+  const [showKnouMailGuide, setShowKnouMailGuide] = useState(true);
 
   // Cooldown timer
   useEffect(() => {
@@ -113,16 +114,25 @@ export const RegisterPage: React.FC = () => {
   const handleSendCode = async () => {
     setEmailMsg(null);
     setError('');
-    const email = form.username.trim();
+    const email = form.username.trim().toLowerCase();
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
       setEmailMsg({ type: 'error', text: '올바른 이메일 주소를 입력해 주세요.' });
+      return;
+    }
+    if (!email.endsWith('@knou.ac.kr')) {
+      setEmailMsg({
+        type: 'error',
+        text: '한국방송통신대학교 학생메일(@knou.ac.kr) 계정으로만 회원가입이 가능합니다. 아직 메일이 없으시다면 아래 신청 안내를 참고해 주세요.',
+      });
+      setShowKnouMailGuide(true);
       return;
     }
 
     try {
       setIsSendingCode(true);
       const res = await auth.sendEmailCode(email, 'register');
+      setForm((f) => ({ ...f, username: email }));
       setIsCodeSent(true);
       setCooldown(60); // 60s cooldown
       setExpireSeconds(600); // 10 minutes
@@ -166,6 +176,12 @@ export const RegisterPage: React.FC = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!form.username.trim().toLowerCase().endsWith('@knou.ac.kr')) {
+      setError('한국방송통신대학교 학생메일(@knou.ac.kr) 계정으로만 회원가입이 가능합니다.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     if (!isEmailVerified) {
       setError('이메일 인증을 완료해 주세요. [인증번호 발송]을 눌러 인증을 진행해 주세요.');
@@ -262,7 +278,7 @@ export const RegisterPage: React.FC = () => {
           {/* Email / Username with Real-time Verification */}
           <div>
             <label className={labelCls}>
-              아이디 (실제 수신 가능한 이메일 주소) <span className="text-rose-500 font-bold">*</span>
+              아이디 (방송대 학생메일 <span className="text-blue-700 font-extrabold">@knou.ac.kr</span> 전용) <span className="text-rose-500 font-bold">*</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -272,7 +288,7 @@ export const RegisterPage: React.FC = () => {
                 readOnly={isEmailVerified}
                 value={form.username}
                 onChange={set('username')}
-                placeholder="예: knoucs@gmail.com"
+                placeholder="예: portalid@knou.ac.kr"
                 autoComplete="email"
               />
               <button
@@ -298,9 +314,78 @@ export const RegisterPage: React.FC = () => {
                 )}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              비밀번호 재설정 및 주요 학사 알림 수신을 위해 본인이 소유한 실제 이메일을 입력해 주세요.
+            <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+              방송대 재학생 확인을 위해 <strong className="text-blue-700">@knou.ac.kr</strong> 학생메일로만 가입할 수 있습니다. (네이버·구글 등 일반 이메일 불가)
             </p>
+            {form.username.includes('@') && !form.username.trim().toLowerCase().endsWith('@knou.ac.kr') && (
+              <p className="text-xs text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>@knou.ac.kr 도메인의 방송대 학생메일 주소만 입력할 수 있습니다.</span>
+              </p>
+            )}
+          </div>
+
+          {/* KNOU Student Email Issuance Guide */}
+          <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowKnouMailGuide((v) => !v)}
+              className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-950">
+                <HelpCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                아직 방송대 학생메일(@knou.ac.kr)을 발급받지 않으셨나요?
+              </span>
+              {showKnouMailGuide ? (
+                <ChevronUp className="w-4 h-4 text-blue-700 shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-blue-700 shrink-0" />
+              )}
+            </button>
+            {showKnouMailGuide && (
+              <div className="px-4 pb-4 pt-1 border-t border-blue-100 space-y-3 text-xs text-slate-700 leading-relaxed">
+                <p className="text-slate-600">
+                  한국방송통신대학교 학생(재학생·휴학생·졸업생 등, 제적생 제외)이라면 포털에서 무료로 <strong className="text-slate-900">본인ID@knou.ac.kr</strong> 계정을 즉시 발급받아 사용할 수 있습니다.
+                </p>
+                <ol className="space-y-1.5 list-decimal list-inside font-medium text-slate-800 bg-white/80 rounded-xl p-3 border border-blue-100">
+                  <li>
+                    <a
+                      href="https://www.knou.ac.kr"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-700 font-bold hover:underline"
+                    >
+                      한국방송통신대학교 홈페이지(knou.ac.kr)
+                    </a>{' '}
+                    접속 및 포털 로그인
+                  </li>
+                  <li>상단 또는 개인정보 메뉴의 <strong>[맞춤정보]</strong> → <strong>[메일신청]</strong> 선택</li>
+                  <li>개인정보 수집 동의 후 영문 이름·비밀번호 설정하여 계정 생성 완료</li>
+                  <li>발급된 <strong>포털ID@knou.ac.kr</strong> 메일을 위 입력란에 입력하고 <strong>[인증번호 발송]</strong> 클릭</li>
+                </ol>
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <a
+                    href="https://eist.knou.ac.kr/eist/10267/subview.do"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    방송대 학생메일 신청방법 공식 안내 보기
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    href="https://www.knou.ac.kr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs transition-colors"
+                  >
+                    방송대 포털 바로가기
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Verification Code Input */}

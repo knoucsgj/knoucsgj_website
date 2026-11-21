@@ -272,6 +272,8 @@ async function recordFailure(db: D1, key: string) {
 const clearFailures = (db: D1, key: string) => db.prepare('DELETE FROM login_attempts WHERE k = ?').bind(key).run();
 
 // ---------------------------------------------------------------- auth handlers
+const isKnouStudentEmail = (email: string) => /^[a-zA-Z0-9._%+-]+@knou\.ac\.kr$/i.test(email.trim());
+
 function validateRegistration(b: any) {
   const username = str(b.username, 80).toLowerCase();
   const password = typeof b.password === 'string' ? b.password : '';
@@ -287,10 +289,9 @@ function validateRegistration(b: any) {
   const department = str(b.department, 30);
   const learning_center = str(b.learning_center, 50) || '광주전남지역대학';
 
-  // Email format validation for username
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  if (!emailRegex.test(username)) {
-    throw new HttpError(400, '아이디는 유효한 이메일 주소(예: user@example.com) 형식이어야 합니다.');
+  // Strictly require @knou.ac.kr student email for registration
+  if (!isKnouStudentEmail(username)) {
+    throw new HttpError(400, '아이디는 한국방송통신대학교 학생메일(@knou.ac.kr) 주소만 가입이 가능합니다.');
   }
   if (password.length < 8 || password.length > 64 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
     throw new HttpError(400, '비밀번호는 영문과 숫자를 포함하여 8자 이상이어야 합니다.');
@@ -448,6 +449,9 @@ async function handleAuth(req: Request, db: D1, env: Env, session: Session, acti
     }
 
     if (type === 'register') {
+      if (!isKnouStudentEmail(email)) {
+        throw new HttpError(400, '한국방송통신대학교 학생메일(@knou.ac.kr) 계정으로만 회원가입 인증이 가능합니다.');
+      }
       const exists = await db.prepare('SELECT 1 FROM members WHERE username = ?').bind(email).first();
       if (exists) {
         throw new HttpError(409, '이미 가입되어 있는 이메일 주소입니다. 로그인해 주세요.');

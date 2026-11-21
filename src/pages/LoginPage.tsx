@@ -101,14 +101,14 @@ export const LoginPage: React.FC = () => {
 
       <form onSubmit={submit} className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-4 shadow-xs">
         <div>
-          <label className="block font-bold text-slate-800 mb-1.5 text-sm">아이디 (이메일)</label>
+          <label className="block font-bold text-slate-800 mb-1.5 text-sm">아이디 (이메일 · @knou.ac.kr)</label>
           <input
             type="email"
             className={inputCls}
             required
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="예: user@example.com"
+            placeholder="예: portalid@knou.ac.kr"
             autoComplete="username"
             autoFocus
           />
@@ -201,7 +201,7 @@ export const LoginPage: React.FC = () => {
                   required
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="예: user@example.com"
+                  placeholder="예: portalid@knou.ac.kr"
                   className={inputCls}
                 />
               </div>
